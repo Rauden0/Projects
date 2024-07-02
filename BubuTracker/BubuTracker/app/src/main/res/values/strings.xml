@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Bubu Tracker</string>
+    <string name="title_activity_maps">MapsActivity</string>
+    <string name="google_map_api_key">AIzaSyBKgHn2Ujf3_UtGSWuDkILhgkrGTwEsSqA</string>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="password">Password</string>
+    <string name="email_address">Email Address</string>
+    <string name="password_again">Password Again</string>
+    <string name="register">Register</string>
+    <string name="registration">Registration</string>
+    <string name="bubu_tracker">Bubu Tracker</string>
+</resources>
