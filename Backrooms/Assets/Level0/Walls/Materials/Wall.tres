@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://c0clv05rd1wny"]
+
+[ext_resource type="Texture2D" uid="uid://dvjfuautjnhc1" path="res://Assets/Level0/Walls/textures/level0_wall_diff.webp" id="1_lui6g"]
+
+[resource]
+albedo_texture = ExtResource("1_lui6g")
+uv1_scale = Vector3(-10, -10, -10)

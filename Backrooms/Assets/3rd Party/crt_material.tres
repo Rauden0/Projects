@@ -1,0 +1,17 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://b3l4ru0886jmd"]
+
+[ext_resource type="Shader" path="res://Assets/3rd Party/crt_grid.gdshader" id="1_55hop"]
+
+[resource]
+shader = ExtResource("1_55hop")
+shader_parameter/res = Vector2(1920, 1080)
+shader_parameter/mask_type = 0
+shader_parameter/bloom_type = 0
+shader_parameter/hardScan = -1.0
+shader_parameter/hardPix = -2.0
+shader_parameter/hardBloomScan = -2.0
+shader_parameter/hardBloomPix = -1.5
+shader_parameter/bloomAmount = 8.0
+shader_parameter/warp = Vector2(8, 8)
+shader_parameter/maskDark = 0.5
+shader_parameter/maskLight = 1.5

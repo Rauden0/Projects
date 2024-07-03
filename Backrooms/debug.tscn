@@ -1,0 +1,64 @@
+[gd_scene load_steps=8 format=3 uid="uid://dalm03sm2lf4g"]
+
+[ext_resource type="Script" path="res://Scripts/world.cs" id="1_ge82i"]
+[ext_resource type="PackedScene" uid="uid://cn16un3vqtg7h" path="res://Scenes/player.tscn" id="2_pghoo"]
+[ext_resource type="PackedScene" uid="uid://d1ru5clde1rgb" path="res://Scenes/NoteManager/NoteManager.tscn" id="4_ncjli"]
+[ext_resource type="Script" path="res://Generation/BackroomsGenerator.cs" id="5_nibkd"]
+
+[sub_resource type="Environment" id="Environment_hrsih"]
+ambient_light_sky_contribution = 0.05
+ssao_enabled = true
+sdfgi_enabled = true
+sdfgi_use_occlusion = true
+sdfgi_read_sky_light = false
+sdfgi_bounce_feedback = 1.0
+sdfgi_cascades = 8
+sdfgi_y_scale = 0
+fog_light_color = Color(1, 0.933333, 0.54902, 1)
+fog_light_energy = 0.0
+fog_density = 1.0
+fog_height = 5.0
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.5864
+volumetric_fog_albedo = Color(0, 0, 0, 1)
+volumetric_fog_anisotropy = 0.0
+volumetric_fog_length = 87.78
+volumetric_fog_detail_spread = 5.5982
+adjustment_brightness = 0.41
+
+[sub_resource type="CameraAttributesPhysical" id="CameraAttributesPhysical_vlina"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_hmck8"]
+vertices = PackedVector3Array(1.11484, 0.377825, -1.65, -1.08516, 0.377825, -1.65, -1.08516, 0.377825, -0.65, -1.08516, 0.377825, 0.55, -1.08516, 0.377825, 1.75, 1.11484, 0.377825, 1.75, 1.11484, 0.377825, -1.65, -1.08516, 0.377825, -0.65, -1.48516, 0.377825, -0.45, -1.08516, 0.377825, 0.55, 1.11484, 0.377825, 1.75, -1.48516, 0.377825, -0.45, -1.68516, 0.377825, -1.85, -4.08516, 0.377825, -1.85, -4.08516, 0.377825, 1.95, -1.68516, 0.377825, 1.95, -1.48516, 0.377825, 0.35, -1.48516, 0.377825, 0.35, -1.08516, 0.377825, 0.55, -1.48516, 0.377825, -0.45)
+polygons = [PackedInt32Array(2, 1, 0), PackedInt32Array(5, 4, 3), PackedInt32Array(8, 7, 9), PackedInt32Array(9, 7, 6), PackedInt32Array(9, 6, 10), PackedInt32Array(11, 16, 12), PackedInt32Array(12, 16, 15), PackedInt32Array(12, 15, 14), PackedInt32Array(12, 14, 13), PackedInt32Array(19, 18, 17)]
+sample_partition_type = 1
+cell_size = 0.2
+cell_height = 0.2
+agent_height = 0.2
+agent_radius = 0.2
+agent_max_climb = 0.2
+
+[node name="World" type="Node3D"]
+script = ExtResource("1_ge82i")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_hrsih")
+camera_attributes = SubResource("CameraAttributesPhysical_vlina")
+
+[node name="Player" parent="." instance=ExtResource("2_pghoo")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.94996, 1.98371, -262.289)
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.38466, 0.45031, -6.34161)
+navigation_mesh = SubResource("NavigationMesh_hmck8")
+use_edge_connections = false
+
+[node name="Generator" type="Node3D" parent="." node_paths=PackedStringArray("_noteManager")]
+script = ExtResource("5_nibkd")
+ChanceOfSpawningEnemy = 300
+MaxNotes = 15
+_noteManager = NodePath("NoteManager")
+
+[node name="NoteManager" parent="Generator" node_paths=PackedStringArray("_player") instance=ExtResource("4_ncjli")]
+_player = NodePath("../../Player")
+_neededPages = 8

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://3cqwtvxwhl0u"]
+
+[ext_resource type="Script" path="res://Scripts/Components/Vision.cs" id="1_hqnuq"]
+
+[node name="Vision" type="Node3D"]
+script = ExtResource("1_hqnuq")

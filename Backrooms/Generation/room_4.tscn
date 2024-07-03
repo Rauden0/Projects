@@ -1,0 +1,28 @@
+[gd_scene load_steps=6 format=3 uid="uid://u7u02bfr3hg0"]
+
+[ext_resource type="PackedScene" uid="uid://cs7d6yurt33f7" path="res://Assets/Level0/Walls/Objects/Level_Wall_Door_4m.tscn" id="1_vsti0"]
+[ext_resource type="Material" uid="uid://cxh3lyolnj4vg" path="res://Assets/Level0/Materials/Floor/level0_floor.tres" id="2_v0ivh"]
+[ext_resource type="PackedScene" uid="uid://c8ama78qftkyg" path="res://Assets/Level0/Walls/Objects/Levle0_Wall_4m.tscn" id="3_fa7i8"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_s3cn5"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_flth2"]
+
+[node name="Room1" type="Node3D"]
+
+[node name="Level_Wall_Door_4m" parent="." instance=ExtResource("1_vsti0")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.01, -1.5, -0.0344613, 0)
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(3, 0, 0, 0, 0.02, 0, 0, 0, 4, 0, 0.1, 0)
+material_override = ExtResource("2_v0ivh")
+mesh = SubResource("BoxMesh_s3cn5")
+skeleton = NodePath("StaticBody3D")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D"]
+shape = SubResource("BoxShape3D_flth2")
+
+[node name="Levle0_Wall_4m" parent="." instance=ExtResource("3_fa7i8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.01, 1.5, -0.0435314, 0)

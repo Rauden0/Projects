@@ -1,0 +1,39 @@
+[gd_scene load_steps=2 format=3 uid="uid://cflxr63m30gnf"]
+
+[ext_resource type="Script" path="res://Scripts/Menu.cs" id="1_k6pdu"]
+
+[node name="Menu" type="Control"]
+layout_mode = 3
+anchor_right = 1.686
+anchor_bottom = 1.681
+offset_right = -48.2721
+offset_bottom = -8.28809
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_k6pdu")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.606
+anchor_bottom = 0.601
+offset_right = 0.236084
+offset_bottom = 0.319092
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Play" type="Button" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "PLAY"
+
+[node name="Quit" type="Button" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Quit"
+
+[connection signal="pressed" from="MarginContainer/VBoxContainer/Play" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/Quit" to="." method="_on_quit_pressed"]

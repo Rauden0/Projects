@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://d1ru5clde1rgb"]
+
+[ext_resource type="Script" path="res://Scenes/NoteManager/NoteManager.cs" id="1_2e7ei"]
+
+[node name="NoteManager" type="Node3D"]
+script = ExtResource("1_2e7ei")

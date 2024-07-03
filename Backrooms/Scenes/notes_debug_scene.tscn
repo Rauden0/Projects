@@ -1,0 +1,67 @@
+[gd_scene load_steps=13 format=3 uid="uid://ddiosgeanxafu"]
+
+[ext_resource type="PackedScene" uid="uid://cn16un3vqtg7h" path="res://Scenes/player.tscn" id="1_f0q5y"]
+[ext_resource type="Script" path="res://Scenes/notes_debug_scene.cs" id="1_sj4gc"]
+[ext_resource type="PackedScene" uid="uid://d1ru5clde1rgb" path="res://Scenes/NoteManager/NoteManager.tscn" id="2_5tlh5"]
+[ext_resource type="PackedScene" uid="uid://b7qksnos4yuay" path="res://Scenes/Note.tscn" id="2_xhn7u"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_4so3w"]
+size = Vector3(50, 0.0721436, 50)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_d6l0e"]
+size = Vector2(50, 50)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_up7xo"]
+albedo_color = Color(0.356863, 0.356863, 0.356863, 1)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_vhhpp"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_34m74"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_nalai"]
+
+[sub_resource type="Sky" id="Sky_41cuy"]
+sky_material = SubResource("ProceduralSkyMaterial_nalai")
+
+[sub_resource type="Environment" id="Environment_318g7"]
+background_mode = 2
+sky = SubResource("Sky_41cuy")
+ambient_light_source = 3
+
+[node name="NotesDebugScene" type="Node3D" node_paths=PackedStringArray("_noteManager")]
+script = ExtResource("1_sj4gc")
+_noteManager = NodePath("NoteManager")
+
+[node name="NoteManager" parent="." instance=ExtResource("2_5tlh5")]
+
+[node name="Floor" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.00531006, 0)
+shape = SubResource("BoxShape3D_4so3w")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("PlaneMesh_d6l0e")
+skeleton = NodePath("../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_up7xo")
+
+[node name="Cylinder" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Cylinder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.664696, 1.00492, -4.7468)
+shape = SubResource("CylinderShape3D_vhhpp")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Cylinder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.753927, 1.02444, -4.73957)
+mesh = SubResource("CylinderMesh_34m74")
+skeleton = NodePath("../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_up7xo")
+
+[node name="Player" parent="." instance=ExtResource("1_f0q5y")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.211463, 1.78055, -0.0600007)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_318g7")
+
+[node name="Note" parent="." instance=ExtResource("2_xhn7u")]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, -1.64263, 0.0499028, -4.78292)

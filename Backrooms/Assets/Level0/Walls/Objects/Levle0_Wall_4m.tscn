@@ -1,0 +1,17 @@
+[gd_scene load_steps=4 format=3 uid="uid://c8ama78qftkyg"]
+
+[ext_resource type="Material" uid="uid://c0clv05rd1wny" path="res://Assets/Level0/Walls/Materials/Wall.tres" id="1_awjpq"]
+[ext_resource type="ArrayMesh" uid="uid://se3t7bdet3ww" path="res://Assets/Level0/Walls/Meshes/Level0_Wall_4m.obj" id="2_t54ll"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1gda7"]
+size = Vector3(0.102705, 4, 4)
+
+[node name="Levle0_Wall_4m" type="StaticBody3D"]
+
+[node name="Level0Wall4m" type="MeshInstance3D" parent="."]
+material_override = ExtResource("1_awjpq")
+mesh = ExtResource("2_t54ll")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05117, 0)
+shape = SubResource("BoxShape3D_1gda7")

@@ -1,0 +1,32 @@
+[gd_scene load_steps=5 format=3 uid="uid://cjt78ejt6nwas"]
+
+[ext_resource type="Material" uid="uid://cxh3lyolnj4vg" path="res://Assets/Level0/Materials/Floor/level0_floor.tres" id="3_aqwfs"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_pi1gf"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_l3icg"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_4efpt"]
+size = Vector3(1, 0.005, 1)
+
+[node name="Ceiling" type="Node3D"]
+
+[node name="Ceiling" type="MeshInstance3D" parent="."]
+transform = Transform3D(3, 0, 0, 0, 0.033, 0, 0, 0, 4, 0, 3.99, 0)
+material_override = ExtResource("3_aqwfs")
+mesh = SubResource("BoxMesh_pi1gf")
+skeleton = NodePath("StaticBody3D")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Ceiling"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ceiling/StaticBody3D"]
+shape = SubResource("BoxShape3D_l3icg")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.75998, 0)
+light_energy = 2.0
+light_bake_mode = 1
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.96722, 0)
+mesh = SubResource("BoxMesh_4efpt")

@@ -1,0 +1,24 @@
+[gd_scene load_steps=5 format=3 uid="uid://b00dmwi5plvwe"]
+
+[ext_resource type="PackedScene" uid="uid://c8ama78qftkyg" path="res://Assets/Level0/Walls/Objects/Levle0_Wall_4m.tscn" id="2_cxexp"]
+[ext_resource type="Material" uid="uid://cxh3lyolnj4vg" path="res://Assets/Level0/Materials/Floor/level0_floor.tres" id="3_aqwfs"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_s3cn5"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_flth2"]
+
+[node name="Room1" type="Node3D"]
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(3, 0, 0, 0, 0.02, 0, 0, 0, 4, 0, 0.1, 0)
+material_override = ExtResource("3_aqwfs")
+mesh = SubResource("BoxMesh_s3cn5")
+skeleton = NodePath("StaticBody3D")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D"]
+shape = SubResource("BoxShape3D_flth2")
+
+[node name="Levle0_Wall_4m" parent="." instance=ExtResource("2_cxexp")]
+transform = Transform3D(-4.37114e-08, 0, 0.76, 0, 1, 0, -1, 0, -3.32207e-08, 0, -0.0511539, 2)

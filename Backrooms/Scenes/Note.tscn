@@ -1,0 +1,41 @@
+[gd_scene load_steps=4 format=3 uid="uid://b7qksnos4yuay"]
+
+[ext_resource type="Script" path="res://Scenes/Objects/Note.cs" id="1_7547t"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bdc5x"]
+size = Vector3(0.21, 0.3, 0.01)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_4jige"]
+size = Vector2(0.21, 0.3)
+
+[node name="Note" type="Area3D" node_paths=PackedStringArray("Text", "Content")]
+process_mode = 3
+collision_layer = 16
+collision_mask = 16
+script = ExtResource("1_7547t")
+Duration = 0.2
+DistanceFromCamera = 0.2
+Text = NodePath("")
+Content = NodePath("CollisionShape3D/MeshInstance3D/Label3D")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." groups=["Interactable"]]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 0)
+shape = SubResource("BoxShape3D_bdc5x")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CollisionShape3D"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0)
+mesh = SubResource("PlaneMesh_4jige")
+skeleton = NodePath("../..")
+
+[node name="Label3D" type="Label3D" parent="CollisionShape3D/MeshInstance3D"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.000651901, -0.142957)
+pixel_size = 0.0004
+modulate = Color(1, 0, 0, 1)
+text = "This is a very long text containing.
+Many lines.
+TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST "
+outline_size = 1
+horizontal_alignment = 3
+vertical_alignment = 0
+autowrap_mode = 3
+width = 450.0

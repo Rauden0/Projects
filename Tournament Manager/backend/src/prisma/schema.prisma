@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                         String       @id @default(auto()) @map("_id") @db.ObjectId
+  sub                        String       @unique
+  nickname                   String?
+  email                      String?
+  tournamentsManaged         Tournament[] @relation("ManagedTournaments", fields: [tournamentsManagedIds], references: [id])
+  tournamentsManagedIds      String[]     @db.ObjectId
+  tournamentsFollowed        Tournament[] @relation("FollowedTournaments", fields: [tournamentsFollowedIds], references: [id])
+  tournamentsFollowedIds     String[]     @db.ObjectId
+  tournamentsParticipatedIn  Tournament[] @relation("ParticipatedTournaments", fields: [tournamentsParticipatedIds], references: [id])
+  tournamentsParticipatedIds String[]     @db.ObjectId
+  description                String?
+  lastLogin                  DateTime?
+  registerDate               DateTime?
+  MatchNodes                 Node[]       @relation("MatchNodes", fields: [nodeIds], references: [id])
+  nodeIds                    String[]     @db.ObjectId
+}
+
+model Tournament {
+  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  title                String
+  format               String
+  members              User[]    @relation("ParticipatedTournaments", fields: [membersIds], references: [id])
+  membersIds           String[]  @db.ObjectId
+  followers            User[]    @relation("FollowedTournaments", fields: [followersIds], references: [id])
+  followersIds         String[]  @db.ObjectId
+  adminUsers           User[]    @relation("ManagedTournaments", fields: [adminUsersIds], references: [id])
+  adminUsersIds        String[]  @db.ObjectId
+  rootNode             Node?     @relation("RootNode", fields: [nodeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  nodeId               String?   @unique @db.ObjectId
+  inviteId             String?
+  inviteIdCreationTime DateTime?
+  status               String?
+  description          String?
+  startDate            DateTime
+  endDate              DateTime
+  capacity             Int
+  tournamentNodes      Node[]    @relation("tournamentNodes")
+}
+
+model Node {
+  id                     String      @id @default(auto()) @map("_id") @db.ObjectId
+  tag                    String
+  depth                  Int
+  scoreA                 Int
+  scoreB                 Int
+  finished               Boolean
+  successorId            String?     @db.ObjectId
+  users                  User[]      @relation("MatchNodes", fields: [userIds], references: [id])
+  userIds                String[]    @db.ObjectId
+  successorNodesUser1    Node[]      @relation("User1")
+  predecessorNodeUser1   Node?       @relation("User1", fields: [predecessorNodeUser1Id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  predecessorNodeUser1Id String?     @db.ObjectId
+  successorNodesUser2    Node[]      @relation("User2")
+  predecessorNodeUser2   Node?       @relation("User2", fields: [predecessorNodeUser2Id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  predecessorNodeUser2Id String?     @db.ObjectId
+  TournamentForRoot      Tournament? @relation("RootNode")
+  TournamentForAll       Tournament? @relation("tournamentNodes", fields: [tournamentId], references: [id])
+  tournamentId           String?     @db.ObjectId
+}

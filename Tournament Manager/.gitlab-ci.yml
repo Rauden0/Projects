@@ -1,0 +1,18 @@
+image: node:20
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}-npm-cache
+  paths:
+    - node_modules/
+
+stages:
+  - build
+
+build:
+  tags:
+    - shared-fi
+  stage: build
+  script:
+    - cd frontend
+    - npm ci
+    - npm run build
