@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Bubu Tracker</string>
     <string name="title_activity_maps">MapsActivity</string>
-    <string name="google_map_api_key">AIzaSyBKgHn2Ujf3_UtGSWuDkILhgkrGTwEsSqA</string>
+    <string name="google_map_api_key">secret</string>
     <string name="first_name">First Name</string>
     <string name="last_name">Last Name</string>
     <string name="password">Password</string>
