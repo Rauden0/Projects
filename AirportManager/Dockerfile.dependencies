@@ -1,0 +1,26 @@
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
+
+WORKDIR /build
+
+# === 1. Install root POM ===
+COPY pom.xml .
+RUN mvn --batch-mode --no-transfer-progress --fail-never --non-recursive install
+
+# === 2. Copy module POMs ===
+COPY auth-gateway/pom.xml auth-gateway/pom.xml
+COPY auth-gateway/gateway/pom.xml auth-gateway/gateway/pom.xml
+COPY artemis-server/pom.xml artemis-server/pom.xml
+COPY flight-service/pom.xml flight-service/pom.xml
+COPY steward-service/pom.xml steward-service/pom.xml
+COPY airport-service/pom.xml airport-service/pom.xml
+
+# === 3. Compile local modules 'security' and 'jms-events' ===
+COPY security security
+COPY jms-events jms-events
+
+RUN mvn --batch-mode --no-transfer-progress --fail-never --projects security,jms-events install -DskipTests
+
+# === 4. Preload dependencies for other modules using go-offline ===
+RUN mvn --batch-mode --no-transfer-progress --fail-never -pl \
+  auth-gateway,auth-gateway/gateway,flight-service,steward-service,airport-service \
+  dependency:go-offline -DexcludeReactor=false

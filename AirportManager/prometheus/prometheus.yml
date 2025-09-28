@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'airport-airplane-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['airport-airplane-service:8081']
+
+  - job_name: 'flight-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['flight-service:8080']
+
+  - job_name: 'steward-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['steward-service:8079']
+
+  - job_name: 'artemis'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['artemis:9876']

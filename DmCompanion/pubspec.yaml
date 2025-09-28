@@ -1,0 +1,39 @@
+name: tes
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+environment:
+  sdk: ^3.5.3
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  material_symbols_icons: ^4.2789.0
+  firebase_core: ^3.8.0
+  cloud_firestore: ^5.5.0
+  get_it: ^8.0.2
+  json_annotation: ^4.9.0
+  rxdart: ^0.28.0
+  popover: ^0.3.1
+  firebase_auth: ^5.3.3
+  google_sign_in: ^5.2.1
+  uuid: ^4.2.0
+  file_picker:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.13
+  json_serializable: ^6.9.0
+  flutter_gen_runner: ^5.8.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/player_avatars/
+flutter_gen:
+  output: lib/generated/
+  line_length: 80
+  integrations:
+    flutter:
+      assets:
+        enabled: true

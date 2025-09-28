@@ -1,0 +1,100 @@
+services:
+  dependencies:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dependencies
+    image: pa165-airport-manager/dependencies:2.0
+    command: /bin/bash -c exit
+
+  airport-airplane-service:
+    build:
+      context: .
+      dockerfile: ./airport-service/Dockerfile
+    depends_on:
+      - dependencies
+    ports:
+      - "${PORT_AIRPORT_SERVICE}:8081"
+    networks:
+      - mynet
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - seedData=${SEED_DATA:-true}
+
+  flight-service:
+    build:
+      context: .
+      dockerfile: ./flight-service/Dockerfile
+    depends_on:
+      - dependencies
+    ports:
+      - "${PORT_FLIGHT_SERVICE}:8080"
+    networks:
+      - mynet
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - seedData=${SEED_DATA:-true}
+
+  steward-service:
+    build:
+      context: .
+      dockerfile: ./steward-service/Dockerfile
+    depends_on:
+      - dependencies
+    ports:
+      - "${PORT_STEWARD_SERVICE}:8079"
+    networks:
+      - mynet
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - seedData=${SEED_DATA:-true}
+
+  artemis:
+    build:
+      context: .
+      dockerfile: ./artemis-server/Dockerfile
+    networks:
+      - mynet
+
+  auth-gateway:
+    build:
+      context: .
+      dockerfile: ./auth-gateway/Dockerfile
+    depends_on:
+      - dependencies
+    ports:
+      - "${PORT_GATEWAY}:8090"
+    networks:
+      - auth
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    ports:
+      - "${PORT_GRAFANA}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/datasources/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./grafana/provisioning/dashboards/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    networks:
+      - mynet
+
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    volumes:
+      - prometheus-data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "${PORT_PROMETHEUS}:9090"
+    networks:
+      - mynet
+
+networks:
+  mynet:
+  auth:
+
+volumes:
+  grafana-data:
+  prometheus-data:

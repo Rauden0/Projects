@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "xvesely4-dm-companion",
+          "appId": "1:671027145760:android:c168f2bbbbc0517b756045",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "xvesely4-dm-companion",
+          "configurations": {
+            "android": "1:671027145760:android:c168f2bbbbc0517b756045",
+            "ios": "1:671027145760:ios:50a43a9ea535fceb756045",
+            "macos": "1:671027145760:ios:50a43a9ea535fceb756045",
+            "web": "1:671027145760:web:44149aeaa377aa77756045",
+            "windows": "1:671027145760:web:07c98696fe1606d7756045"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+*.md
+.git
+.gitignore
+.gitattributes
+.gitlab-ci.yml
+compose.yaml
+Dockerfile.dependencies
+**/Dockerfile
+docs
+**/docs
+**/target

@@ -1,0 +1,5 @@
+{"properties": [{
+  "name": "airport_manager.messaging.queues",
+  "type": "java.lang.String[]",
+  "description": "Unicast JMS destinations maintained by Airport Manager's message broker."
+}]}

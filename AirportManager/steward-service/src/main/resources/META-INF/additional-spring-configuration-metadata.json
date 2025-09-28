@@ -1,0 +1,17 @@
+{"properties": [
+  {
+    "name": "airport_manager.events.change.steward.listeners",
+    "type": "java.lang.String[]",
+    "description": "Where to send steward change events. List of JMS destinations."
+  },
+  {
+    "name": "airport_manager.consistency.events.required",
+    "type": "java.lang.Boolean",
+    "description": "Enforce send of events affecting consistency."
+  },
+  {
+    "name": "airport_manager.events.other.stewardAssignment.listeners",
+    "type": "java.lang.String[]",
+    "description": "Where to send steward assignment events. List of JMS destinations."
+  }
+]}

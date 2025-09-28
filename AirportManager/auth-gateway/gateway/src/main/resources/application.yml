@@ -1,0 +1,48 @@
+# TCP port for HTTP requests, must be different from the client
+server:
+  port: 8090
+  error:
+    include-message: always
+
+spring:
+  mvc:
+    log-request-details: true
+  # OAuth 2 stuff
+  security:
+    oauth2:
+      resourceserver:
+        opaque-token:
+          introspection-uri: https://id.muni.cz/oidc/introspect
+          # Martin Kuba's testing resource server
+          client-id: d57b3a8f-156e-46de-9f27-39c4daee05e1
+          client-secret: fa228ebc-4d54-4cda-901e-4d6287f8b1652a9c9c44-73c9-4502-973f-bcdb4a8ec96a
+
+springdoc:
+  api-docs:
+    path: /openapi
+  swagger-ui:
+    path: /swagger-ui.html
+    oauth:
+      # Martin Kuba's testing client
+      client-id: 7e02a0a9-446a-412d-ad2b-90add47b0fdd
+      client-secret: 48a2b2e3-4b2b-471e-b7b7-b81a85b6eeef22f347f2-3fc9-4e16-8698-3e2492701a89
+      scopes:
+       - test_1
+       - test_2
+       - test_3
+
+logging:
+  pattern:
+    console: '%clr(%d{HH:mm:ss.SSS}){blue} %clr(%-5p) %clr(%logger){blue} %clr(:){red} %clr(%m){faint}%n'
+  level:
+    root: info
+    cz.muni: debug
+    org.springframework.web.client.RestTemplate: debug
+    org.springframework.web: info
+    jdk.event.security: info
+    org.springframework.security.oauth2.server.resource: trace
+    org.springframework.security.web.DefaultSecurityFilterChain: warn
+    org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter: debug
+    org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext: warn
+    org.springframework.web.servlet.DispatcherServlet: warn
+    org.apache.catalina.core: warn

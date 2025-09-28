@@ -1,0 +1,9 @@
+
+ █████╗ ██████╗ ██╗
+██╔══██╗██╔══██╗██║
+███████║██████╔╝██║
+██╔══██║██╔═══╝ ██║
+██║  ██║██║     ██║
+╚═╝  ╚═╝╚═╝     ╚═╝
+
+OAuth 2 Resource Server implemented with Spring MVC and Spring Security
