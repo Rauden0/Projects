@@ -1,69 +1,53 @@
-//
-// Created by werti on 14.12.2023.
-//
+#pragma once
 
-#ifndef QT_CMAKE_HTTPSERVER_HTTPSERVER_H
-#define QT_CMAKE_HTTPSERVER_HTTPSERVER_H
-
-#include "rssfetcher.h"
-#include <QCoreApplication>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QNetworkRequest>
-#include <QUrl>
-#include <QXmlStreamReader>
+#include "Database.h"
+#include "FeedScheduler.h"
+#include <QObject>
+#include <QTcpServer>
 #include <QtHttpServer/QtHttpServer>
 
-// Forward declaration of Database and RSSReader classes to avoid circular
-// dependencies
-class Database;
-class RSSReader;
-
-class HttpServer : public QObject {
+class HttpServer : public QObject
+{
     Q_OBJECT
-
-private:
-    QHttpServer* server; // Pointer to the HTTP server instance
-    Database* database; // Pointer to the database instance
-    QString address; // Server address
-    qintptr port; // Server port
-    RSSReader* reader; // Pointer to the RSSReader instance
-
 public:
-    // Constructor with parameters for server address, port, database path, and
-    // optional parent
-    HttpServer(QString address, qintptr port, QString databasePath,
-        QObject* parent = nullptr);
+    HttpServer(const QString& host, quint16 port,
+               Database* db, FeedScheduler* scheduler,
+               const QString& apiKey = {},
+               bool allowLocalhost = false,
+               QObject* parent = nullptr);
 
-    // Destructor
-    ~HttpServer();
-
-    // Handler function for the "AddFeed" HTTP request
-    QHttpServerResponse AddFeed(const QHttpServerRequest& req);
-
-    // Handler function for the "GetFeed" HTTP request
-    QHttpServerResponse GetFeed(const QHttpServerRequest& req);
-
-    // Handler function for the "FeedState" HTTP request
-    QHttpServerResponse FeedState(const QHttpServerRequest& req);
-
-    // Handler function for the "ListFeed" HTTP request
-    QHttpServerResponse ListFeed(const QHttpServerRequest& req);
+    bool    listen();
+    quint16 boundPort() const { return m_boundPort; }
 
 signals:
-    // Signal to request stopping the server
-    void requestStop();
-
-public slots:
-    // Slot function to start listening for incoming requests
-    void startListening();
-
-    // Slot function to stop the server
-    void stop();
+    void stopRequested();
 
 private:
-    // Function to process incoming HTTP requests
-    QByteArray processRequest(const QByteArray& requestData);
-};
+    void setupRoutes();
 
-#endif // QT_CMAKE_HTTPSERVER_HTTPSERVER_H
+    bool isAuthorized(const QHttpServerRequest& req) const;
+
+    QHttpServerResponse handleHealth    (const QHttpServerRequest& req);
+    QHttpServerResponse handleReady     (const QHttpServerRequest& req);
+    QHttpServerResponse handleAddFeed   (const QHttpServerRequest& req);
+    QHttpServerResponse handleListFeeds (const QHttpServerRequest& req);
+    QHttpServerResponse handleGetData   (const QHttpServerRequest& req);
+    QHttpServerResponse handleGetState  (const QHttpServerRequest& req);
+    QHttpServerResponse handleRemoveFeed(const QHttpServerRequest& req);
+    QHttpServerResponse handleQuit      (const QHttpServerRequest& req);
+
+    static QHttpServerResponse jsonOk(const QJsonValue& payload);
+    static QHttpServerResponse jsonError(
+        const QString& msg,
+        QHttpServerResponse::StatusCode code = QHttpServerResponse::StatusCode::BadRequest);
+
+    QHttpServer    m_server;
+    QTcpServer*    m_tcpServer = nullptr;
+    QString        m_host;
+    quint16        m_port;
+    quint16        m_boundPort = 0;
+    QString        m_apiKey;
+    bool           m_allowLocalhost = false;
+    Database*      m_db;
+    FeedScheduler* m_scheduler;
+};

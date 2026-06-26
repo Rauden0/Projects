@@ -1,37 +1,60 @@
-**Table of Contents**
-- [Get](#Get)
-- [State](#State)
-- [List](#List)
-- [Add](#Add)
+# RssProxy
 
-# Get
+RSS caching proxy. The **Server** periodically fetches RSS feeds and serves them via a JSON HTTP API. The **Client** is a tiny CLI to drive the server.
 
-To Get an Feed you need to have it in the format:
-    Get Url
+---
 
-    For example:
-        Get https://www.nasa.gov/rss/dyn/lg_image_of_the_day.rss
+## Server
 
-# State
+### Configuration (`config.ini`)
 
-To get an State of Feed you need to have it in the format:
-    State Url
+```ini
+[server]
+host = 127.0.0.1
+port = 8080
 
-    For example:
-        State https://www.nasa.gov/rss/dyn/lg_image_of_the_day.rss
+[database]
+path = rss_proxy.db
+```
 
-# List
+Pass a custom config with `--config /path/to/config.ini`.
 
-To List Feeds you need to have it in the format:
-    List Optional[Label]
+### API
 
-    For example:
-        List chelo
+| Method | Path            | Query / Body                                   | Description            |
+|--------|-----------------|------------------------------------------------|------------------------|
+| POST   | `/feeds`        | JSON `{url, interval, labels[]}`               | Add a feed             |
+| GET    | `/feeds`        | `?label=<label>` _(optional)_                  | List feeds             |
+| DELETE | `/feeds`        | `?url=<url>`                                   | Remove a feed          |
+| GET    | `/feeds/data`   | `?url=<url>`                                   | Raw XML content        |
+| GET    | `/feeds/state`  | `?url=<url>`                                   | Feed status JSON       |
+| POST   | `/quit`         | –                                              | Shutdown server        |
 
-# Add
-To Add an new Feed you need to have it in the format:
-    Add Label1... url interval
+---
 
-    For example:
-        Add chelo chelo1 chelo2 chelo3 chelo4 https://www.nasa.gov/rss/dyn/lg_image_of_the_day.rss 10
+## Client
+
+```
+Usage: Client [--host <host>] [--port <port>]
+
+Commands:
+  add <url> <interval_secs> [label ...]   Add a feed
+  list [label]                            List feeds
+  get <url>                               Print raw XML
+  state <url>                             Show feed status
+  remove <url>                            Remove a feed
+  quit                                    Shutdown server
+  help                                    Show help
+```
+
+### Examples
+
+```
+> add https://www.nasa.gov/rss/dyn/lg_image_of_the_day.rss 3600 space nasa
+> list space
+> state https://www.nasa.gov/rss/dyn/lg_image_of_the_day.rss
+> get https://www.nasa.gov/rss/dyn/lg_image_of_the_day.rss
+> remove https://www.nasa.gov/rss/dyn/lg_image_of_the_day.rss
+> quit
+```
 

@@ -1,206 +1,291 @@
-#include "httpserver.h"
-#include "QByteArray"
+#include "HttpServer.h"
 
-QString hello() { return "Hello world"; }
-QHttpServerResponse HttpServer::AddFeed(const QHttpServerRequest& req)
+#include "UrlValidator.h"
+
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QLoggingCategory>
+#include <QUrlQuery>
+
+Q_LOGGING_CATEGORY(lcHttp, "rssproxy.http")
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+QHttpServerResponse HttpServer::jsonOk(const QJsonValue& payload)
 {
-    QStringList data = QString(req.body()).split(' ');
-    if (data.length() < 3) {
-        QJsonObject obj = {
-            { "error", "Invalid number of arguments" },
-            { "errorCode", (int)QHttpServerResponse::StatusCode::BadRequest }
-        };
-        QJsonDocument doc;
-        doc.setObject(obj);
-        return QHttpServerResponse(obj,
-            QHttpServerResponse::StatusCode::BadRequest);
-    }
-    bool ok;
-    data.at(data.length() - 1).toInt(&ok, 10);
-    if (!ok) {
-        QJsonObject obj = {
-            { "error", "Invalid arguments" },
-            { "errorCode", (int)QHttpServerResponse::StatusCode::BadRequest }
-        };
-        QJsonDocument doc;
-        doc.setObject(obj);
-        return QHttpServerResponse(obj,
-            QHttpServerResponse::StatusCode::BadRequest);
-    }
-    for (int i = 0; i < database->database->size(); i++) {
-        if (database->database->at(i)->url == data.at(data.length() - 2)) {
-            QJsonObject obj = {
-                { "error", "Duplicate located" },
-                { "errorCode", (int)QHttpServerResponse::StatusCode::BadRequest }
-            };
-            QJsonDocument doc;
-            doc.setObject(obj);
-            return QHttpServerResponse(obj,
-                QHttpServerResponse::StatusCode::BadRequest);
-        }
-    }
-    feed* new_feed = new feed;
-    for (int i = 0; i < data.length() - 2; i++) {
-        new_feed->label.push_back(data[i]);
-    }
-    new_feed->url = data[data.length() - 2];
-    new_feed->interval = data[data.length() - 1].toInt();
-    database->database->push_back(new_feed);
-    QJsonObject obj = { { "Success", "Sucessfully added" },
-        { "Code", (int)QHttpServerResponse::StatusCode::Ok } };
-    QJsonDocument doc;
-    doc.setObject(obj);
-    return QHttpServerResponse(obj, QHttpServerResponse::StatusCode::Ok);
+    if (payload.isArray())
+        return QHttpServerResponse(payload.toArray(), QHttpServerResponse::StatusCode::Ok);
+    return QHttpServerResponse(payload.toObject(), QHttpServerResponse::StatusCode::Ok);
 }
 
-QHttpServerResponse HttpServer::GetFeed(const QHttpServerRequest& req)
+QHttpServerResponse HttpServer::jsonError(const QString& msg,
+                                          QHttpServerResponse::StatusCode code)
 {
+    return QHttpServerResponse(QJsonObject{{QStringLiteral("error"), msg}}, code);
+}
 
-    QStringList data = QString(req.body()).split(' ');
-    if (data.size() != 1) {
-        QJsonObject reply = {
-            { "error", "Invalid number of arguments" },
-            { "errorCode", (int)QHttpServerResponse::StatusCode::BadRequest }
-        };
-        return QHttpServerResponse(reply,
-            QHttpServerResponse::StatusCode::BadRequest);
-    }
-    for (int i = 0; i < database->database->size(); ++i) {
-        const auto& currentFeed = (*database->database)[i];
-        if (currentFeed->url == data.at(0)) {
-            QByteArray base64Data = currentFeed->data->toBase64();
-            QString base64String(base64Data);
-            QJsonObject jsonObject {
-                { "Feed Data", base64String },
-            };
-            QJsonObject reply = { jsonObject };
-            return QHttpServerResponse(reply, QHttpServerResponse::StatusCode::Ok);
-        }
-    }
-    QJsonObject reply = {
-        { "error", "No feed with this url" },
-        { "errorCode", (int)QHttpServerResponse::StatusCode::BadRequest }
+static QJsonObject feedToJson(const FeedInfo& f)
+{
+    QJsonArray labels;
+    for (const auto& l : f.labels)
+        labels.append(l);
+    return QJsonObject{
+        {QStringLiteral("url"),        f.url},
+        {QStringLiteral("labels"),     labels},
+        {QStringLiteral("interval"),   f.interval},
+        {QStringLiteral("lastUpdate"), f.lastUpdate},
+        {QStringLiteral("lastError"),  f.lastError},
     };
-    return QHttpServerResponse(reply,
-        QHttpServerResponse::StatusCode::BadRequest);
 }
 
-QHttpServerResponse HttpServer::FeedState(const QHttpServerRequest& req)
+bool HttpServer::isAuthorized(const QHttpServerRequest& req) const
 {
-    QStringList data = QString(req.body()).split(' ');
-    if (data.size() != 1) {
-        QJsonObject reply = {
-            { "error", "Invalid number of arguments" },
-            { "errorCode", (int)QHttpServerResponse::StatusCode::BadRequest }
-        };
-        return QHttpServerResponse(reply,
-            QHttpServerResponse::StatusCode::BadRequest);
+    if (m_apiKey.isEmpty())
+        return true;
+
+    QString token;
+    const QByteArray authHdr = req.value(QByteArray("Authorization"));
+    if (authHdr.startsWith("Bearer "))
+        token = QString::fromUtf8(authHdr.mid(7)).trimmed();
+
+    if (token.isEmpty()) {
+        const QByteArray apiKeyHdr = req.value(QByteArray("X-Api-Key"));
+        if (!apiKeyHdr.isEmpty())
+            token = QString::fromUtf8(apiKeyHdr).trimmed();
     }
-    for (int i = 0; i < database->database->size(); ++i) {
-        const auto& currentFeed = (*database->database)[i];
-        if (currentFeed->url == data.at(0)) {
-            QJsonObject reply = { { "Last update", currentFeed->lastupdate },
-                { "Error at last update", currentFeed->error },
-                { "Current size", currentFeed->data->size() } };
-            return QHttpServerResponse(reply, QHttpServerResponse::StatusCode::Ok);
-        }
-    }
-    QJsonObject reply = {
-        { "error", "No feed with this url" },
-        { "errorCode", (int)QHttpServerResponse::StatusCode::BadRequest }
-    };
-    return QHttpServerResponse(reply,
-        QHttpServerResponse::StatusCode::BadRequest);
+
+    return token == m_apiKey;
 }
 
-QHttpServerResponse HttpServer::ListFeed(const QHttpServerRequest& req)
+// ── route handlers ────────────────────────────────────────────────────────────
+
+QHttpServerResponse HttpServer::handleHealth(const QHttpServerRequest&)
 {
-    QStringList data = QString(req.body()).split(' ');
-    if (data.size() > 1) {
-        QJsonObject reply = {
-            { "error", "Invalid number of arguments" },
-            { "errorCode", (int)QHttpServerResponse::StatusCode::BadRequest }
-        };
-        return QHttpServerResponse(reply,
-            QHttpServerResponse::StatusCode::BadRequest);
-    }
-    QString replyData = "";
-    QJsonArray jsonArray;
-
-    for (const auto& feed : *database->database) {
-        if (data.size() == 0)
-        {
-            QJsonObject jsonFeed;
-            jsonFeed["url"] = feed->url;
-            jsonArray.append(jsonFeed);
-            continue;
-        }
-        if (std::find(feed->label.begin(), feed->label.end(), data[0]) != feed->label.end()) {
-            QJsonObject jsonFeed;
-            jsonFeed["url"] = feed->url;
-            jsonArray.append(jsonFeed);
-        }
-    }
-    if (jsonArray.empty()) {
-
-        QJsonObject reply = {
-            { "error", "No feed with this url" },
-            { "errorCode", (int)QHttpServerResponse::StatusCode::BadRequest }
-        };
-        return QHttpServerResponse(reply,
-            QHttpServerResponse::StatusCode::BadRequest);
-    }
-    return QHttpServerResponse(jsonArray, QHttpServerResponse::StatusCode::Ok);
+    return jsonOk(QJsonObject{{QStringLiteral("status"), QStringLiteral("ok")}});
 }
 
-HttpServer::HttpServer(QString adress, qintptr port, QString databasePath,
-    QObject* parent)
-    : QObject(parent)
-    , address(adress)
-    , port(port)
+QHttpServerResponse HttpServer::handleReady(const QHttpServerRequest&)
 {
-    server = new QHttpServer(this);
-    server->route("/AddFeed", QHttpServerRequest::Method::Post,
-        [this](const QHttpServerRequest& req) { return AddFeed(req); });
-    server->route("/GetFeed", QHttpServerRequest::Method::Post,
-        [&](const QHttpServerRequest& req) { return GetFeed(req); });
-    server->route("/List", QHttpServerRequest::Method::Post,
-        [&](const QHttpServerRequest& req) { return ListFeed(req); });
-    server->route("/State", QHttpServerRequest::Method::Post,
-        [&](const QHttpServerRequest& req) { return FeedState(req); });
-    server->route("/Quit", [this]() {
-        qDebug() << "Ending the server";
-        QHttpServerResponse response(QHttpServerResponse::StatusCode::Ok);
-        QMetaObject::invokeMethod(this, "requestStop", Qt::QueuedConnection);
-        return response;
+    if (!m_db->isOpen()) {
+        return jsonError(QStringLiteral("Database not ready"),
+                         QHttpServerResponse::StatusCode::ServiceUnavailable);
+    }
+    return jsonOk(QJsonObject{
+        {QStringLiteral("status"), QStringLiteral("ready")},
+        {QStringLiteral("activeFetches"), m_scheduler->activeFetchCount()},
+        {QStringLiteral("queuedFetches"), m_scheduler->pendingFetchCount()},
     });
-    // Here is a hack so reader can access the database could not think of better
-    // way sorry (not sure if this is very optimal)
-    reader = new RSSReader(database);
-    database = new Database(reader, databasePath);
-    reader->SetDatabase(database);
 }
 
-HttpServer::~HttpServer()
+QHttpServerResponse HttpServer::handleAddFeed(const QHttpServerRequest& req)
 {
-    delete server;
-    delete database;
-    delete reader;
+    if (!isAuthorized(req))
+        return jsonError(QStringLiteral("Unauthorized"),
+                         QHttpServerResponse::StatusCode::Unauthorized);
+
+    const auto doc = QJsonDocument::fromJson(req.body());
+    if (!doc.isObject())
+        return jsonError(QStringLiteral("Expected JSON object body"));
+
+    const QJsonObject body = doc.object();
+    const QString url = body.value(QStringLiteral("url")).toString().trimmed();
+    if (url.isEmpty())
+        return jsonError(QStringLiteral("'url' is required"));
+
+    const auto validation = UrlValidator::validate(url, m_allowLocalhost);
+    if (!validation.ok)
+        return jsonError(validation.error);
+
+    const qint64 interval = body.value(QStringLiteral("interval")).toInteger(3600);
+    if (interval <= 0)
+        return jsonError(QStringLiteral("'interval' must be > 0"));
+
+    QStringList labels;
+    for (const auto& v : body.value(QStringLiteral("labels")).toArray())
+        labels.append(v.toString());
+
+    if (m_db->feedByUrl(url))
+        return jsonError(QStringLiteral("Feed already exists"),
+                         QHttpServerResponse::StatusCode::Conflict);
+
+    if (!m_db->addFeed(url, labels, interval))
+        return jsonError(QStringLiteral("Database error"),
+                         QHttpServerResponse::StatusCode::InternalServerError);
+
+    m_scheduler->scheduleFetch(url);
+
+    return QHttpServerResponse(
+        QJsonObject{{QStringLiteral("message"), QStringLiteral("Feed added")}},
+        QHttpServerResponse::StatusCode::Created);
 }
 
-void HttpServer::startListening()
+QHttpServerResponse HttpServer::handleListFeeds(const QHttpServerRequest& req)
 {
-    if (server->listen(QHostAddress(address), port)) {
-        qDebug() << "Server is listening on port " << port;
-    } else {
-        qDebug() << "Failed to start server!";
+    if (!isAuthorized(req))
+        return jsonError(QStringLiteral("Unauthorized"),
+                         QHttpServerResponse::StatusCode::Unauthorized);
+
+    const QString label = QUrlQuery(req.url()).queryItemValue(QStringLiteral("label"));
+    const QList<FeedInfo> feeds =
+        label.isEmpty() ? m_db->allFeeds() : m_db->feedsByLabel(label);
+
+    QJsonArray arr;
+    for (const auto& f : feeds)
+        arr.append(feedToJson(f));
+    return jsonOk(arr);
+}
+
+QHttpServerResponse HttpServer::handleGetData(const QHttpServerRequest& req)
+{
+    if (!isAuthorized(req))
+        return jsonError(QStringLiteral("Unauthorized"),
+                         QHttpServerResponse::StatusCode::Unauthorized);
+
+    const QString url = QUrlQuery(req.url()).queryItemValue(QStringLiteral("url"));
+    if (url.isEmpty())
+        return jsonError(QStringLiteral("'url' query param is required"));
+
+    if (!m_db->feedByUrl(url))
+        return jsonError(QStringLiteral("Feed not found"),
+                         QHttpServerResponse::StatusCode::NotFound);
+
+    const auto data = m_db->feedData(url);
+    if (!data)
+        return jsonError(QStringLiteral("No data yet – feed may still be fetching"),
+                         QHttpServerResponse::StatusCode::NotFound);
+
+    return QHttpServerResponse(
+        QByteArrayLiteral("application/xml"),
+        *data,
+        QHttpServerResponse::StatusCode::Ok);
+}
+
+QHttpServerResponse HttpServer::handleGetState(const QHttpServerRequest& req)
+{
+    if (!isAuthorized(req))
+        return jsonError(QStringLiteral("Unauthorized"),
+                         QHttpServerResponse::StatusCode::Unauthorized);
+
+    const QString url = QUrlQuery(req.url()).queryItemValue(QStringLiteral("url"));
+    if (url.isEmpty())
+        return jsonError(QStringLiteral("'url' query param is required"));
+
+    const auto feed = m_db->feedByUrl(url);
+    if (!feed)
+        return jsonError(QStringLiteral("Feed not found"),
+                         QHttpServerResponse::StatusCode::NotFound);
+
+    const auto data = m_db->feedData(url);
+    return jsonOk(QJsonObject{
+        {QStringLiteral("url"),        feed->url},
+        {QStringLiteral("interval"),   feed->interval},
+        {QStringLiteral("lastUpdate"), feed->lastUpdate},
+        {QStringLiteral("lastError"),  feed->lastError},
+        {QStringLiteral("hasData"),    data.has_value()},
+        {QStringLiteral("dataSize"),   data ? static_cast<qint64>(data->size()) : 0LL},
+    });
+}
+
+QHttpServerResponse HttpServer::handleRemoveFeed(const QHttpServerRequest& req)
+{
+    if (!isAuthorized(req))
+        return jsonError(QStringLiteral("Unauthorized"),
+                         QHttpServerResponse::StatusCode::Unauthorized);
+
+    const QString url = QUrlQuery(req.url()).queryItemValue(QStringLiteral("url"));
+    if (url.isEmpty())
+        return jsonError(QStringLiteral("'url' query param is required"));
+
+    if (!m_db->feedByUrl(url))
+        return jsonError(QStringLiteral("Feed not found"),
+                         QHttpServerResponse::StatusCode::NotFound);
+
+    if (!m_db->removeFeed(url))
+        return jsonError(QStringLiteral("Database error"),
+                         QHttpServerResponse::StatusCode::InternalServerError);
+
+    return jsonOk(QJsonObject{{QStringLiteral("message"), QStringLiteral("Feed removed")}});
+}
+
+QHttpServerResponse HttpServer::handleQuit(const QHttpServerRequest& req)
+{
+    if (!isAuthorized(req))
+        return jsonError(QStringLiteral("Unauthorized"),
+                         QHttpServerResponse::StatusCode::Unauthorized);
+
+    qCInfo(lcHttp) << "Shutdown requested via /quit";
+    QMetaObject::invokeMethod(this, [this]() { emit stopRequested(); }, Qt::QueuedConnection);
+    return jsonOk(QJsonObject{{QStringLiteral("message"), QStringLiteral("Shutting down")}});
+}
+
+// ── setup ─────────────────────────────────────────────────────────────────────
+
+void HttpServer::setupRoutes()
+{
+    using Method = QHttpServerRequest::Method;
+
+    m_server.route(QStringLiteral("/health"), Method::Get,
+        [this](const QHttpServerRequest& req) { return handleHealth(req); });
+
+    m_server.route(QStringLiteral("/ready"), Method::Get,
+        [this](const QHttpServerRequest& req) { return handleReady(req); });
+
+    m_server.route(QStringLiteral("/feeds"), Method::Post,
+        [this](const QHttpServerRequest& req) { return handleAddFeed(req); });
+
+    m_server.route(QStringLiteral("/feeds"), Method::Get,
+        [this](const QHttpServerRequest& req) { return handleListFeeds(req); });
+
+    m_server.route(QStringLiteral("/feeds"), Method::Delete,
+        [this](const QHttpServerRequest& req) { return handleRemoveFeed(req); });
+
+    m_server.route(QStringLiteral("/feeds/data"), Method::Get,
+        [this](const QHttpServerRequest& req) { return handleGetData(req); });
+
+    m_server.route(QStringLiteral("/feeds/state"), Method::Get,
+        [this](const QHttpServerRequest& req) { return handleGetState(req); });
+
+    m_server.route(QStringLiteral("/quit"), Method::Post,
+        [this](const QHttpServerRequest& req) { return handleQuit(req); });
+
+    m_server.addAfterRequestHandler(this,
+        [](const QHttpServerRequest& request, QHttpServerResponse& response) {
+            qCInfo(lcHttp).nospace()
+                << request.method() << ' ' << request.url().path()
+                << " -> " << static_cast<int>(response.statusCode());
+        });
+}
+
+HttpServer::HttpServer(const QString& host, quint16 port,
+                       Database* db, FeedScheduler* scheduler,
+                       const QString& apiKey, bool allowLocalhost,
+                       QObject* parent)
+    : QObject(parent)
+    , m_host(host)
+    , m_port(port)
+    , m_apiKey(apiKey)
+    , m_allowLocalhost(allowLocalhost)
+    , m_db(db)
+    , m_scheduler(scheduler)
+{
+    setupRoutes();
+}
+
+bool HttpServer::listen()
+{
+    m_tcpServer = new QTcpServer(this);
+    if (!m_tcpServer->listen(QHostAddress(m_host), m_port)) {
+        qCCritical(lcHttp) << "Failed to listen on" << m_host << ":" << m_port
+                           << "-" << m_tcpServer->errorString();
+        return false;
     }
-    connect(this, &HttpServer::requestStop, this, &HttpServer::stop);
-}
-
-void HttpServer::stop() { thread()->quit(); }
-
-QByteArray HttpServer::processRequest(const QByteArray& requestData)
-{
-    return requestData;
+    if (!m_server.bind(m_tcpServer)) {
+        qCCritical(lcHttp) << "Failed to bind QHttpServer to TCP server";
+        return false;
+    }
+    m_boundPort = m_tcpServer->serverPort();
+    qCInfo(lcHttp) << "Listening on" << m_host << ":" << m_boundPort
+                   << (m_apiKey.isEmpty() ? "(auth disabled)" : "(auth enabled)");
+    return true;
 }

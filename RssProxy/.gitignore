@@ -1,0 +1,27 @@
+# Build outputs
+**/build/
+**/build2/
+**/cmake-build-*/
+
+# Qt kit (install via aqt; do not commit)
+Tests/6.8.0/
+
+# Runtime / local data
+*.db
+*.db-journal
+
+# IDE
+.idea/
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# Test artifacts
+Tests/*.xml
+Tests/test_output.txt
+Tests/aqtinstall.log
+
+# OS
+Thumbs.db
+Desktop.ini

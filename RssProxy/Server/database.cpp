@@ -1,184 +1,200 @@
-#include "database.h"
-#include "rssfetcher.h"
-bool DoesFileExist(const QString& filePath)
+#include "Database.h"
+#include <QDateTime>
+#include <QSqlError>
+#include <QSqlQuery>
+#include <atomic>
+
+static QString uniqueConnName()
 {
-    QFile file(filePath);
-    return file.exists();
-}
-bool DoesDirExists(const QString& path)
-{
-    QDir directory(path);
-    if (!directory.exists()) {
-        directory.mkpath(".");
-    }
-    return directory.exists();
+    static std::atomic<int> counter{0};
+    return QStringLiteral("rss_proxy_%1").arg(counter.fetch_add(1));
 }
 
-void Database::FeedUpdater()
-{
-    while (stopFeedUpdater) {
-        QDateTime currentDateTime = QDateTime::currentDateTime();
-        qint64 epochTime = currentDateTime.toSecsSinceEpoch();
-        for (int i = 0; i < database->size(); i++) {
-            if (((epochTime - database->at(i)->lastupdate) > database->at(i)->interval) && !database->at(i)->being_updated) {
-                database->at(i)->being_updated = true;
-                QString url = database->at(i)->url;
-                QMetaObject::invokeMethod(reader, "fetchRssFeed", Qt::QueuedConnection,
-                    Q_ARG(QString, url));
-            }
-        }
-    }
-}
-Database::Database(RSSReader* reader, QString databasePath)
-{
-    this->reader = reader;
-    this->database = new std::vector<feed*>;
-    this->path = databasePath;
-    if (DoesDirExists(this->path)) {
-        LoadData();
-    }
-    QtConcurrent::run([this]() { FeedUpdater(); });
-}
-
-void Database::LoadData()
-{
-    QDir folder(path);
-
-    if (!folder.exists()) {
-        qDebug() << "Database folder does not exist:" << path;
-        return;
-    }
-
-    QStringList feedFiles = folder.entryList(QStringList() << "feed_*.txt", QDir::Files);
-    for (const QString& feedFile : feedFiles) {
-        QString filePath = folder.filePath(feedFile);
-        QFile file(filePath);
-
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&file);
-
-            feed* loadedFeed = new feed;
-            in >> loadedFeed->url >> loadedFeed->lastupdate >> loadedFeed->interval;
-            QString labels;
-            in >> labels;
-            QStringList labelList = labels.split(" ", Qt::SkipEmptyParts);
-            loadedFeed->label = std::vector<QString>();
-            for (int i = 0; i < labelList.count(); i++) {
-                loadedFeed->label.push_back(labelList[i]);
-            }
-            database->push_back(loadedFeed);
-
-            file.close();
-        } else {
-            qDebug() << "Error opening file for reading:" << file.fileName();
-        }
-    }
-    QStringList dataFiles = folder.entryList(QStringList() << "data_*.txt", QDir::Files);
-    for (int i = 0; i < dataFiles.size(); ++i) {
-        QString filePath = folder.filePath(dataFiles[i]);
-        QFile file(filePath);
-
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&file);
-            QByteArray data = in.readAll().toUtf8();
-            if (i < database->size()) {
-                (*database)[i]->data = new QByteArray(data);
-            } else {
-                qDebug() << "Error: Mismatch between feed and data files";
-            }
-            file.close();
-        } else {
-            qDebug() << "Error opening data file for reading:" << file.fileName();
-        }
-    }
-}
-
-void Database::SaveDatabase()
-{
-    QDir folder(this->path);
-
-    if (!folder.exists()) {
-        if (!folder.mkpath(".")) {
-            qDebug() << "Error creating folder:" << this->path;
-            throw std::runtime_error("Cannot make database directory");
-        }
-    }
-
-    for (int i = 0; i < database->size(); i++) {
-        const feed& currentFeed = *database->at(i);
-        QString FeedName = QString("%1/feed_%2.txt").arg(this->path).arg(i);
-        QFile FeedFile(FeedName);
-        if (FeedFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream out(&FeedFile);
-            QString joinedLabels;
-            for (const QString& label : currentFeed.label) {
-                joinedLabels += label + " ";
-            }
-            out << currentFeed.url << " " << currentFeed.lastupdate << " "
-                << currentFeed.interval << " " << joinedLabels.trimmed();
-
-            FeedFile.close();
-        } else {
-            qDebug() << "Error opening file for writing:" << FeedFile.fileName();
-        }
-        QString DataName = QString("%1/data_%2.txt").arg(this->path).arg(i);
-        QFile DataFile(DataName);
-        if (DataFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream out(&DataFile);
-            out << currentFeed.data->data();
-            DataFile.close();
-        } else {
-            qDebug() << "Error opening file for writing:" << DataFile.fileName();
-        }
-    }
-}
+Database::Database(const QString& dbPath, QObject* parent)
+    : QObject(parent), m_dbPath(dbPath), m_connName(uniqueConnName())
+{}
 
 Database::~Database()
 {
-    int i = 0;
-
-    stopFeedUpdater = false;
-    for (; i < 5; i++) {
-        try {
-            SaveDatabase();
-            break;
-        } catch (std::exception& e) {
-            std::cout << "Failed to save the database" << std::endl;
-            std::cout << "Retrying" << std::endl;
-        }
-    }
-    if (i == 5) {
-        std::cout << "Completly failed to save the database proceed with caution"
-                  << std::endl;
-    }
-    for (int i = 0; i < database->size(); i++) {
-        delete database->at(i);
-    }
-    delete this->database;
+    m_db.close();
+    m_db = QSqlDatabase();
+    QSqlDatabase::removeDatabase(m_connName);
 }
 
-void Database::SaveRssData(QByteArray rssData, QString url, bool error)
+bool Database::open()
 {
-    for (int i = 0; i < database->size(); ++i) {
-        const auto& currentFeed = (*database)[i];
-        if (currentFeed->url == url) {
-            if (error && currentFeed->first) {
-                database->erase(database->begin() + i);
-                return;
-            }
-            if (error) {
-                database->at(i)->error = true;
-                return;
-            }
-            database->at(i)->error = false;
-            database->at(i)->being_updated = false;
-            QDateTime currentDateTime = QDateTime::currentDateTime();
-            qint64 epochTime = currentDateTime.toSecsSinceEpoch();
-            currentFeed->data = new QByteArray(rssData);
-            currentFeed->lastupdate = epochTime;
-            currentFeed->first = false;
-            break;
+    m_db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), m_connName);
+    m_db.setDatabaseName(m_dbPath);
+    if (!m_db.open()) {
+        qCritical("Database::open: %s", qPrintable(m_db.lastError().text()));
+        return false;
+    }
+    return createSchema();
+}
+
+bool Database::createSchema()
+{
+    QSqlQuery q(m_db);
+
+    const auto exec = [&](const char* sql) -> bool {
+        if (!q.exec(sql)) {
+            qCritical("Database::createSchema: %s", qPrintable(q.lastError().text()));
+            return false;
+        }
+        return true;
+    };
+
+    return exec("PRAGMA foreign_keys = ON") &&
+           exec(R"sql(
+               CREATE TABLE IF NOT EXISTS feeds (
+                   id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                   url         TEXT    NOT NULL UNIQUE,
+                   labels      TEXT    DEFAULT '',
+                   interval    INTEGER NOT NULL DEFAULT 3600,
+                   last_update INTEGER NOT NULL DEFAULT 0,
+                   last_error  INTEGER NOT NULL DEFAULT 0
+               )
+           )sql") &&
+           exec(R"sql(
+               CREATE TABLE IF NOT EXISTS feed_data (
+                   feed_id    INTEGER PRIMARY KEY
+                              REFERENCES feeds(id) ON DELETE CASCADE,
+                   content    BLOB    NOT NULL DEFAULT '',
+                   updated_at INTEGER NOT NULL DEFAULT 0
+               )
+           )sql");
+}
+
+static FeedInfo rowToFeed(const QSqlQuery& q)
+{
+    const QVariant labelsValue = q.value(QStringLiteral("labels"));
+    const QStringList labels = labelsValue.isNull()
+        ? QStringList{}
+        : labelsValue.toString().split(u',', Qt::SkipEmptyParts);
+
+    return FeedInfo{
+        q.value(QStringLiteral("id")).toLongLong(),
+        q.value(QStringLiteral("url")).toString(),
+        labels,
+        q.value(QStringLiteral("interval")).toLongLong(),
+        q.value(QStringLiteral("last_update")).toLongLong(),
+        q.value(QStringLiteral("last_error")).toBool(),
+    };
+}
+
+bool Database::addFeed(const QString& url, const QStringList& labels, qint64 intervalSecs)
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral(
+        "INSERT INTO feeds (url, labels, interval) VALUES (:url, :labels, :interval)"));
+    q.bindValue(QStringLiteral(":url"),      url);
+    // Qt/SQLite maps empty QString to NULL; bind UTF-8 bytes to store "" reliably.
+    q.bindValue(QStringLiteral(":labels"), labels.join(u',').toUtf8());
+    q.bindValue(QStringLiteral(":interval"), intervalSecs);
+    if (!q.exec()) {
+        qWarning("Database::addFeed: %s", qPrintable(q.lastError().text()));
+        return false;
+    }
+    return true;
+}
+
+bool Database::removeFeed(const QString& url)
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("DELETE FROM feeds WHERE url = :url"));
+    q.bindValue(QStringLiteral(":url"), url);
+    if (!q.exec()) {
+        qWarning("Database::removeFeed: %s", qPrintable(q.lastError().text()));
+        return false;
+    }
+    return true;
+}
+
+std::optional<FeedInfo> Database::feedByUrl(const QString& url) const
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("SELECT * FROM feeds WHERE url = :url LIMIT 1"));
+    q.bindValue(QStringLiteral(":url"), url);
+    if (q.exec() && q.next())
+        return rowToFeed(q);
+    return std::nullopt;
+}
+
+QList<FeedInfo> Database::allFeeds() const
+{
+    QSqlQuery q(m_db);
+    if (!q.exec(QStringLiteral("SELECT * FROM feeds ORDER BY id"))) {
+        qWarning("Database::allFeeds: %s", qPrintable(q.lastError().text()));
+        return {};
+    }
+    QList<FeedInfo> list;
+    while (q.next())
+        list.append(rowToFeed(q));
+    return list;
+}
+
+QList<FeedInfo> Database::feedsByLabel(const QString& label) const
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral(
+        "SELECT * FROM feeds WHERE ',' || labels || ',' LIKE :pat ORDER BY id"));
+    q.bindValue(QStringLiteral(":pat"), QLatin1String("%,") + label + QLatin1String(",%"));
+    QList<FeedInfo> list;
+    if (!q.exec()) {
+        qWarning("Database::feedsByLabel: %s", qPrintable(q.lastError().text()));
+        return list;
+    }
+    while (q.next())
+            list.append(rowToFeed(q));
+    return list;
+}
+
+bool Database::updateFeedData(const QString& url, const QByteArray& data, bool error)
+{
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    QSqlQuery q(m_db);
+
+    q.prepare(QStringLiteral(
+        "UPDATE feeds SET last_update = :now, last_error = :err WHERE url = :url"));
+    q.bindValue(QStringLiteral(":now"), now);
+    q.bindValue(QStringLiteral(":err"), error ? 1 : 0);
+    q.bindValue(QStringLiteral(":url"), url);
+    if (!q.exec()) {
+        qWarning("Database::updateFeedData (feeds): %s", qPrintable(q.lastError().text()));
+        return false;
+    }
+
+    if (!error) {
+        q.prepare(QStringLiteral(R"sql(
+            INSERT INTO feed_data (feed_id, content, updated_at)
+            SELECT id, :content, :now FROM feeds WHERE url = :url
+            ON CONFLICT(feed_id) DO UPDATE
+                SET content    = excluded.content,
+                    updated_at = excluded.updated_at
+        )sql"));
+        q.bindValue(QStringLiteral(":content"), data);
+        q.bindValue(QStringLiteral(":now"),     now);
+        q.bindValue(QStringLiteral(":url"),     url);
+        if (!q.exec()) {
+            qWarning("Database::updateFeedData (feed_data): %s", qPrintable(q.lastError().text()));
+            return false;
         }
     }
-    SaveDatabase();
+    return true;
+}
+
+std::optional<QByteArray> Database::feedData(const QString& url) const
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral(R"sql(
+        SELECT fd.content
+        FROM   feed_data fd
+        JOIN   feeds f ON f.id = fd.feed_id
+        WHERE  f.url = :url
+        LIMIT  1
+    )sql"));
+    q.bindValue(QStringLiteral(":url"), url);
+    if (q.exec() && q.next())
+        return q.value(0).toByteArray();
+    return std::nullopt;
 }
