@@ -1,0 +1,25 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+itertools = "0.14.0"
+actix-web = "4.12.1"
+actix = "0.13.5"
+actix-web-actors = "4.3"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_with = "3.0"
+
+uuid = { version = "1.0", features = ["v4", "serde"] }
+log = "0.4.28"
+env_logger = "0.11.8"
+rand = "0.8"
+dotenv = "0.15"
+
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres"] }
+tokio = { version = "1", features = ["full"] }
+
+shared = { path = "../shared" }

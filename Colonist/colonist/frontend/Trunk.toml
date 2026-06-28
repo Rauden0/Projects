@@ -1,0 +1,6 @@
+[build]
+target = "index.html"
+
+[serve]
+port = 3000
+open = true
