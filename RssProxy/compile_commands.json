@@ -1,0 +1,47 @@
+[
+  {
+    "directory": "C:/Users/werti/Desktop/github/Projects/RssProxy",
+    "file": "Server/Config.cpp",
+    "command": "clang++ -std=c++17 -IServer -ITests/6.8.0/msvc2022_64/include -ITests/6.8.0/msvc2022_64/include/QtCore -DQT_CORE_LIB -c Server/Config.cpp"
+  },
+  {
+    "directory": "C:/Users/werti/Desktop/github/Projects/RssProxy",
+    "file": "Server/Database.cpp",
+    "command": "clang++ -std=c++17 -IServer -ITests/6.8.0/msvc2022_64/include -ITests/6.8.0/msvc2022_64/include/QtCore -ITests/6.8.0/msvc2022_64/include/QtSql -DQT_CORE_LIB -DQT_SQL_LIB -c Server/Database.cpp"
+  },
+  {
+    "directory": "C:/Users/werti/Desktop/github/Projects/RssProxy",
+    "file": "Server/FeedFetcher.cpp",
+    "command": "clang++ -std=c++17 -IServer -ITests/6.8.0/msvc2022_64/include -ITests/6.8.0/msvc2022_64/include/QtCore -ITests/6.8.0/msvc2022_64/include/QtNetwork -DQT_CORE_LIB -DQT_NETWORK_LIB -c Server/FeedFetcher.cpp"
+  },
+  {
+    "directory": "C:/Users/werti/Desktop/github/Projects/RssProxy",
+    "file": "Server/FeedScheduler.cpp",
+    "command": "clang++ -std=c++17 -IServer -ITests/6.8.0/msvc2022_64/include -ITests/6.8.0/msvc2022_64/include/QtCore -ITests/6.8.0/msvc2022_64/include/QtSql -DQT_CORE_LIB -DQT_SQL_LIB -c Server/FeedScheduler.cpp"
+  },
+  {
+    "directory": "C:/Users/werti/Desktop/github/Projects/RssProxy",
+    "file": "Server/HttpServer.cpp",
+    "command": "clang++ -std=c++17 -IServer -ITests/6.8.0/msvc2022_64/include -ITests/6.8.0/msvc2022_64/include/QtCore -ITests/6.8.0/msvc2022_64/include/QtNetwork -ITests/6.8.0/msvc2022_64/include/QtSql -ITests/6.8.0/msvc2022_64/include/QtHttpServer -DQT_CORE_LIB -DQT_NETWORK_LIB -DQT_SQL_LIB -DQT_HTTPSERVER_LIB -c Server/HttpServer.cpp"
+  },
+  {
+    "directory": "C:/Users/werti/Desktop/github/Projects/RssProxy",
+    "file": "Server/UrlValidator.cpp",
+    "command": "clang++ -std=c++17 -IServer -ITests/6.8.0/msvc2022_64/include -ITests/6.8.0/msvc2022_64/include/QtCore -ITests/6.8.0/msvc2022_64/include/QtNetwork -DQT_CORE_LIB -DQT_NETWORK_LIB -c Server/UrlValidator.cpp"
+  },
+  {
+    "directory": "C:/Users/werti/Desktop/github/Projects/RssProxy",
+    "file": "Server/main.cpp",
+    "command": "clang++ -std=c++17 -IServer -ITests/6.8.0/msvc2022_64/include -ITests/6.8.0/msvc2022_64/include/QtCore -ITests/6.8.0/msvc2022_64/include/QtNetwork -ITests/6.8.0/msvc2022_64/include/QtSql -ITests/6.8.0/msvc2022_64/include/QtHttpServer -DQT_CORE_LIB -DQT_NETWORK_LIB -DQT_SQL_LIB -DQT_HTTPSERVER_LIB -c Server/main.cpp"
+  },
+  {
+    "directory": "C:/Users/werti/Desktop/github/Projects/RssProxy",
+    "file": "Client/Client.cpp",
+    "command": "clang++ -std=c++17 -IClient -IServer -ITests/6.8.0/msvc2022_64/include -ITests/6.8.0/msvc2022_64/include/QtCore -ITests/6.8.0/msvc2022_64/include/QtNetwork -DQT_CORE_LIB -DQT_NETWORK_LIB -c Client/Client.cpp"
+  },
+  {
+    "directory": "C:/Users/werti/Desktop/github/Projects/RssProxy",
+    "file": "Tests/tst_Database.cpp",
+    "command": "clang++ -std=c++17 -IServer -ITests/6.8.0/msvc2022_64/include -ITests/6.8.0/msvc2022_64/include/QtCore -ITests/6.8.0/msvc2022_64/include/QtSql -ITests/6.8.0/msvc2022_64/include/QtTest -DQT_CORE_LIB -DQT_SQL_LIB -DQT_TESTLIB_LIB -c Tests/tst_Database.cpp"
+  }
+]

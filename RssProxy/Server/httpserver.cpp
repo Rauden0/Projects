@@ -10,8 +10,6 @@
 
 Q_LOGGING_CATEGORY(lcHttp, "rssproxy.http")
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
 QHttpServerResponse HttpServer::jsonOk(const QJsonValue& payload)
 {
     if (payload.isArray())
@@ -58,7 +56,6 @@ bool HttpServer::isAuthorized(const QHttpServerRequest& req) const
     return token == m_apiKey;
 }
 
-// ── route handlers ────────────────────────────────────────────────────────────
 
 QHttpServerResponse HttpServer::handleHealth(const QHttpServerRequest&)
 {
@@ -219,7 +216,6 @@ QHttpServerResponse HttpServer::handleQuit(const QHttpServerRequest& req)
     return jsonOk(QJsonObject{{QStringLiteral("message"), QStringLiteral("Shutting down")}});
 }
 
-// ── setup ─────────────────────────────────────────────────────────────────────
 
 void HttpServer::setupRoutes()
 {

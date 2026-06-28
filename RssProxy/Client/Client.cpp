@@ -21,7 +21,6 @@ Client::Client(const QString& host, quint16 port, const QString& apiKey, QObject
     QTimer::singleShot(0, this, &Client::readCommand);
 }
 
-// ── HTTP helpers ──────────────────────────────────────────────────────────────
 
 static QByteArray syncExec(QNetworkReply* reply)
 {
@@ -71,7 +70,6 @@ QByteArray Client::del(const QString& path, const QUrlQuery& query)
     return syncExec(m_nam.deleteResource(req));
 }
 
-// ── Output ────────────────────────────────────────────────────────────────────
 
 void Client::prettyPrint(const QByteArray& body)
 {
@@ -96,7 +94,6 @@ void Client::printHelp()
 )" << Qt::endl;
 }
 
-// ── Command handlers ──────────────────────────────────────────────────────────
 
 void Client::cmdAdd(const QStringList& args)
 {
@@ -159,7 +156,6 @@ void Client::cmdQuit()
     QCoreApplication::quit();
 }
 
-// ── REPL loop ─────────────────────────────────────────────────────────────────
 
 void Client::readCommand()
 {

@@ -1,6 +1,7 @@
 # Build outputs
 **/build/
 **/build2/
+**/build-clangd/
 **/cmake-build-*/
 
 # Qt kit (install via aqt; do not commit)

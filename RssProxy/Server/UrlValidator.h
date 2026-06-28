@@ -2,7 +2,6 @@
 
 #include <QString>
 
-// Validates feed URLs before persistence or outbound fetch (SSRF mitigation).
 class UrlValidator
 {
 public:

@@ -11,8 +11,8 @@ struct FeedInfo {
     qint64      id;
     QString     url;
     QStringList labels;
-    qint64      interval;    // seconds
-    qint64      lastUpdate;  // epoch seconds, 0 = never
+    qint64      interval; 
+    qint64      lastUpdate;
     bool        lastError;
 };
 
@@ -26,14 +26,12 @@ public:
     bool open();
     bool isOpen() const { return m_db.isOpen(); }
 
-    // Feed metadata
     bool                    addFeed(const QString& url, const QStringList& labels, qint64 intervalSecs);
     bool                    removeFeed(const QString& url);
     std::optional<FeedInfo> feedByUrl(const QString& url) const;
     QList<FeedInfo>         allFeeds() const;
     QList<FeedInfo>         feedsByLabel(const QString& label) const;
 
-    // Feed content
     bool                      updateFeedData(const QString& url, const QByteArray& data, bool error);
     std::optional<QByteArray> feedData(const QString& url) const;
 

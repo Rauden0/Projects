@@ -88,7 +88,6 @@ bool Database::addFeed(const QString& url, const QStringList& labels, qint64 int
     q.prepare(QStringLiteral(
         "INSERT INTO feeds (url, labels, interval) VALUES (:url, :labels, :interval)"));
     q.bindValue(QStringLiteral(":url"),      url);
-    // Qt/SQLite maps empty QString to NULL; bind UTF-8 bytes to store "" reliably.
     q.bindValue(QStringLiteral(":labels"), labels.join(u',').toUtf8());
     q.bindValue(QStringLiteral(":interval"), intervalSecs);
     if (!q.exec()) {

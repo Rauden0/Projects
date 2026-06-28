@@ -14,22 +14,16 @@ bool isBlockedAddress(const QHostAddress& addr, bool allowLocalhost)
              && ((ip >> 8) & 0xFF) >= cStart && ((ip >> 8) & 0xFF) <= cEnd;
     };
 
-  // 10.0.0.0/8
     if (inRange(10, 0, 0, 255))
       return true;
-  // 172.16.0.0/12
     if (inRange(172, 16, 0, 31))
       return true;
-  // 192.168.0.0/16
     if (inRange(192, 168, 0, 255))
       return true;
-  // 127.0.0.0/8 loopback
     if (!allowLocalhost && inRange(127, 0, 0, 255))
       return true;
-  // 169.254.0.0/16 link-local
     if (inRange(169, 254, 0, 255))
       return true;
-  // 0.0.0.0/8
     if (((ip >> 24) & 0xFF) == 0)
       return true;
   }
@@ -42,7 +36,7 @@ bool isBlockedAddress(const QHostAddress& addr, bool allowLocalhost)
   return false;
 }
 
-} // namespace
+}
 
 UrlValidator::Result UrlValidator::validate(const QString& url, bool allowLocalhost)
 {

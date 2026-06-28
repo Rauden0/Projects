@@ -1,0 +1,29 @@
+{
+  "configurations": [
+    {
+      "name": "Win32",
+      "includePath": [
+        "${workspaceFolder}/Server",
+        "${workspaceFolder}/Client",
+        "${workspaceFolder}/Tests/6.8.0/msvc2022_64/include",
+        "${workspaceFolder}/Tests/6.8.0/msvc2022_64/include/QtCore",
+        "${workspaceFolder}/Tests/6.8.0/msvc2022_64/include/QtSql",
+        "${workspaceFolder}/Tests/6.8.0/msvc2022_64/include/QtNetwork",
+        "${workspaceFolder}/Tests/6.8.0/msvc2022_64/include/QtHttpServer"
+      ],
+      "defines": [
+        "QT_CORE_LIB",
+        "QT_SQL_LIB",
+        "QT_NETWORK_LIB",
+        "QT_HTTPSERVER_LIB",
+        "UNICODE",
+        "_UNICODE",
+        "WIN32",
+        "_WIN64"
+      ],
+      "cppStandard": "c++17",
+      "intelliSenseMode": "windows-msvc-x64"
+    }
+  ],
+  "version": 4
+}

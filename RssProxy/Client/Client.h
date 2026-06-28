@@ -6,14 +6,6 @@
 #include <QTextStream>
 #include <QUrlQuery>
 
-// Simple command-line RSS proxy client.
-// Commands (typed to stdin):
-//   add <url> <interval_secs> [label1 label2 ...]
-//   list [label]
-//   get <url>
-//   state <url>
-//   remove <url>
-//   quit
 class Client : public QObject
 {
     Q_OBJECT

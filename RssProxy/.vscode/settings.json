@@ -1,0 +1,7 @@
+{
+  "cmake.configureSettings": {
+    "CMAKE_PREFIX_PATH": "${workspaceFolder}/Tests/6.8.0/msvc2022_64",
+    "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+  },
+  "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json"
+}

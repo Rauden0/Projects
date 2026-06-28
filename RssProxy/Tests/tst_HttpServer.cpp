@@ -11,7 +11,6 @@
 #include <QNetworkRequest>
 #include <QtTest>
 
-// ── HTTP helpers ──────────────────────────────────────────────────────────────
 
 struct Response {
     int        status;
@@ -63,7 +62,6 @@ private:
     QString               m_base;
 };
 
-// ── Test class ────────────────────────────────────────────────────────────────
 
 class tst_HttpServer : public QObject
 {
@@ -110,12 +108,10 @@ private slots:
 
     void cleanup()
     {
-        // Remove all feeds between tests so each test starts clean
         for (const auto& f : m_db->allFeeds())
             m_db->removeFeed(f.url);
     }
 
-    // ── POST /feeds ──────────────────────────────────────────────────────────
 
     void addFeed_valid_returns201()
     {
@@ -156,7 +152,6 @@ private slots:
         QCOMPARE(r.status, 400);
     }
 
-    // ── GET /feeds ────────────────────────────────────────────────────────────
 
     void listFeeds_empty_returnsEmptyArray()
     {
@@ -212,7 +207,6 @@ private slots:
         QVERIFY(r.json().array().isEmpty());
     }
 
-    // ── GET /feeds/state ──────────────────────────────────────────────────────
 
     void getState_notFound_returns404()
     {
@@ -241,7 +235,6 @@ private slots:
         QCOMPARE(obj.value(QStringLiteral("hasData")).toBool(), false);
     }
 
-    // ── GET /feeds/data ───────────────────────────────────────────────────────
 
     void getData_noDataYet_returns404()
     {
@@ -270,15 +263,12 @@ private slots:
         QCOMPARE(r.status, 404);
     }
 
-    // ── DELETE /feeds ─────────────────────────────────────────────────────────
-
     void removeFeed_valid_returns200()
     {
         m_http->post(QStringLiteral("/feeds"), addBody(kUrl, 60));
         auto r = m_http->del(QStringLiteral("/feeds"),
                               QStringLiteral("url=") + QLatin1String(kUrl));
         QCOMPARE(r.status, 200);
-        // Feed is gone
         auto list = m_http->get(QStringLiteral("/feeds"));
         QVERIFY(list.json().array().isEmpty());
     }

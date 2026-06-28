@@ -16,7 +16,6 @@ public:
     void start();
     void stop();
 
-    // Trigger an immediate fetch (e.g. right after a feed is added)
     void scheduleFetch(const QString& url);
 
     int activeFetchCount() const { return m_inProgress.size(); }
