@@ -1,0 +1,36 @@
+@model List<BookHub.Mvc.Models.ApplicationUser>
+
+@{
+    ViewData["Title"] = "Users";
+}
+
+<h1 class="mb-3">Users</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<table class="table table-striped">
+    <thead>
+    <tr>
+        <th>Email</th>
+        <th>Display name</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var u in Model)
+    {
+        <tr>
+            <td>@u.Email</td>
+            <td>@u.DisplayName</td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" href="/admin/users/@u.Id/reset-password">
+                    Reset password
+                </a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

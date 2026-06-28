@@ -1,0 +1,39 @@
+@using BusinessLayer.Dto.Book
+@model BookDto
+
+@{
+    ViewData["Title"] = "Book details";
+}
+
+<h1>Book details</h1>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">@Model.Name</h5>
+        <h6 class="card-subtitle mb-2 text-muted">Id: @Model.Id</h6>
+        <p class="card-text">@Model.Description</p>
+        <p class="card-text">
+            <strong>Price:</strong> @Model.Price.ToString("0.00")
+        </p>
+        <p class="card-text">
+            <strong>PublisherId:</strong> @Model.PublisherId
+        </p>
+        <p class="card-text">
+            <strong>AuthorsIds:</strong>
+            @if (Model.AuthorsIds != null && Model.AuthorsIds.Any())
+            {
+                @string.Join(", ", Model.AuthorsIds)
+            }
+        </p>
+        <p class="card-text">
+            <strong>GenresIds:</strong>
+            @if (Model.GenresIds != null && Model.GenresIds.Any())
+            {
+                @string.Join(", ", Model.GenresIds)
+            }
+        </p>
+    </div>
+</div>
+
+<a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning mt-3">Edit</a>
+<a asp-action="Index" class="btn btn-secondary mt-3">Back to list</a>

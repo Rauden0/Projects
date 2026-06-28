@@ -1,0 +1,159 @@
+@model BookHub.Mvc.Models.User.UserOrderDetailViewModel
+
+@{
+    ViewData["Title"] = "Order Details #" + Model.Id;
+    // Výpočet původní ceny (Subtotal) před slevou
+    // Pokud nemáš RawTotalPrice přímo ve ViewModelu, můžeme ji dopočítat z položek
+    var subtotal = Model.OrderItems.Sum(item => item.Quantity * (Model.Books.FirstOrDefault(b => b.Id == item.BookId)?.Price ?? 0));
+    var discount = subtotal - Model.TotalPrice;
+}
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">Order <span class="text-primary">#@Model.Id</span></h2>
+        <a asp-action="Index" class="btn btn-outline-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Back to My Orders
+        </a>
+    </div>
+
+    @if (ViewData["Error"] != null)
+    {
+        <div class="alert alert-danger shadow-sm">@ViewData["Error"]</div>
+    }
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-circle me-2"></i>Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1 text-muted small uppercase fw-bold">Contact Name</p>
+                    <p class="fs-5 mb-3">@Model.FirstName @Model.LastName</p>
+                    
+                    <p class="mb-1 text-muted small uppercase fw-bold">Email Address</p>
+                    <p class="mb-3">@Model.Email</p>
+                    
+                    <p class="mb-1 text-muted small uppercase fw-bold">Phone Number</p>
+                    <p class="mb-0">@Model.PhoneNumber</p>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-geo-alt-fill me-2"></i>Delivery Address</h5>
+                </div>
+                <div class="card-body">
+                    <address class="mb-0 lh-lg">
+                        <strong>@Model.FirstName @Model.LastName</strong><br />
+                        @Model.Street<br />
+                        @Model.PostalCode @Model.City<br />
+                        <span class="text-muted">@Model.Country</span>
+                    </address>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-light py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-credit-card-2-back me-2"></i>Payment & Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Current Status:</span>
+                        <span class="badge @(Model.OrderState == "New" ? "bg-info" : "bg-success") px-3">@Model.OrderState</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Payment Method:</span>
+                        <span class="fw-bold">@Model.PaymentMethod</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Payment Received:</span>
+                        @if (Model.Paid) { 
+                            <span class="badge bg-success-subtle text-success border border-success px-2">
+                                <i class="bi bi-check-circle-fill me-1"></i> YES
+                            </span> 
+                        }
+                        else { 
+                            <span class="badge bg-danger-subtle text-danger border border-danger px-2">
+                                <i class="bi bi-x-circle-fill me-1"></i> NO
+                            </span> 
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2"></i>Ordered Items</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Book Title</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end pe-4">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.OrderItems)
+                                {
+                                    var book = Model.Books.FirstOrDefault(b => b.Id == item.BookId);
+                                    <tr>
+                                        <td class="ps-4">
+                                            <div class="fw-bold text-primary">@(book?.Name ?? "Unknown Book")</div>
+                                            <small class="text-muted">SKU: @item.BookId</small>
+                                        </td>
+                                        <td class="text-center fw-bold">@item.Quantity</td>
+                                        <td class="text-end text-muted">@((book?.Price ?? 0).ToString("N2")) Kč</td>
+                                        <td class="text-end fw-bold pe-4">@((item.Quantity * (book?.Price ?? 0)).ToString("N2")) Kč</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-white p-4 border-top">
+                    <div class="row justify-content-end">
+                        <div class="col-md-6 col-lg-5">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Items Subtotal:</span>
+                                <span class="@(discount > 0.01 ? "text-decoration-line-through text-danger" : "fw-bold")">
+                                    @subtotal.ToString("N2") Kč
+                                </span>
+                            </div>
+
+                            @if (discount > 0.01)
+                            {
+                                <div class="d-flex justify-content-between text-success fw-bold mb-2">
+                                    <span><i class="bi bi-tag-fill me-1"></i> Coupon Discount:</span>
+                                    <span>- @discount.ToString("N2") Kč</span>
+                                </div>
+                            }
+
+                            <hr class="my-3" />
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fs-5 fw-bold">Total Amount:</span>
+                                <span class="fs-3 fw-bold text-primary">@Model.TotalPrice.ToString("N2") Kč</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-secondary mt-4 border-0 shadow-sm d-flex align-items-center">
+                <i class="bi bi-info-circle-fill fs-4 me-3 text-primary"></i> 
+                <div>
+                    <strong>Need help with your order?</strong><br />
+                    <small>If you have any questions regarding your delivery or payment, please contact our support at support@bookhub.com.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

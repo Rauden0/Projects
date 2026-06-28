@@ -1,0 +1,36 @@
+@using BusinessLayer.Dto.Author
+@model AuthorDto
+
+@{
+    ViewData["Title"] = "Delete author";
+    var canDelete = ViewData["CanDelete"] as bool? ?? false;
+}
+
+<h1>Delete author</h1>
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+@if (!canDelete)
+{
+    <div class="alert alert-warning">
+        This author cannot be deleted because it is used by at least one book.
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">@Model.Name</h5>
+        <p class="card-text"><strong>Id:</strong> @Model.Id</p>
+    </div>
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" asp-for="Id" />
+
+    @if (canDelete)
+    {
+        <button type="submit" class="btn btn-danger">Delete</button>
+    }
+
+    <a asp-action="Index" class="btn btn-secondary">Back</a>
+</form>

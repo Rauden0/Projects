@@ -1,0 +1,18 @@
+@using BusinessLayer.Dto.Publisher
+@model PublisherDto
+
+@{
+    ViewData["Title"] = "Publisher details";
+}
+
+<h1>Publisher details</h1>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">@Model.Name</h5>
+        <h6 class="card-subtitle mb-2 text-muted">Id: @Model.Id</h6>
+    </div>
+</div>
+
+<a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning mt-3">Edit</a>
+<a asp-action="Index" class="btn btn-secondary mt-3">Back to list</a>

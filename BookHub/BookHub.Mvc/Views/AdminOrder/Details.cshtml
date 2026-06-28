@@ -1,0 +1,40 @@
+@model BookHub.Mvc.Models.Admin.AdminOrderFormViewModel
+
+@{
+    ViewData["Title"] = "Order details";
+}
+
+<h1>Order details</h1>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Order @Model.Id</h5>
+        <p class="card-text">
+            <strong>Total price:</strong> @Model.TotalPrice.ToString("0.00")
+        </p>
+        <p class="card-text">Payment method: @Model.PaymentMethod</p>
+        <p class="card-text">Order state: @Model.OrderState</p>
+        <p class="card-text">Paid: @Model.Paid</p>
+        <p class="card-text"><strong>Order items:</strong></p>
+        <table class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th>Book Id</th>
+                <th>Quantity</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in @Model.OrderItems)
+            {
+                <tr>
+                    <td>@item.Value</td>
+                    <td>@item.Text</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning mt-3">Edit</a>
+<a asp-action="Index" class="btn btn-secondary mt-3">Back to list</a>

@@ -1,0 +1,60 @@
+@model BookHub.Mvc.Models.User.WishList.UserWishListDetailViewModel
+
+@{
+    ViewData["Title"] = "My wish list " + @Model.Name;
+}
+
+<h1>Wish list: @Model.Name</h1>
+
+@if (ViewData["Error"] is string error && !string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<table class="table table-striped table-bordered">
+    <thead>
+    <tr>
+        <th></th>
+        <th>Book name</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.WishListItems)
+    {
+        var book = Model.Books.FirstOrDefault(b => b.Id == item.BookId);
+        <tr>
+            <td>
+                <img src="@GetImageSrc(@book?.ImageBase64)"
+                     width="50px"/>
+            </td>
+            <td>@book?.Name</td>
+            <td>@book?.Price</td>
+            <td>
+                <form asp-action="RemoveItem" method="post" class="d-inline">
+                    <input type="hidden" name="bookId" value="@item.BookId" />
+                    <input type="hidden" name="wishListId" value="@Model.Id" />
+
+                    <button type="submit" class="btn btn-sm btn-danger">
+                        Remove
+                    </button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+<a asp-action="Index" class="btn btn-secondary">Back</a>
+
+@functions {
+    string GetImageSrc(string? base64)
+    {
+        if (string.IsNullOrWhiteSpace(base64))
+            return "https://via.placeholder.com/800x600?text=No+image";
+
+        if (base64.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+            return base64;
+
+        return $"data:image/jpeg;base64,{base64}";
+    }
+}

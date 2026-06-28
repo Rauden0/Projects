@@ -1,0 +1,53 @@
+@model BookHub.Mvc.Models.Admin.GiftCardCreateWithCouponsViewModel
+
+@{
+    ViewData["Title"] = "Create Gift Card";
+    var err = TempData["Err"] as string;
+}
+
+<h1 class="mb-3">Create Gift Card</h1>
+
+@if (!string.IsNullOrWhiteSpace(err))
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<form asp-action="Create" method="post" class="card shadow-sm">
+    @Html.AntiForgeryToken()
+
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="mb-3">
+            <label class="form-label">Reduction amount (CZK)</label>
+            <input class="form-control" asp-for="GiftCard.ReductionAmount" />
+            <span class="text-danger" asp-validation-for="GiftCard.ReductionAmount"></span>
+        </div>
+
+        <div class="row g-2">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Valid from (UTC)</label>
+                <input class="form-control" asp-for="GiftCard.ValidFrom" type="date" />
+                <span class="text-danger" asp-validation-for="GiftCard.ValidFrom"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Valid to (UTC)</label>
+                <input class="form-control" asp-for="GiftCard.ValidTo" type="date" />
+                <span class="text-danger" asp-validation-for="GiftCard.ValidTo"></span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Number of coupons to generate</label>
+            <input class="form-control" asp-for="CouponCount" type="number" min="1" max="500" />
+            <span class="text-danger" asp-validation-for="CouponCount"></span>
+            <div class="form-text">Coupons will be generated immediately after gift card creation.</div>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex gap-2">
+        <a class="btn btn-outline-secondary" asp-action="Index">Back</a>
+        <button class="btn btn-primary" type="submit">Create</button>
+    </div>
+</form>

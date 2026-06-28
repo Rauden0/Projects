@@ -1,0 +1,273 @@
+﻿@using BookHub.Mvc.Models.User
+@model List<HomeBookListItemViewModel>
+
+@{
+    ViewData["Title"] = "BookHub";
+    var q = (ViewData["q"] as string) ?? "";
+    var error = (ViewData["Error"] as string);
+    var isSearch = !string.IsNullOrWhiteSpace(q);
+    var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h1 class="mb-1">BookHub</h1>
+        <div class="text-muted">Browse our books</div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger">
+        Failed to load books: @error
+    </div>
+}
+
+<form method="get" asp-controller="Home" asp-action="Index" class="row g-2 align-items-center mb-3" autocomplete="off">
+    <div class="col-12 col-md-10 position-relative">
+        <input id="searchBox"
+               name="q"
+               value="@q"
+               class="form-control"
+               placeholder="Search books, genres, publishers..." />
+
+        <div id="suggestBox"
+             class="list-group position-absolute w-100 shadow-sm"
+             style="z-index: 1050; display:none; top: 100%; left: 0;">
+        </div>
+    </div>
+
+    <div class="col-12 col-md-2 d-grid">
+        <button class="btn btn-primary" type="submit">Search</button>
+    </div>
+</form>
+
+@if (isSearch)
+{
+    <div class="mb-3 text-muted">
+        Search results for: <strong>@q</strong>
+        <a class="ms-2" asp-controller="Home" asp-action="Index">Clear</a>
+    </div>
+}
+
+@if (Model == null || Model.Count == 0)
+{
+    <div class="alert alert-info">
+        No books found.
+    </div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+        @foreach (var item in Model)
+        {
+            var book = item.Book;
+
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="ratio ratio-4x3 bg-light">
+                        <img src="@GetImageSrc(book.ImageBase64)"
+                             class="card-img-top object-fit-cover"
+                             alt="@book.Name" />
+                    </div>
+
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title mb-2">@book.Name</h5>
+
+                        <div class="small text-muted mb-2">
+                            @if (!string.IsNullOrWhiteSpace(item.AuthorsText))
+                            {
+                                <div><strong>Author:</strong> @item.AuthorsText</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(item.GenresText))
+                            {
+                                <div><strong>Genre:</strong> @item.GenresText</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(item.PublisherText))
+                            {
+                                <div><strong>Publisher:</strong> @item.PublisherText</div>
+                            }
+                        </div>
+
+                        <div class="mt-auto d-flex justify-content-between align-items-center">
+                            <div class="fw-bold">@book.Price.ToString("0.00") Kč</div>
+                            <div class="small fw-semibold">
+                                @if (book.StockQuantity > 0)
+                                {
+                                    <span class="text-success">In stock</span>
+                                }
+                                else
+                                {
+                                    <span class="text-danger">Out of stock</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="d-grid mt-3">
+                            <a class="btn btn-outline-primary"
+                               asp-controller="UserBook"
+                               asp-action="Detail"
+                               asp-route-id="@book.Id">
+                                View detail
+                            </a>
+                        </div>
+
+                        @if (isAuthenticated)
+                        {
+                            <div class="d-flex gap-2 mt-2">
+                                <a class="btn btn-primary flex-fill"
+                                   asp-controller="Home"
+                                   asp-action="AddToCartFromHome"
+                                   asp-route-id="@book.Id">
+                                    Add to cart
+                                </a>
+                                <div class="dropdown flex-fill">
+                                    <a class="btn btn-primary dropdown-toggle w-100"
+                                       type="button"
+                                       data-bs-toggle="dropdown"
+                                       aria-expanded="false">
+                                        Add to wishlist
+                                    </a>
+                                    <ul class="dropdown-menu" style="width: max-content;">
+                                        @foreach (var wl in item.WishLists)
+                                        {
+                                            <li>
+                                                <form asp-controller="Home"
+                                                      asp-action="AddToWishListFromHome"
+                                                      method="post" class="px-3">
+
+                                                    <input type="hidden" name="bookId" value="@book.Id" />
+                                                    <input type="hidden" name="wishListId" value="@wl.Value" />
+
+                                                    <button type="submit" class="dropdown-item">@wl.Text</button>
+                                                </form>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<script>
+(() => {
+    const input = document.getElementById("searchBox");
+    const box = document.getElementById("suggestBox");
+
+    let timer = null;
+    let lastTerm = "";
+
+    function hide() {
+        box.style.display = "none";
+        box.innerHTML = "";
+    }
+
+    function header(text) {
+        const div = document.createElement("div");
+        div.className = "list-group-item list-group-item-secondary py-2";
+        div.textContent = text;
+        return div;
+    }
+
+    function itemRow(label, badgeText) {
+        const a = document.createElement("button");
+        a.type = "button";
+        a.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
+        a.innerHTML = `<span>${escapeHtml(label)}</span><span class="badge bg-light text-dark">${badgeText}</span>`;
+        a.addEventListener("click", () => {
+            input.value = label;
+            hide();
+            input.focus();
+        });
+        return a;
+    }
+
+    function escapeHtml(s) {
+        return String(s)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    async function load(term) {
+        const url = `@Url.Action("Suggest", "Home")?term=${encodeURIComponent(term)}`;
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) return null;
+        return await res.json();
+    }
+
+    function render(data) {
+        box.innerHTML = "";
+
+        const hasAny =
+            (data?.books?.length ?? 0) +
+            (data?.genres?.length ?? 0) +
+            (data?.publishers?.length ?? 0) > 0;
+
+        if (!hasAny) {
+            hide();
+            return;
+        }
+
+        if (data.books?.length) {
+            box.appendChild(header("Books"));
+            data.books.forEach(x => box.appendChild(itemRow(x.label, "Book")));
+        }
+        if (data.genres?.length) {
+            box.appendChild(header("Genres"));
+            data.genres.forEach(x => box.appendChild(itemRow(x.label, "Genre")));
+        }
+        if (data.publishers?.length) {
+            box.appendChild(header("Publishers"));
+            data.publishers.forEach(x => box.appendChild(itemRow(x.label, "Publisher")));
+        }
+
+        box.style.display = "block";
+    }
+
+    input.addEventListener("input", () => {
+        const term = input.value.trim();
+        if (term.length < 2) {
+            lastTerm = term;
+            hide();
+            return;
+        }
+
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+            lastTerm = term;
+            const data = await load(term);
+            if (input.value.trim() !== lastTerm) return;
+            if (data) render(data);
+        }, 200);
+    });
+    
+    document.addEventListener("click", (e) => {
+        if (!box.contains(e.target) && e.target !== input) hide();
+    });
+    
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") hide();
+    });
+})();
+</script>
+
+@functions {
+    string GetImageSrc(string? base64)
+    {
+        if (string.IsNullOrWhiteSpace(base64))
+            return "https://via.placeholder.com/640x480?text=No+image";
+
+        if (base64.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+            return base64;
+
+        return $"data:image/jpeg;base64,{base64}";
+    }
+}

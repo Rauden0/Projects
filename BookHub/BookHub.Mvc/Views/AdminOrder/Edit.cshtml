@@ -1,0 +1,40 @@
+@model BookHub.Mvc.Models.Admin.AdminOrderFormViewModel
+
+@{
+    ViewData["Title"] = "Edit order";
+}
+
+<h1>Edit order</h1>
+
+<form asp-action="Edit" asp-controller="AdminOrder" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+ 
+    <div class="mb-3">
+        <label asp-for="PaymentMethod" class="form-label">Payment method:</label>
+        <select asp-for="PaymentMethod"
+                asp-items="Model.SelectedPaymentMethod"
+                class="form-control">
+        </select>
+        <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+    </div>
+    
+    <div class="mb-3">
+        <label asp-for="OrderState" class="form-label">Order state:</label>
+        <select asp-for="OrderState"
+                asp-items="Model.SelectedOrderState"
+                class="form-control">
+        </select>
+        <span asp-validation-for="OrderState" class="text-danger"></span>
+    </div>
+    
+    <div class="mb-3">
+        <label asp-for="Paid" class="form-label">Paid:</label>
+        <input asp-for="Paid" type="checkbox"/>
+        <span asp-validation-for="Paid" class="text-danger"></span>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Back to list</a>
+</form>

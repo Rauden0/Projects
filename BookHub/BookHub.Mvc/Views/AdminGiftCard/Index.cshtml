@@ -1,0 +1,72 @@
+@using BusinessLayer.Dto.GiftCard
+@model List<GiftCardDto>
+
+@{
+    ViewData["Title"] = "Gift Cards";
+    var ok = TempData["Ok"] as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="mb-1">Gift Cards</h1>
+        <div class="text-muted">Manage gift cards.</div>
+    </div>
+    <a class="btn btn-primary" asp-action="Create">Create Gift Card</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(ok))
+{
+    <div class="alert alert-success">@ok</div>
+}
+
+@if (Model == null || Model.Count == 0)
+{
+    <div class="alert alert-info">No gift cards found.</div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Reduction</th>
+                    <th>Valid from</th>
+                    <th>Valid to</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var gc in Model.OrderByDescending(x => x.Id))
+                {
+                    <tr>
+                        <td>@gc.Id</td>
+                        <td><strong>@gc.ReductionAmount</strong> Kč</td>
+                        <td>@gc.ValidFrom.ToString("yyyy-MM-dd")</td>
+                        <td>@gc.ValidTo.ToString("yyyy-MM-dd")</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary"
+                               asp-action="Details"
+                               asp-route-id="@gc.Id">
+                                Details
+                            </a>
+
+                            <form class="d-inline"
+                                  method="post"
+                                  asp-action="Delete"
+                                  asp-route-id="@gc.Id"
+                                  onsubmit="return confirm('Delete gift card #@gc.Id?');">
+                                @Html.AntiForgeryToken()
+                                <button class="btn btn-sm btn-outline-danger" type="submit">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

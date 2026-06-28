@@ -1,0 +1,78 @@
+﻿@model BookHub.Mvc.Models.User.UserCartViewModel
+
+@{
+    ViewData["Title"] = "My cart";
+}
+
+<h1>Cart</h1>
+
+@if (ViewData["Error"] is string error && !string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<table class="table table-striped table-bordered">
+    <thead>
+    <tr>
+        <th></th>
+        <th>Book name</th>
+        <th>Quantity</th>
+        <th>Price</th>
+    </tr>
+    </thead>
+    <tbody>
+    @{ float totalCartPrice = 0; }
+    @foreach (var item in Model.CartItems)
+    {
+        var book = Model.Books.FirstOrDefault(b => b.Id == item.BookId);
+        var itemTotal = (book?.Price ?? 0) * item.Quantity;
+        totalCartPrice += itemTotal;
+        
+        <tr>
+            <td>
+                <img src="@GetImageSrc(@book?.ImageBase64)"
+                     width="50px"/>
+            </td>
+            <td>@book?.Name</td>
+            <td>
+                <a asp-action="DecreaseItemQuantity" asp-route-id="@item.BookId" class="btn btn-sm btn-info">-</a>
+                <span class="mx-2">@item.Quantity</span>
+                <a asp-action="IncreaseItemQuantity" asp-route-id="@item.BookId" class="btn btn-sm btn-info">+</a>
+            </td>
+            <td>@itemTotal.ToString("N2") Kč</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<div class="d-flex justify-content-between align-items-center mt-4 p-3 bg-light border rounded">
+    <div>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Shop
+        </a>
+    </div>
+    
+    <div class="text-end">
+        <h4 class="mb-3">Total Price: <span class="text-primary">@totalCartPrice.ToString("N2") Kč</span></h4>
+        
+        @if (Model.CartItems.Any())
+        {
+            <a asp-controller="UserOrder" asp-action="Checkout" class="btn btn-success btn-lg px-5 shadow">
+                Checkout (Town and address) <i class="bi bi-chevron-right"></i>
+            </a>
+        }
+    </div>
+</div>
+
+@functions {
+    string GetImageSrc(string? base64)
+    {
+        if (string.IsNullOrWhiteSpace(base64))
+            return "https://via.placeholder.com/800x600?text=No+image";
+
+        if (base64.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+            return base64;
+
+        return $"data:image/jpeg;base64,{base64}";
+    }
+}

@@ -1,0 +1,105 @@
+@model List<BusinessLayer.Dto.Coupon.CouponDto>
+
+@{
+    ViewData["Title"] = "Coupons";
+    var q = (ViewData["q"] as string) ?? "";
+    var ok = TempData["Ok"] as string;
+}
+
+<h1 class="mb-3">Coupons</h1>
+
+@if (!string.IsNullOrWhiteSpace(ok))
+{
+    <div class="alert alert-success">@ok</div>
+}
+
+<form method="get" asp-controller="AdminCoupons" asp-action="Index" class="row g-2 align-items-center mb-3">
+    <div class="col-12 col-md-10">
+        <input name="q" value="@q" class="form-control" placeholder="Search by code..." />
+    </div>
+    <div class="col-12 col-md-2 d-grid">
+        <button class="btn btn-primary" type="submit">Search</button>
+    </div>
+</form>
+
+@if (Model == null || Model.Count == 0)
+{
+    <div class="alert alert-info">No coupons found.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+            <tr>
+                <th>Id</th>
+                <th>Code</th>
+                <th>GiftCard</th>
+                <th>Status</th>
+                <th>Order</th>
+                <th class="text-end"></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var c in Model)
+            {
+                <tr>
+                    <td>@c.Id</td>
+
+                    <td class="font-monospace">@c.Code</td>
+
+                    <td>
+                        @if (c.GiftCardId is not null)
+                        {
+                            <a asp-controller="AdminGiftCard"
+                               asp-action="Detail"
+                               asp-route-id="@c.GiftCardId.Value">
+                                #@c.GiftCardId.Value
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+
+                    <td>
+                        @if (c.IsUsed)
+                        {
+                            <span class="badge bg-danger">Used</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">Unused</span>
+                        }
+                    </td>
+
+                    <td>
+                        @if (c.OrderId is not null)
+                        {
+                            <span class="font-monospace">#@c.OrderId.Value</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+
+                    <td class="text-end">
+                        <form asp-controller="AdminCoupons" asp-action="Delete" method="post"
+                              onsubmit="return confirm('Delete coupon?');" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="code" value="@c.Code" />
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+<div class="mt-3">
+    <a class="btn btn-outline-secondary" asp-controller="Admin" asp-action="Index">Back to dashboard</a>
+</div>

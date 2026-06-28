@@ -1,0 +1,15 @@
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\bin\Debug\net8.0\DataAccessLayer.deps.json
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\bin\Debug\net8.0\DataAccessLayer.runtimeconfig.json
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\bin\Debug\net8.0\DataAccessLayer.dll
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\bin\Debug\net8.0\DataAccessLayer.pdb
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.csproj.AssemblyReference.cache
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.AssemblyInfoInputs.cache
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.AssemblyInfo.cs
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.csproj.CoreCompileInputs.cache
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.sourcelink.json
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.dll
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\refint\DataAccessLayer.dll
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.pdb
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.genruntimeconfig.cache
+C:\Users\werti\Desktop\github\Projects\BookHub\DataAccessLayer\obj\Debug\net8.0\ref\DataAccessLayer.dll

@@ -1,0 +1,55 @@
+@model BookHub.Mvc.Models.Admin.AdminBookFormViewModel
+
+<h2>Create book</h2>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Description" class="form-label"></label>
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Price" class="form-label"></label>
+        <input asp-for="Price" class="form-control" type="number" step="0.01" min="0" />
+        <span asp-validation-for="Price" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="StockQuantity" class="form-label"></label>
+        <input asp-for="StockQuantity" class="form-control" type="number" min="0" />
+        <span asp-validation-for="StockQuantity" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Authors</label>
+        <select asp-for="SelectedAuthorIds" asp-items="Model.Authors" class="form-select" multiple></select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Genres</label>
+        <select asp-for="SelectedGenreIds" asp-items="Model.Genres" class="form-select" multiple></select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Publisher</label>
+        <select asp-for="PublisherId" asp-items="Model.Publishers" class="form-select"></select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Image" class="form-label"></label>
+        <input asp-for="Image" class="form-control" type="file" />
+        <span asp-validation-for="Image" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a asp-action="Index" class="btn btn-secondary">Back</a>
+</form>

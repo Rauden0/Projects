@@ -1,0 +1,82 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);NU1605</NoWarn>
+  </PropertyGroup>
+
+<ItemGroup>
+    <PackageReference Include="Mapster" Version="7.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.10" />
+
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+
+    <PackageReference Include="Microsoft.SqlServer.Server" Version="1.0.0" />
+    <PackageReference Include="Scrutor" Version="7.0.0" />
+</ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BusinessLayer\BusinessLayer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="Views\AdminAuthor\Create.cshtml" />
+    <AdditionalFiles Include="Views\AdminAuthor\Delete.cshtml" />
+    <AdditionalFiles Include="Views\AdminAuthor\Detail.cshtml" />
+    <AdditionalFiles Include="Views\AdminAuthor\Edit.cshtml" />
+    <AdditionalFiles Include="Views\AdminAuthor\Index.cshtml" />
+    <AdditionalFiles Include="Views\AdminBook\Create.cshtml" />
+    <AdditionalFiles Include="Views\AdminBook\Delete.cshtml" />
+    <AdditionalFiles Include="Views\AdminBook\Detail.cshtml" />
+    <AdditionalFiles Include="Views\AdminBook\Edit.cshtml" />
+    <AdditionalFiles Include="Views\AdminBook\Index.cshtml" />
+    <AdditionalFiles Include="Views\AdminCoupon\Index.cshtml" />
+    <AdditionalFiles Include="Views\AdminGenre\Create.cshtml" />
+    <AdditionalFiles Include="Views\AdminGenre\Delete.cshtml" />
+    <AdditionalFiles Include="Views\AdminGenre\Detail.cshtml" />
+    <AdditionalFiles Include="Views\AdminGenre\Edit.cshtml" />
+    <AdditionalFiles Include="Views\AdminGenre\Index.cshtml" />
+    <AdditionalFiles Include="Views\AdminGiftCard\Create.cshtml" />
+    <AdditionalFiles Include="Views\AdminGiftCard\Detail.cshtml" />
+    <AdditionalFiles Include="Views\AdminGiftCard\Index.cshtml" />
+    <AdditionalFiles Include="Views\AdminHome\Index.cshtml" />
+    <AdditionalFiles Include="Views\AdminOrder\Detail.cshtml" />
+    <AdditionalFiles Include="Views\AdminOrder\Edit.cshtml" />
+    <AdditionalFiles Include="Views\AdminOrder\Index.cshtml" />
+    <AdditionalFiles Include="Views\AdminPublisher\Create.cshtml" />
+    <AdditionalFiles Include="Views\AdminPublisher\Delete.cshtml" />
+    <AdditionalFiles Include="Views\AdminPublisher\Detail.cshtml" />
+    <AdditionalFiles Include="Views\AdminPublisher\Edit.cshtml" />
+    <AdditionalFiles Include="Views\AdminPublisher\Index.cshtml" />
+    <AdditionalFiles Include="Views\AdminUser\Index.cshtml" />
+    <AdditionalFiles Include="Views\AdminUser\ResetPassword.cshtml" />
+    <AdditionalFiles Include="Views\UserBook\BookDetail.cshtml" />
+    <AdditionalFiles Include="Views\UserCart\Index.cshtml" />
+    <AdditionalFiles Include="Views\UserOrder\Checkout.cshtml" />
+    <AdditionalFiles Include="Views\UserOrder\Detail.cshtml" />
+    <AdditionalFiles Include="Views\UserOrder\Index.cshtml" />
+    <AdditionalFiles Include="Views\UserWishList\Create.cshtml" />
+    <AdditionalFiles Include="Views\UserWishList\Detail.cshtml" />
+    <AdditionalFiles Include="Views\UserWishList\Index.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Views\Admin\AdminBooks\Create.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\AdminBooks\Delete.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\AdminBooks\Detail.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\AdminBooks\Edit.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\AdminBooks\Index.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\AdminCupons\Index.cshtml" />
+  </ItemGroup>
+  
+</Project>

@@ -1,0 +1,16 @@
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\bin\Debug\net8.0\BusinessLayer.deps.json
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\bin\Debug\net8.0\BusinessLayer.dll
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\bin\Debug\net8.0\BusinessLayer.pdb
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\bin\Debug\net8.0\DataAccessLayer.dll
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\bin\Debug\net8.0\DataAccessLayer.pdb
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\BusinessLayer.csproj.AssemblyReference.cache
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\BusinessLayer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\BusinessLayer.AssemblyInfoInputs.cache
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\BusinessLayer.AssemblyInfo.cs
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\BusinessLayer.csproj.CoreCompileInputs.cache
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\BusinessLayer.sourcelink.json
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\Business.EA331CBA.Up2Date
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\BusinessLayer.dll
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\refint\BusinessLayer.dll
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\BusinessLayer.pdb
+C:\Users\werti\Desktop\github\Projects\BookHub\BusinessLayer\obj\Debug\net8.0\ref\BusinessLayer.dll

@@ -1,0 +1,119 @@
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<h1 class="mb-4">Admin Dashboard</h1>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+
+    <div class="col">
+        <a asp-controller="AdminAuthor" asp-action="Index"
+           class="text-decoration-none">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">Authors</h5>
+                    <p class="card-text text-muted">
+                        Manage authors
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col">
+        <a asp-controller="AdminBook" asp-action="Index"
+           class="text-decoration-none">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">Books</h5>
+                    <p class="card-text text-muted">
+                        Manage books
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col">
+        <a asp-controller="AdminGenre" asp-action="Index"
+           class="text-decoration-none">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">Genres</h5>
+                    <p class="card-text text-muted">
+                        Manage genres
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col">
+        <a asp-controller="AdminOrder" asp-action="Index"
+           class="text-decoration-none">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">Orders</h5>
+                    <p class="card-text text-muted">
+                        Manage orders
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col">
+        <a asp-controller="AdminPublisher" asp-action="Index"
+           class="text-decoration-none">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">Publishers</h5>
+                    <p class="card-text text-muted">
+                        Manage publishers
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col">
+        <a asp-controller="AdminUser" asp-action="Index"
+           class="text-decoration-none">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">Users</h5>
+                    <p class="card-text text-muted">
+                        Manage users and reset passwords
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col">
+        <a asp-controller="AdminGiftCard" asp-action="Index"
+           class="text-decoration-none">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">Gift Cards</h5>
+                    <p class="card-text text-muted">
+                        Manage gift cards and coupons
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="col">
+        <a asp-controller="AdminCoupon" asp-action="Index" class="text-decoration-none">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">Coupons</h5>
+                    <p class="card-text text-muted">View and manage coupons</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+
+</div>

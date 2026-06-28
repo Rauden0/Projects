@@ -1,0 +1,54 @@
+@model BusinessLayer.Dto.GiftCard.GiftCardDto
+
+@{
+    ViewData["Title"] = "Gift card detail";
+    var ok = TempData["Ok"] as string;
+    var err = TempData["Err"] as string;
+    var generated = TempData["GeneratedCoupons"] as string;
+}
+
+<h1 class="mb-3">Gift card #@Model.Id</h1>
+
+@if (!string.IsNullOrWhiteSpace(ok))
+{
+    <div class="alert alert-success">@ok</div>
+}
+@if (!string.IsNullOrWhiteSpace(err))
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Reduction</dt>
+            <dd class="col-sm-9">@Model.ReductionAmount.ToString("0.00") Kč</dd>
+
+            <dt class="col-sm-3">Valid from</dt>
+            <dd class="col-sm-9">@Model.ValidFrom.ToString("yyyy-MM-dd")</dd>
+
+            <dt class="col-sm-3">Valid to</dt>
+            <dd class="col-sm-9">@Model.ValidTo.ToString("yyyy-MM-dd")</dd>
+        </dl>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(generated))
+{
+    <div class="card shadow-sm mb-3">
+        <div class="card-header">Generated coupons</div>
+        <div class="card-body">
+            <pre class="mb-0">@generated</pre>
+        </div>
+    </div>
+}
+
+<div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" asp-controller="AdminGiftCard" asp-action="Index">Back</a>
+
+    <form asp-controller="AdminGiftCard" asp-action="Delete" asp-route-id="@Model.Id" method="post"
+          onsubmit="return confirm('Delete gift card #@Model.Id ?');">
+        @Html.AntiForgeryToken()
+        <button class="btn btn-outline-danger" type="submit">Delete</button>
+    </form>
+</div>
