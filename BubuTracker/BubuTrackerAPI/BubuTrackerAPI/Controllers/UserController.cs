@@ -1,52 +1,57 @@
 ﻿using BubuTrackerAPI.Dtos;
 using BubuTrackerAPI.Repository;
+using BubuTrackerAPI.Services;
 using BubuTrackerAPI.UserDatabase.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BubuTrackerAPI.Controllers;
+
 [Route("api/user")]
 [ApiController]
-public class UserController: ControllerBase
+[Authorize]
+public class UserController : ControllerBase
 {
+    private readonly ICurrentUserService _currentUserService;
     private readonly IUserRepository _userRepository;
 
-    public UserController(IUserRepository userRepository)
+    public UserController(ICurrentUserService currentUserService, IUserRepository userRepository)
     {
+        _currentUserService = currentUserService;
         _userRepository = userRepository;
     }
-    public async Task<IActionResult> LoginUser(UserLoginDto userLoginDto)
-    {
-        var user = await _userRepository.GetUserByEmailAsync(userLoginDto.Email);
-        if (user == null)
-        {
-            return NotFound(new { message = "User not found" });
-        }
-        bool isPasswordCorrect = BCrypt.Net.BCrypt.Verify(userLoginDto.Password, user.Password);
-        if (!isPasswordCorrect)
-        {
-            return Unauthorized(new { message = "Invalid password" });
-        }
-        return Ok(new { message = "Login successful" });
-        
-    }
-    [HttpPost]
-    public async Task<IActionResult> RegisterUser(UserRegisterDto registerDto)
-    {
-        User user = UserRegisterDto.UserRegisterDtoToUser(registerDto);
-        user.Password = PasswordHelper.HashPassword(user.Password);
-        return Ok(await _userRepository.CreateUserAsync(user));
-    }
-    
-    public async Task<IActionResult> UpdateUser(UserUpdateDto userUpdateDto)
-    {
-        var user = await _userRepository.GetUserByEmailAsync(userUpdateDto.Email);
-        if (user == null) return NotFound();    
 
-        user.FirstName = userUpdateDto.FirstName ?? "";
-        user.LastName = userUpdateDto.LastName ?? "";
-
-        await _userRepository.UpdateUserAsync(user);
-        return Ok(user);
+    [HttpGet("me")]
+    public async Task<ActionResult<UserProfileDto>> GetMe()
+    {
+        var user = await _currentUserService.GetOrCreateCurrentUserAsync();
+        return Ok(ToDto(user));
     }
-    
+
+    [HttpPut("me")]
+    public async Task<ActionResult<UserProfileDto>> UpdateMe([FromBody] UserUpdateDto updateDto)
+    {
+        var user = await _currentUserService.GetOrCreateCurrentUserAsync();
+
+        if (!string.IsNullOrWhiteSpace(updateDto.FirstName))
+        {
+            user.FirstName = updateDto.FirstName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(updateDto.LastName))
+        {
+            user.LastName = updateDto.LastName.Trim();
+        }
+
+        var updated = await _userRepository.UpdateAsync(user);
+        return Ok(ToDto(updated));
+    }
+
+    private static UserProfileDto ToDto(User user) => new()
+    {
+        Id = user.Id,
+        Email = user.Email,
+        FirstName = user.FirstName,
+        LastName = user.LastName
+    };
 }
