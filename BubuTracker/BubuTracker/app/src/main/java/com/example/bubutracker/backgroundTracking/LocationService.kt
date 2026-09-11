@@ -1,45 +1,76 @@
+package com.example.bubutracker.backgroundTracking
+
 import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.ActivityCompat
-import com.google.android.gms.location.*
-import java.util.Date
+import androidx.core.app.NotificationCompat
+import com.example.bubutracker.R
+import com.example.bubutracker.client.LocationUpdateData
+import com.example.bubutracker.client.RetrofitClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
-@Suppress("DEPRECATION")
 class LocationService : Service() {
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        createNotificationChannel()
+        startForeground(NOTIFICATION_ID, buildNotification())
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         createLocationRequest()
         startLocationUpdates()
     }
 
-    private fun createLocationRequest() {
-        locationRequest = LocationRequest.create().apply {
-            interval = 10000 // 10 seconds
-            fastestInterval = 5000 // 5 seconds
-            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Location tracking",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
         }
+    }
+
+    private fun buildNotification(): Notification =
+        NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(getString(R.string.location_notification_title))
+            .setContentText(getString(R.string.location_notification_text))
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setOngoing(true)
+            .build()
+
+    private fun createLocationRequest() {
+        locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, UPDATE_INTERVAL_MS)
+            .setMinUpdateIntervalMillis(FASTEST_INTERVAL_MS)
+            .build()
     }
 
     private fun startLocationUpdates() {
         locationCallback = object : LocationCallback() {
-            fun onLocationResult(locationResult: LocationResult?) {
-                locationResult ?: return
+            override fun onLocationResult(locationResult: LocationResult) {
                 for (location in locationResult.locations) {
-                    // Handle location updates here
                     sendLocationToServer(location)
                 }
             }
@@ -53,27 +84,18 @@ class LocationService : Service() {
             fusedLocationClient.requestLocationUpdates(
                 locationRequest,
                 locationCallback,
-                null
+                mainLooper
             )
         }
     }
 
     private fun sendLocationToServer(location: Location) {
-        // val retrofit = Retrofit.Builder()
-        //     .baseUrl(BASE_URL)
-        //     .addConverterFactory(GsonConverterFactory.create())
-        //     .build()
-        // val service = retrofit.create(ApiService::class.java)
-        // val call = service.sendLocationUpdate(LocationUpdateDto(userId, location.latitude, location.longitude, Date()))
-        // call.enqueue(object : Callback<Void> {
-        //     override fun onResponse(call: Call<Void>, response: Response<Void>) {
-        //         // Handle successful response
-        //     }
-        //
-        //     override fun onFailure(call: Call<Void>, t: Throwable) {
-        //         // Handle failure
-        //     }
-        // })
+        RetrofitClient.apiService.updateLocation(
+            LocationUpdateData(location.latitude, location.longitude)
+        ).enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) = Unit
+            override fun onFailure(call: Call<Void>, t: Throwable) = Unit
+        })
     }
 
     override fun onDestroy() {
@@ -82,14 +104,9 @@ class LocationService : Service() {
     }
 
     companion object {
-        private const val BASE_URL = "https://your-server-url.com/api/"
-
-        // Example of LocationUpdateDto
-        data class LocationUpdateDto(
-            val userId: String,
-            val latitude: Double,
-            val longitude: Double,
-            val timestamp: Date
-        )
+        private const val CHANNEL_ID = "bubutracker_location"
+        private const val NOTIFICATION_ID = 1001
+        private const val UPDATE_INTERVAL_MS = 10_000L
+        private const val FASTEST_INTERVAL_MS = 5_000L
     }
 }

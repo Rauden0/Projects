@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-
 }
+
 android {
     namespace = "com.example.bubutracker"
     compileSdk = 34
@@ -18,6 +18,13 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:5121/\"")
+        buildConfigField("String", "AUTH0_DOMAIN", "\"YOUR_TENANT.auth0.com\"")
+        buildConfigField("String", "AUTH0_CLIENT_ID", "\"YOUR_AUTH0_CLIENT_CLIENT_ID\"")
+        buildConfigField("String", "AUTH0_AUDIENCE", "\"https://api.bubutracker\"")
+        manifestPlaceholders["auth0Domain"] = "YOUR_TENANT.auth0.com"
+        manifestPlaceholders["auth0Scheme"] = "bubutracker"
     }
 
     buildTypes {
@@ -38,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -48,9 +56,8 @@ android {
         }
     }
 }
+
 dependencies {
-    api(libs.grpc.stub)
-    implementation(libs.protobuf.kotlin)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -60,26 +67,25 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.appcompat)
+    implementation(libs.androidx.appcompat.v141)
+    implementation(libs.material.v160)
+    implementation(libs.androidx.constraintlayout)
     implementation(libs.play.services.maps.v1900)
     implementation(libs.play.services.location)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.gson)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    implementation(libs.auth0)
+    implementation(libs.kotlinx.coroutines.core)
+
     testImplementation(libs.junit)
+    testImplementation("org.robolectric:robolectric:4.11.1")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation(libs.retrofit)
-    implementation(libs.converter.gson)
-    implementation( libs.material.v160)
-    implementation (libs.androidx.appcompat.v141)
-    implementation(libs.grpc.okhttp)
-    implementation(libs.grpc.protobuf.lite)
-    implementation(libs.grpc.stub.v1360)
-    implementation(libs.annotations.api)
-    implementation(libs.grpc.stub)
-    implementation (libs.retrofit)
-    implementation (libs.converter.gson)
-    implementation (libs.gson)
-
 }
