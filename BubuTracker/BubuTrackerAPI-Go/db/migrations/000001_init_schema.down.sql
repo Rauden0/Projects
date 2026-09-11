@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS user_tracking;
+DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS users;
