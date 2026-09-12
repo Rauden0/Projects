@@ -70,7 +70,7 @@ func (h *TrackingHandler) Add(w http.ResponseWriter, r *http.Request) {
 
 	var req addTrackingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpserver.WriteError(w, badRequest("malformed request body"))
+		httpserver.WriteError(w, decodeError(err))
 		return
 	}
 

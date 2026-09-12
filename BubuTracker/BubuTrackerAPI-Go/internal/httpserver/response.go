@@ -60,6 +60,8 @@ func statusFor(err error) (int, string) {
 		return http.StatusBadRequest, "self_tracking"
 	case errors.Is(err, domain.ErrUnauthenticated):
 		return http.StatusUnauthorized, "unauthenticated"
+	case errors.Is(err, domain.ErrPayloadTooLarge):
+		return http.StatusRequestEntityTooLarge, "payload_too_large"
 	default:
 		return http.StatusInternalServerError, "internal_error"
 	}

@@ -20,9 +20,15 @@ type Config struct {
 	Auth0Audience string
 
 	CORSAllowedOrigins []string
+	MaxBodyBytes       int64
 
 	ShutdownTimeout time.Duration
 	RequestTimeout  time.Duration
+
+	DBMaxConns        int32
+	DBMinConns        int32
+	DBMaxConnLifetime time.Duration
+	DBMaxConnIdleTime time.Duration
 }
 
 // Load reads configuration from the environment, applying sane defaults for
@@ -35,8 +41,14 @@ func Load() (Config, error) {
 		DatabaseURL:     os.Getenv("DATABASE_URL"),
 		Auth0Domain:     os.Getenv("AUTH0_DOMAIN"),
 		Auth0Audience:   os.Getenv("AUTH0_AUDIENCE"),
+		MaxBodyBytes:    getInt64("MAX_REQUEST_BODY_BYTES", 1<<20), // 1 MiB
 		ShutdownTimeout: getDuration("SHUTDOWN_TIMEOUT", 15*time.Second),
 		RequestTimeout:  getDuration("REQUEST_TIMEOUT", 10*time.Second),
+
+		DBMaxConns:        int32(getInt64("DB_MAX_CONNS", 10)),
+		DBMinConns:        int32(getInt64("DB_MIN_CONNS", 2)),
+		DBMaxConnLifetime: getDuration("DB_MAX_CONN_LIFETIME", 30*time.Minute),
+		DBMaxConnIdleTime: getDuration("DB_MAX_CONN_IDLE_TIME", 5*time.Minute),
 	}
 
 	origins := getEnv("CORS_ALLOWED_ORIGINS", "*")
@@ -84,4 +96,16 @@ func getDuration(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return time.Duration(seconds) * time.Second
+}
+
+func getInt64(key string, fallback int64) int64 {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return fallback
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return fallback
+	}
+	return n
 }

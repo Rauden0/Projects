@@ -73,7 +73,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	var req updateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpserver.WriteError(w, badRequest("malformed request body"))
+		httpserver.WriteError(w, decodeError(err))
 		return
 	}
 

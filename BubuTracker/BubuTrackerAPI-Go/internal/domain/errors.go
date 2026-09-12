@@ -11,4 +11,5 @@ var (
 	ErrInvalidArgument = errors.New("invalid argument")
 	ErrSelfTracking    = errors.New("cannot track yourself")
 	ErrUnauthenticated = errors.New("missing or invalid authentication")
+	ErrPayloadTooLarge = errors.New("request body too large")
 )

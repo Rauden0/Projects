@@ -39,7 +39,13 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	pool, err := store.NewPool(ctx, cfg.DatabaseURL)
+	pool, err := store.NewPool(ctx, store.PoolConfig{
+		DatabaseURL:     cfg.DatabaseURL,
+		MaxConns:        cfg.DBMaxConns,
+		MinConns:        cfg.DBMinConns,
+		MaxConnLifetime: cfg.DBMaxConnLifetime,
+		MaxConnIdleTime: cfg.DBMaxConnIdleTime,
+	})
 	if err != nil {
 		return fmt.Errorf("connect to database: %w", err)
 	}
@@ -61,13 +67,14 @@ func run() error {
 
 	router := handler.NewRouter(handler.Deps{
 		Logger:         logger,
-		Verifier:       verifier,
+		AuthMiddleware: verifier.Middleware,
 		Health:         handler.NewHealthHandler(pool),
 		Users:          userService,
 		Locations:      locationService,
 		Tracking:       trackingService,
 		CORSOrigins:    cfg.CORSAllowedOrigins,
 		RequestTimeout: cfg.RequestTimeout,
+		MaxBodyBytes:   cfg.MaxBodyBytes,
 	})
 
 	srv := &http.Server{

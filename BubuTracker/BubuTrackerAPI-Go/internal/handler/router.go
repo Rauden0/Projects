@@ -9,20 +9,23 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
-	"github.com/Rauden0/bubutracker-api/internal/auth"
 	"github.com/Rauden0/bubutracker-api/internal/httpserver"
 )
 
 // Deps are the constructed dependencies the router wires into handlers.
 type Deps struct {
-	Logger         *slog.Logger
-	Verifier       *auth.Verifier
+	Logger *slog.Logger
+	// AuthMiddleware gates the /api/v1 route group. In production this is
+	// (*auth.Verifier).Middleware; tests can substitute a fake so the route
+	// tree and its auth gating can be exercised without a real Auth0 tenant.
+	AuthMiddleware func(http.Handler) http.Handler
 	Health         *HealthHandler
 	Users          UserService
 	Locations      LocationService
 	Tracking       TrackingService
 	CORSOrigins    []string
 	RequestTimeout time.Duration
+	MaxBodyBytes   int64
 }
 
 // NewRouter builds the full HTTP route tree: public health checks, and an
@@ -35,11 +38,16 @@ func NewRouter(d Deps) http.Handler {
 	r.Use(httpserver.RequestLogger(d.Logger))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(d.RequestTimeout))
+	r.Use(httpserver.MaxBodyBytes(d.MaxBodyBytes))
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   d.CORSOrigins,
-		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
-		AllowCredentials: true,
+		AllowedOrigins: d.CORSOrigins,
+		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete},
+		AllowedHeaders: []string{"Authorization", "Content-Type"},
+		// No cookies/browser credentials are used (auth is a Bearer token),
+		// so this stays false. AllowCredentials:true combined with a "*"
+		// origin (the default CORSOrigins) is a known CORS footgun: browsers
+		// reject it outright, silently breaking any web client.
+		AllowCredentials: false,
 	}))
 
 	r.Get("/healthz", d.Health.Live)
@@ -50,7 +58,7 @@ func NewRouter(d Deps) http.Handler {
 	trackingHandler := NewTrackingHandler(d.Users, d.Tracking)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Use(d.Verifier.Middleware)
+		r.Use(d.AuthMiddleware)
 
 		r.Get("/users/me", userHandler.Me)
 		r.Patch("/users/me", userHandler.UpdateMe)

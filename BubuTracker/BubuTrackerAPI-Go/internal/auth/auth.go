@@ -8,8 +8,18 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+)
+
+// Bounds for OIDC discovery at startup: each attempt gets its own timeout so
+// an unreachable/slow tenant fails fast instead of hanging the process, and
+// a couple of retries ride out a transient DNS or network blip on boot.
+const (
+	discoveryAttempts = 3
+	discoveryTimeout  = 10 * time.Second
+	discoveryBackoff  = time.Second
 )
 
 type ctxKey int
@@ -36,9 +46,9 @@ type Verifier struct {
 func NewVerifier(ctx context.Context, auth0Domain, audience string) (*Verifier, error) {
 	issuer := fmt.Sprintf("https://%s/", auth0Domain)
 
-	provider, err := oidc.NewProvider(ctx, issuer)
+	provider, err := discoverProvider(ctx, issuer)
 	if err != nil {
-		return nil, fmt.Errorf("discover auth0 oidc provider at %s: %w", issuer, err)
+		return nil, fmt.Errorf("discover auth0 oidc provider at %s after %d attempts: %w", issuer, discoveryAttempts, err)
 	}
 
 	verifier := provider.Verifier(&oidc.Config{
@@ -47,6 +57,32 @@ func NewVerifier(ctx context.Context, auth0Domain, audience string) (*Verifier, 
 	})
 
 	return &Verifier{idTokenVerifier: verifier}, nil
+}
+
+// discoverProvider fetches the OIDC discovery document, retrying a bounded
+// number of times with a fixed backoff so a transient failure at boot
+// (e.g. a DNS blip) doesn't crash-loop the process, while a persistently
+// unreachable tenant still fails within a predictable amount of time.
+func discoverProvider(ctx context.Context, issuer string) (*oidc.Provider, error) {
+	var lastErr error
+	for attempt := 1; attempt <= discoveryAttempts; attempt++ {
+		attemptCtx, cancel := context.WithTimeout(ctx, discoveryTimeout)
+		provider, err := oidc.NewProvider(attemptCtx, issuer)
+		cancel()
+		if err == nil {
+			return provider, nil
+		}
+		lastErr = err
+
+		if attempt < discoveryAttempts {
+			select {
+			case <-time.After(discoveryBackoff * time.Duration(attempt)):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+	}
+	return nil, lastErr
 }
 
 // Middleware authenticates the request's bearer token and injects its claims
