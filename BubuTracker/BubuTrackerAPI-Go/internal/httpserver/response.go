@@ -12,9 +12,14 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/domain"
 )
 
-// WriteJSON encodes v as the response body with the given status code.
+// WriteJSON encodes v as the response body with the given status code. Every
+// response goes through here, and every response (profile, location,
+// tracking data) is per-user PII, so it's never cacheable by an
+// intermediary — hence the blanket Cache-Control rather than an opt-in set
+// on individual handlers.
 func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	if v == nil {
 		return

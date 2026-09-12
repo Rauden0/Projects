@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+
+	"github.com/Rauden0/bubutracker-api/internal/domain"
+	"github.com/Rauden0/bubutracker-api/internal/httpserver"
 )
 
 // Bounds for OIDC discovery at startup: each attempt gets its own timeout so
@@ -86,24 +89,28 @@ func discoverProvider(ctx context.Context, issuer string) (*oidc.Provider, error
 }
 
 // Middleware authenticates the request's bearer token and injects its claims
-// into the request context, rejecting the request with 401 otherwise.
+// into the request context, rejecting the request with 401 otherwise. On
+// rejection it goes through httpserver.WriteError like every other error
+// path in the API, rather than net/http's plain-text http.Error — a client
+// parsing the documented JSON error envelope shouldn't need a special case
+// for auth failures.
 func (v *Verifier) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := bearerToken(r)
 		if token == "" {
-			http.Error(w, `{"error":"missing bearer token"}`, http.StatusUnauthorized)
+			httpserver.WriteError(w, fmt.Errorf("%w: missing bearer token", domain.ErrUnauthenticated))
 			return
 		}
 
 		idToken, err := v.idTokenVerifier.Verify(r.Context(), token)
 		if err != nil {
-			http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)
+			httpserver.WriteError(w, fmt.Errorf("%w: invalid or expired token", domain.ErrUnauthenticated))
 			return
 		}
 
 		var claims Claims
 		if err := idToken.Claims(&claims); err != nil {
-			http.Error(w, `{"error":"malformed token claims"}`, http.StatusUnauthorized)
+			httpserver.WriteError(w, fmt.Errorf("%w: malformed token claims", domain.ErrUnauthenticated))
 			return
 		}
 		claims.Subject = idToken.Subject
