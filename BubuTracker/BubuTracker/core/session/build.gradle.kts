@@ -23,6 +23,7 @@ android {
 dependencies {
     implementation(project(":core:network"))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.tink.android)
 
     testImplementation(libs.junit)
     testImplementation("org.robolectric:robolectric:4.11.1")

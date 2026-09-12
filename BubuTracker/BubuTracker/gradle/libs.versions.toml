@@ -36,6 +36,7 @@ appcompatVersion = "1.7.0"
 playServicesLocation = "21.3.0"
 auth0 = "3.2.1"
 okhttp3 = "4.12.0"
+tink = "1.19.0"
 
 [libraries]
 androidx-appcompat-v141 = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppcompat" }
@@ -118,6 +119,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 auth0 = { group = "com.auth0.android", name = "auth0", version.ref = "auth0" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp3" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp3" }
+tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 
 
 
