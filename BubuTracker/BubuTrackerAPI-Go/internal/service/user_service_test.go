@@ -37,6 +37,16 @@ func TestUserService_GetOrCreateBySubject_ReturnsExistingAndSyncsEmail(t *testin
 	assert.Equal(t, "new@example.com", user.Email)
 }
 
+func TestUserService_GetOrCreateBySubject_NormalizesEmailCase(t *testing.T) {
+	repo := newFakeUserRepo()
+	svc := service.NewUserService(repo)
+
+	user, err := svc.GetOrCreateBySubject(context.Background(), "auth0|123", "Alice@Example.COM", "", "")
+
+	require.NoError(t, err)
+	assert.Equal(t, "alice@example.com", user.Email)
+}
+
 func TestUserService_GetOrCreateBySubject_RejectsMissingSubject(t *testing.T) {
 	svc := service.NewUserService(newFakeUserRepo())
 
@@ -60,13 +70,12 @@ func TestUserService_UpdateProfile_PartialUpdateLeavesOtherFieldUntouched(t *tes
 }
 
 func TestUserService_UpdateProfile_RejectsBlankName(t *testing.T) {
-	repo := newFakeUserRepo()
-	user := domain.User{ID: uuid.New(), Email: "a@example.com", FirstName: "Alice"}
-	repo.seed(user)
-	svc := service.NewUserService(repo)
+	// Validation happens against the input alone, before any repository
+	// call, so this rejects even for a user ID that doesn't exist.
+	svc := service.NewUserService(newFakeUserRepo())
 
 	blank := "   "
-	_, err := svc.UpdateProfile(context.Background(), user.ID, &blank, nil)
+	_, err := svc.UpdateProfile(context.Background(), uuid.New(), &blank, nil)
 
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }

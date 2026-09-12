@@ -21,58 +21,63 @@ func NewUserService(users UserRepository) *UserService {
 
 // GetOrCreateBySubject returns the user for a validated Auth0 subject,
 // provisioning a new account on first sign-in and keeping the cached email
-// in sync with the identity provider on every call thereafter.
+// in sync with the identity provider thereafter. The fast path is a plain
+// read; UpsertByAuth0Subject (a write) only runs when the account doesn't
+// exist yet or its cached email has drifted, and is safe under concurrent
+// first-sign-in requests for the same subject.
 func (s *UserService) GetOrCreateBySubject(ctx context.Context, subjectID, email, firstName, lastName string) (domain.User, error) {
 	if subjectID == "" {
 		return domain.User{}, domain.ErrUnauthenticated
 	}
+	email = normalizeEmail(email)
 	if email == "" {
-		email = fmt.Sprintf("%s@users.auth0.local", subjectID)
+		email = normalizeEmail(fmt.Sprintf("%s@users.auth0.local", subjectID))
 	}
 
 	existing, err := s.users.GetByAuth0SubjectID(ctx, subjectID)
 	if err == nil {
-		if email != "" && existing.Email != email {
-			existing.Email = email
-			return s.users.Update(ctx, existing)
+		if existing.Email == email {
+			return existing, nil
 		}
-		return existing, nil
-	}
-	if !errors.Is(err, domain.ErrNotFound) {
+	} else if !errors.Is(err, domain.ErrNotFound) {
 		return domain.User{}, err
 	}
 
-	return s.users.Create(ctx, domain.User{
-		ID:             uuid.New(),
-		Auth0SubjectID: subjectID,
-		Email:          email,
-		FirstName:      firstName,
-		LastName:       lastName,
-	})
+	return s.users.UpsertByAuth0Subject(ctx, subjectID, email, firstName, lastName)
 }
 
 // UpdateProfile applies a partial update: a nil field leaves the existing
-// value untouched, matching PATCH semantics.
+// value untouched, matching PATCH semantics. Validation happens against the
+// input alone, so no read is needed before the atomic write.
 func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, firstName, lastName *string) (domain.User, error) {
-	user, err := s.users.GetByID(ctx, userID)
+	firstName, err := trimmedOrError(firstName, "firstName")
+	if err != nil {
+		return domain.User{}, err
+	}
+	lastName, err = trimmedOrError(lastName, "lastName")
 	if err != nil {
 		return domain.User{}, err
 	}
 
-	if firstName != nil {
-		trimmed := strings.TrimSpace(*firstName)
-		if trimmed == "" {
-			return domain.User{}, fmt.Errorf("%w: firstName cannot be blank", domain.ErrInvalidArgument)
-		}
-		user.FirstName = trimmed
-	}
-	if lastName != nil {
-		trimmed := strings.TrimSpace(*lastName)
-		if trimmed == "" {
-			return domain.User{}, fmt.Errorf("%w: lastName cannot be blank", domain.ErrInvalidArgument)
-		}
-		user.LastName = trimmed
-	}
+	return s.users.UpdateProfile(ctx, userID, firstName, lastName)
+}
 
-	return s.users.Update(ctx, user)
+// trimmedOrError trims a provided (non-nil) field and rejects it if that
+// leaves it blank; a nil field passes through untouched.
+func trimmedOrError(field *string, name string) (*string, error) {
+	if field == nil {
+		return nil, nil
+	}
+	trimmed := strings.TrimSpace(*field)
+	if trimmed == "" {
+		return nil, fmt.Errorf("%w: %s cannot be blank", domain.ErrInvalidArgument, name)
+	}
+	return &trimmed, nil
+}
+
+// normalizeEmail lowercases and trims an email so storage and lookups are
+// case-insensitive; Auth0 and API callers aren't guaranteed to send
+// consistent casing for the same address.
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }

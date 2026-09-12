@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -27,7 +26,7 @@ func (s *TrackingService) ListTracked(ctx context.Context, trackerID uuid.UUID) 
 // AddTracking looks up the target user by email and starts tracking them,
 // rejecting self-tracking, unknown emails, and duplicate tracking entries.
 func (s *TrackingService) AddTracking(ctx context.Context, trackerID uuid.UUID, email string) error {
-	email = strings.TrimSpace(email)
+	email = normalizeEmail(email)
 	if email == "" {
 		return fmt.Errorf("%w: email is required", domain.ErrInvalidArgument)
 	}

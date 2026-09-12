@@ -12,7 +12,6 @@ import (
 
 type Querier interface {
 	AddTracking(ctx context.Context, arg AddTrackingParams) error
-	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	GetTrackedLocations(ctx context.Context, trackerID uuid.UUID) ([]GetTrackedLocationsRow, error)
 	GetTrackedUsers(ctx context.Context, trackerID uuid.UUID) ([]User, error)
 	GetTracking(ctx context.Context, arg GetTrackingParams) (UserTracking, error)
@@ -20,8 +19,18 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	RemoveTracking(ctx context.Context, arg RemoveTrackingParams) error
-	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	// Partial update: a NULL argument leaves the existing column value
+	// untouched, so this single atomic statement replaces a read-modify-write
+	// round trip (and the lost-update race that pattern invites).
+	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
 	UpsertLocation(ctx context.Context, arg UpsertLocationParams) (Location, error)
+	// Creates the user on first sign-in, or converges the cached email on every
+	// later one. ON CONFLICT makes this safe under concurrent first-sign-in
+	// requests for the same subject: whichever call loses the race still gets
+	// back the winning row instead of a unique-violation error. first_name and
+	// last_name are only applied on insert, so a later Auth0 claim never
+	// overwrites a name the user has since edited via UpdateUserProfile.
+	UpsertUserByAuth0Subject(ctx context.Context, arg UpsertUserByAuth0SubjectParams) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

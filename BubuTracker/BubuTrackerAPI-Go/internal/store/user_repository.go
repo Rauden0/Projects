@@ -42,25 +42,24 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (domain.U
 	return toDomainUser(u), nil
 }
 
-func (r *UserRepository) Create(ctx context.Context, u domain.User) (domain.User, error) {
-	created, err := r.q.CreateUser(ctx, sqlc.CreateUserParams{
-		Auth0SubjectID: u.Auth0SubjectID,
-		Email:          u.Email,
-		FirstName:      u.FirstName,
-		LastName:       u.LastName,
+func (r *UserRepository) UpsertByAuth0Subject(ctx context.Context, subjectID, email, firstName, lastName string) (domain.User, error) {
+	upserted, err := r.q.UpsertUserByAuth0Subject(ctx, sqlc.UpsertUserByAuth0SubjectParams{
+		Auth0SubjectID: subjectID,
+		Email:          email,
+		FirstName:      firstName,
+		LastName:       lastName,
 	})
 	if err != nil {
 		return domain.User{}, mapError(err)
 	}
-	return toDomainUser(created), nil
+	return toDomainUser(upserted), nil
 }
 
-func (r *UserRepository) Update(ctx context.Context, u domain.User) (domain.User, error) {
-	updated, err := r.q.UpdateUser(ctx, sqlc.UpdateUserParams{
-		ID:        u.ID,
-		Email:     u.Email,
-		FirstName: u.FirstName,
-		LastName:  u.LastName,
+func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, firstName, lastName *string) (domain.User, error) {
+	updated, err := r.q.UpdateUserProfile(ctx, sqlc.UpdateUserProfileParams{
+		ID:        id,
+		FirstName: firstName,
+		LastName:  lastName,
 	})
 	if err != nil {
 		return domain.User{}, mapError(err)

@@ -55,17 +55,39 @@ func (f *fakeUserRepo) GetByEmail(_ context.Context, email string) (domain.User,
 	return f.byID[id], nil
 }
 
-func (f *fakeUserRepo) Create(_ context.Context, u domain.User) (domain.User, error) {
-	if _, exists := f.byEmail[u.Email]; exists {
-		return domain.User{}, domain.ErrAlreadyExists
+// UpsertByAuth0Subject mirrors the real ON CONFLICT (auth0_subject_id)
+// upsert: existing rows only ever get their email touched here, matching
+// the production query, which never overwrites a name the user has since
+// edited via UpdateProfile.
+func (f *fakeUserRepo) UpsertByAuth0Subject(_ context.Context, subjectID, email, firstName, lastName string) (domain.User, error) {
+	if id, ok := f.bySubject[subjectID]; ok {
+		u := f.byID[id]
+		u.Email = email
+		f.seed(u)
+		return u, nil
+	}
+
+	u := domain.User{
+		ID:             uuid.New(),
+		Auth0SubjectID: subjectID,
+		Email:          email,
+		FirstName:      firstName,
+		LastName:       lastName,
 	}
 	f.seed(u)
 	return u, nil
 }
 
-func (f *fakeUserRepo) Update(_ context.Context, u domain.User) (domain.User, error) {
-	if _, ok := f.byID[u.ID]; !ok {
+func (f *fakeUserRepo) UpdateProfile(_ context.Context, id uuid.UUID, firstName, lastName *string) (domain.User, error) {
+	u, ok := f.byID[id]
+	if !ok {
 		return domain.User{}, domain.ErrNotFound
+	}
+	if firstName != nil {
+		u.FirstName = *firstName
+	}
+	if lastName != nil {
+		u.LastName = *lastName
 	}
 	f.seed(u)
 	return u, nil

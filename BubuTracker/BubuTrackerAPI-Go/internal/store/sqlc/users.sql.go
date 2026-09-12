@@ -11,38 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const createUser = `-- name: CreateUser :one
-INSERT INTO users (auth0_subject_id, email, first_name, last_name)
-VALUES ($1, $2, $3, $4)
-RETURNING id, auth0_subject_id, email, first_name, last_name, created_at
-`
-
-type CreateUserParams struct {
-	Auth0SubjectID string `json:"auth0_subject_id"`
-	Email          string `json:"email"`
-	FirstName      string `json:"first_name"`
-	LastName       string `json:"last_name"`
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser,
-		arg.Auth0SubjectID,
-		arg.Email,
-		arg.FirstName,
-		arg.LastName,
-	)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Auth0SubjectID,
-		&i.Email,
-		&i.FirstName,
-		&i.LastName,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getUserByAuth0SubjectID = `-- name: GetUserByAuth0SubjectID :one
 SELECT id, auth0_subject_id, email, first_name, last_name, created_at FROM users WHERE auth0_subject_id = $1
 `
@@ -97,25 +65,61 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	return i, err
 }
 
-const updateUser = `-- name: UpdateUser :one
+const updateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE users
-SET email = $2,
-    first_name = $3,
-    last_name = $4
-WHERE id = $1
+SET first_name = COALESCE($1, first_name),
+    last_name = COALESCE($2, last_name)
+WHERE id = $3
 RETURNING id, auth0_subject_id, email, first_name, last_name, created_at
 `
 
-type UpdateUserParams struct {
+type UpdateUserProfileParams struct {
+	FirstName *string   `json:"first_name"`
+	LastName  *string   `json:"last_name"`
 	ID        uuid.UUID `json:"id"`
-	Email     string    `json:"email"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
 }
 
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser,
-		arg.ID,
+// Partial update: a NULL argument leaves the existing column value
+// untouched, so this single atomic statement replaces a read-modify-write
+// round trip (and the lost-update race that pattern invites).
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserProfile, arg.FirstName, arg.LastName, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Auth0SubjectID,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const upsertUserByAuth0Subject = `-- name: UpsertUserByAuth0Subject :one
+INSERT INTO users (auth0_subject_id, email, first_name, last_name)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (auth0_subject_id) DO UPDATE
+SET email = EXCLUDED.email
+RETURNING id, auth0_subject_id, email, first_name, last_name, created_at
+`
+
+type UpsertUserByAuth0SubjectParams struct {
+	Auth0SubjectID string `json:"auth0_subject_id"`
+	Email          string `json:"email"`
+	FirstName      string `json:"first_name"`
+	LastName       string `json:"last_name"`
+}
+
+// Creates the user on first sign-in, or converges the cached email on every
+// later one. ON CONFLICT makes this safe under concurrent first-sign-in
+// requests for the same subject: whichever call loses the race still gets
+// back the winning row instead of a unique-violation error. first_name and
+// last_name are only applied on insert, so a later Auth0 claim never
+// overwrites a name the user has since edited via UpdateUserProfile.
+func (q *Queries) UpsertUserByAuth0Subject(ctx context.Context, arg UpsertUserByAuth0SubjectParams) (User, error) {
+	row := q.db.QueryRow(ctx, upsertUserByAuth0Subject,
+		arg.Auth0SubjectID,
 		arg.Email,
 		arg.FirstName,
 		arg.LastName,

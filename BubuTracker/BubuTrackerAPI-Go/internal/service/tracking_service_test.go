@@ -21,6 +21,22 @@ func TestTrackingService_AddTracking_RejectsUnknownEmail(t *testing.T) {
 	assert.ErrorIs(t, err, domain.ErrNotFound)
 }
 
+func TestTrackingService_AddTracking_MatchesEmailCaseInsensitively(t *testing.T) {
+	users := newFakeUserRepo()
+	tracker := domain.User{ID: uuid.New(), Email: "tracker@example.com"}
+	target := domain.User{ID: uuid.New(), Email: "target@example.com"}
+	users.seed(tracker)
+	users.seed(target)
+
+	tracking := newFakeTrackingRepo()
+	tracking.users[target.ID] = target
+	svc := service.NewTrackingService(users, tracking)
+
+	err := svc.AddTracking(context.Background(), tracker.ID, "Target@Example.COM")
+
+	assert.NoError(t, err)
+}
+
 func TestTrackingService_AddTracking_RejectsSelfTracking(t *testing.T) {
 	users := newFakeUserRepo()
 	me := domain.User{ID: uuid.New(), Email: "me@example.com"}
