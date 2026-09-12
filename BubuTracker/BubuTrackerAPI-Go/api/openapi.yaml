@@ -1,0 +1,182 @@
+openapi: 3.0.3
+info:
+  title: BubuTracker API
+  version: "1.0"
+  description: >
+    Location-tracking API for the BubuTracker app. All routes except the
+    health checks require a valid Auth0 access token.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      summary: Liveness probe
+      security: []
+      responses:
+        "200": { description: process is alive }
+  /readyz:
+    get:
+      summary: Readiness probe (checks database connectivity)
+      security: []
+      responses:
+        "200": { description: ready to serve traffic }
+        "503": { description: database unreachable }
+  /api/v1/users/me:
+    get:
+      summary: Get (and lazily provision) my profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      summary: Partially update my profile
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateUserRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/locations/me:
+    post:
+      summary: Upsert my current location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateLocationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Location" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413": { description: request body too large }
+  /api/v1/locations/tracked:
+    get:
+      summary: Locations of the users I track
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TrackedLocation" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/tracking:
+    get:
+      summary: List the users I track
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Start tracking a user by email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AddTrackingRequest" }
+      responses:
+        "201": { description: tracking added }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: no user with that email }
+        "409": { description: already tracking this user }
+  /api/v1/tracking/{trackedUserID}:
+    delete:
+      summary: Stop tracking a user
+      parameters:
+        - name: trackedUserID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: removed (idempotent) }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Auth0-issued access token
+  responses:
+    BadRequest:
+      description: invalid request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: missing or invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: invalid_argument }
+            message: { type: string }
+    UserProfile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        createdAt: { type: string, format: date-time }
+    UpdateUserRequest:
+      type: object
+      description: A field omitted (or null) leaves the existing value unchanged.
+      properties:
+        firstName: { type: string, nullable: true }
+        lastName: { type: string, nullable: true }
+    Location:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        updatedAt: { type: string, format: date-time }
+    TrackedLocation:
+      allOf:
+        - $ref: "#/components/schemas/Location"
+        - type: object
+          properties:
+            email: { type: string }
+            firstName: { type: string }
+            lastName: { type: string }
+    UpdateLocationRequest:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+    AddTrackingRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }

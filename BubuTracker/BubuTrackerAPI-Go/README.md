@@ -20,6 +20,7 @@ internal/auth        Auth0 JWT/JWKS validation middleware
 internal/config      environment-based configuration, fails fast on missing values
 db/                  SQL migrations (golang-migrate) and sqlc queries/config
 deploy/              Dockerfile and docker-compose.yml
+api/openapi.yaml     API contract (schemas, error codes)
 ```
 
 The service layer depends on `UserRepository` / `LocationRepository` /
@@ -43,6 +44,9 @@ All routes except `/healthz` and `/readyz` require `Authorization: Bearer <Auth0
 | GET    | /api/v1/tracking           | List the users I track                    |
 | POST   | /api/v1/tracking           | Start tracking a user by email            |
 | DELETE | /api/v1/tracking/{userID}  | Stop tracking a user                      |
+
+Full request/response schemas and error codes: [`api/openapi.yaml`](api/openapi.yaml)
+(open with the [Swagger Editor](https://editor.swagger.io) or any OpenAPI viewer).
 
 ## Local development
 
