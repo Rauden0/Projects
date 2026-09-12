@@ -1,0 +1,14 @@
+# Force LF regardless of platform/checkout settings, so gofmt (which always
+# writes LF) never conflicts with Windows checkouts that would otherwise
+# convert to CRLF and show every touched file as "modified" with no real
+# content change.
+* text=auto eol=lf
+
+*.go text eol=lf
+go.mod text eol=lf
+go.sum text eol=lf
+*.sql text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+Makefile text eol=lf
+*.md text eol=lf
