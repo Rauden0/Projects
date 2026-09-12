@@ -152,3 +152,28 @@ func TestRouter_PanicRecoveryReturnsJSONErrorEnvelope(t *testing.T) {
 	assert.NotEmpty(t, body.Error.Code)
 	assert.NotEmpty(t, body.Error.Message)
 }
+
+// TestRouter_TrackingAddIsRateLimited is the regression test for the email
+// enumeration finding: POST /tracking distinguishes "unknown email" (404)
+// from "known email" (201/409), so without a rate limit an authenticated
+// user could probe arbitrary emails to discover who has an account.
+func TestRouter_TrackingAddIsRateLimited(t *testing.T) {
+	srv := httptest.NewServer(newTestRouter(t, true))
+	defer srv.Close()
+
+	postTracking := func() *http.Response {
+		resp, err := http.Post(srv.URL+"/api/v1/tracking", "application/json", bytes.NewReader([]byte(`{"email":"ghost@example.com"}`)))
+		require.NoError(t, err)
+		return resp
+	}
+
+	for i := 0; i < 10; i++ {
+		resp := postTracking()
+		resp.Body.Close()
+		require.NotEqualf(t, http.StatusTooManyRequests, resp.StatusCode, "request %d should still be within the limit", i+1)
+	}
+
+	resp := postTracking()
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode, "the 11th request in a minute should be rate limited")
+}

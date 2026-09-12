@@ -12,4 +12,5 @@ var (
 	ErrSelfTracking    = errors.New("cannot track yourself")
 	ErrUnauthenticated = errors.New("missing or invalid authentication")
 	ErrPayloadTooLarge = errors.New("request body too large")
+	ErrRateLimited     = errors.New("too many requests")
 )

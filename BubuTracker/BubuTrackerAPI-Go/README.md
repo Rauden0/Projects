@@ -42,7 +42,7 @@ All routes except `/healthz` and `/readyz` require `Authorization: Bearer <Auth0
 | POST   | /api/v1/locations/me       | Upsert my current location                 |
 | GET    | /api/v1/locations/tracked  | Locations of the users I track            |
 | GET    | /api/v1/tracking           | List the users I track                    |
-| POST   | /api/v1/tracking           | Start tracking a user by email            |
+| POST   | /api/v1/tracking           | Start tracking a user by email (rate limited: 10/min/user) |
 | DELETE | /api/v1/tracking/{userID}  | Stop tracking a user                      |
 
 Full request/response schemas and error codes: [`api/openapi.yaml`](api/openapi.yaml)
@@ -101,3 +101,24 @@ themselves rather than fail, so `go test ./...` stays safe to run anywhere.
 CI (`.github/workflows/bubutracker-api-go-ci.yml`, repo root) runs both
 tiers on every push/PR touching this project, against a Postgres service
 container.
+
+## Security notes for deployment
+
+- **This binary speaks plain HTTP, not HTTPS.** It expects to sit behind a
+  TLS-terminating reverse proxy or load balancer (standard in ECS/k8s/most
+  PaaS setups). Deployed without one, bearer tokens and location data travel
+  in cleartext — this is an operational requirement, not optional hardening.
+- **Use a least-privilege DB role at runtime.** `deploy/docker-compose.yml`'s
+  single `bubutracker` role both owns the schema (for local `cmd/migrate`
+  convenience) and serves the app; in production, run migrations with a
+  privileged role and point the running API at a separate role scoped to
+  `SELECT/INSERT/UPDATE/DELETE` on `users`, `locations`, `user_tracking`
+  only — no `CREATE`/`ALTER`/`DROP`.
+- **Dependencies are scanned with [`govulncheck`](https://go.dev/blog/vuln)**,
+  not just `go.sum`-pinned and forgotten; run it before upgrading dependencies
+  and periodically otherwise, since new CVEs get published against versions
+  already in `go.sum`.
+- `POST /api/v1/tracking` is rate limited per user (see the API table above)
+  specifically because its 404-vs-201/409 responses are otherwise an email
+  enumeration oracle — the "add by email" UX and that leak are inherent to
+  each other, so throttling is the mitigation, not eliminating the signal.

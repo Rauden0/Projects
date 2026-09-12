@@ -67,6 +67,8 @@ func statusFor(err error) (int, string) {
 		return http.StatusUnauthorized, "unauthenticated"
 	case errors.Is(err, domain.ErrPayloadTooLarge):
 		return http.StatusRequestEntityTooLarge, "payload_too_large"
+	case errors.Is(err, domain.ErrRateLimited):
+		return http.StatusTooManyRequests, "rate_limited"
 	default:
 		return http.StatusInternalServerError, "internal_error"
 	}

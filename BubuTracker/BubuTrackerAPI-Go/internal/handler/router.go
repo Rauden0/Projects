@@ -68,7 +68,12 @@ func NewRouter(d Deps) http.Handler {
 		r.Get("/locations/tracked", locationHandler.Tracked)
 
 		r.Get("/tracking", trackingHandler.List)
-		r.Post("/tracking", trackingHandler.Add)
+		// Rate limited by user, not just left to the DB constraints: without
+		// this, POST /tracking's distinct 404 (unknown email) vs 201/409
+		// (known email) responses let an authenticated user enumerate every
+		// registered email address in the system at whatever pace they like.
+		r.With(httpserver.RateLimit(10, time.Minute, currentUserRateLimitKey)).
+			Post("/tracking", trackingHandler.Add)
 		r.Delete("/tracking/{trackedUserID}", trackingHandler.Remove)
 	})
 

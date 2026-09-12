@@ -90,6 +90,9 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       summary: Start tracking a user by email
+      description: >
+        Rate limited (10/minute per user): the 404-vs-201/409 distinction
+        below is enough to enumerate registered emails if left unthrottled.
       requestBody:
         required: true
         content:
@@ -101,6 +104,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { description: no user with that email }
         "409": { description: already tracking this user }
+        "429": { description: rate limit exceeded }
   /api/v1/tracking/{trackedUserID}:
     delete:
       summary: Stop tracking a user

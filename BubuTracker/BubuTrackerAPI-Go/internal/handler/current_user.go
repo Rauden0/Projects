@@ -54,3 +54,10 @@ func currentUserFromContext(ctx context.Context) domain.User {
 func WithCurrentUser(ctx context.Context, user domain.User) context.Context {
 	return context.WithValue(ctx, currentUserCtxKey{}, user)
 }
+
+// currentUserRateLimitKey scopes a rate limit to the authenticated user
+// rather than their IP, which is trivial to rotate. Must only be used on
+// routes reachable after CurrentUserMiddleware.
+func currentUserRateLimitKey(r *http.Request) string {
+	return currentUserFromContext(r.Context()).ID.String()
+}
