@@ -13,9 +13,12 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/httpserver"
 )
 
+// Latitude and Longitude are pointers so a missing field can be told apart
+// from an explicit 0 (a valid coordinate, on the equator/prime meridian)
+// and rejected instead of silently overwriting the user's location.
 type updateLocationRequest struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
 }
 
 type locationResponse struct {
@@ -73,11 +76,15 @@ func (h *LocationHandler) UpdateMine(w http.ResponseWriter, r *http.Request) {
 
 	var req updateLocationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpserver.WriteError(w, badRequest("malformed request body"))
+		httpserver.WriteError(w, decodeError(err))
+		return
+	}
+	if req.Latitude == nil || req.Longitude == nil {
+		httpserver.WriteError(w, badRequest("latitude and longitude are required"))
 		return
 	}
 
-	loc, err := h.locations.UpdateMyLocation(r.Context(), user.ID, req.Latitude, req.Longitude)
+	loc, err := h.locations.UpdateMyLocation(r.Context(), user.ID, *req.Latitude, *req.Longitude)
 	if err != nil {
 		httpserver.WriteError(w, err)
 		return

@@ -43,6 +43,20 @@ func TestLocationHandler_UpdateMine_RejectsInvalidCoordinates(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
+func TestLocationHandler_UpdateMine_RejectsMissingCoordinates(t *testing.T) {
+	users := &fakeUserService{user: domain.User{ID: uuid.New()}}
+	locations := &fakeLocationService{}
+	h := handler.NewLocationHandler(users, locations)
+
+	cases := []string{`{}`, `{"latitude":50.1}`, `{"longitude":14.4}`}
+	for _, body := range cases {
+		rec := httptest.NewRecorder()
+		h.UpdateMine(rec, authedRequest(http.MethodPost, "/api/v1/locations/me", body))
+
+		assert.Equalf(t, http.StatusBadRequest, rec.Code, "body %q should be rejected", body)
+	}
+}
+
 func TestLocationHandler_UpdateMine_Succeeds(t *testing.T) {
 	users := &fakeUserService{user: domain.User{ID: uuid.New()}}
 	locations := &fakeLocationService{}
