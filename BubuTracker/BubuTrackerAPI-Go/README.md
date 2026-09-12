@@ -75,9 +75,29 @@ make sqlc-generate
 
 ## Testing
 
+Two tiers, run differently on purpose:
+
 ```bash
-make test
+make test              # unit tests: no Docker, no network, no external state
+make test-integration   # internal/store against a real, disposable Postgres
 ```
 
-Service and handler layers are covered with fakes/httptest — no database or
-Auth0 tenant needed to run them.
+**Unit tests** (`internal/service`, `internal/handler`, `internal/httpserver`,
+`internal/config`, `internal/auth`) use fakes/httptest and run in
+milliseconds. `internal/auth` is genuinely exercised, not just trusted: its
+tests spin up an in-process fake OIDC provider (real RSA signing, real JWKS)
+and check signature, audience, and expiry validation against real JWTs —
+including negative cases like a token signed by an unknown key.
+
+**Integration tests** (`internal/store`, build-tagged `integration`) run the
+real SQL against a real Postgres. This is deliberate: every bug this project
+has actually shipped (the upsert race, the email-casing gap, the tracked-
+locations query silently dropping trackless users) lived in the SQL itself,
+which a fake repository has no way to catch. `make test-integration` starts
+Postgres via `deploy/docker-compose.yml`, applies migrations, runs the suite,
+and tears it down. Without `TEST_DATABASE_URL` set, these tests skip
+themselves rather than fail, so `go test ./...` stays safe to run anywhere.
+
+CI (`.github/workflows/bubutracker-api-go-ci.yml`, repo root) runs both
+tiers on every push/PR touching this project, against a Postgres service
+container.
