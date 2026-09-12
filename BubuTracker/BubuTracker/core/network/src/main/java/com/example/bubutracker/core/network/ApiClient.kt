@@ -1,5 +1,6 @@
 package com.example.bubutracker.core.network
 
+import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -16,16 +17,31 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
     private lateinit var apiService: ApiService
 
-    fun init(baseUrl: String, tokenProvider: TokenProvider) {
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-        val okHttpClient = OkHttpClient.Builder()
+    /**
+     * @param enableLogging Logs full request/response bodies and headers (including the
+     * bearer token). Must stay false in release builds - pass `BuildConfig.DEBUG` from the
+     * app module, never hardcode true.
+     * @param authenticator Recovers from a 401 by refreshing the access token and retrying
+     * (see [SessionAuthenticator]). Optional so tests that don't exercise token refresh
+     * (e.g. against MockWebServer with a fixed token) don't need to supply one.
+     */
+    fun init(
+        baseUrl: String,
+        tokenProvider: TokenProvider,
+        enableLogging: Boolean = false,
+        authenticator: Authenticator? = null,
+    ) {
+        val okHttpClientBuilder = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(tokenProvider))
-            .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-            .build()
+        if (enableLogging) {
+            okHttpClientBuilder.addInterceptor(
+                HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+            )
+        }
+        authenticator?.let { okHttpClientBuilder.authenticator(it) }
+        val okHttpClient = okHttpClientBuilder.build()
         val retrofit = Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(okHttpClient)

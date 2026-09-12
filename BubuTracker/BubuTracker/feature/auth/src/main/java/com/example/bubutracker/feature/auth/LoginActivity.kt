@@ -44,7 +44,10 @@ class LoginActivity : AppCompatActivity() {
         WebAuthProvider.login(account)
             .withScheme(getString(R.string.com_auth0_scheme))
             .withAudience(BuildConfig.AUTH0_AUDIENCE)
-            .withScope("openid profile email")
+            // offline_access is required for Auth0 to issue a refresh token; without it
+            // SessionAuthenticator has nothing to refresh with once the access token
+            // expires, and every request just fails with 401 from then on.
+            .withScope("openid profile email offline_access")
             .start(this, object : Callback<Credentials, AuthenticationException> {
                 override fun onFailure(error: AuthenticationException) {
                     Toast.makeText(
@@ -55,7 +58,7 @@ class LoginActivity : AppCompatActivity() {
                 }
 
                 override fun onSuccess(result: Credentials) {
-                    SessionHolder.instance.saveAccessToken(result.accessToken)
+                    SessionHolder.instance.saveCredentials(result.accessToken, result.refreshToken)
                     syncProfileAndContinue()
                 }
             })
