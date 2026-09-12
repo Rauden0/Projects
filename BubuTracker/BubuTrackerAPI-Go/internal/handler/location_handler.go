@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/Rauden0/bubutracker-api/internal/auth"
 	"github.com/Rauden0/bubutracker-api/internal/domain"
 	"github.com/Rauden0/bubutracker-api/internal/httpserver"
 )
@@ -28,26 +27,31 @@ type locationResponse struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// Latitude, Longitude, and UpdatedAt are nullable: a tracked user who hasn't
+// reported a location yet still appears in the list, just without these.
 type trackedLocationResponse struct {
-	UserID    uuid.UUID `json:"userId"`
-	Email     string    `json:"email"`
-	FirstName string    `json:"firstName"`
-	LastName  string    `json:"lastName"`
-	Latitude  float64   `json:"latitude"`
-	Longitude float64   `json:"longitude"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	UserID    uuid.UUID  `json:"userId"`
+	Email     string     `json:"email"`
+	FirstName string     `json:"firstName"`
+	LastName  string     `json:"lastName"`
+	Latitude  *float64   `json:"latitude"`
+	Longitude *float64   `json:"longitude"`
+	UpdatedAt *time.Time `json:"updatedAt"`
 }
 
 func toTrackedLocationResponse(tl domain.TrackedLocation) trackedLocationResponse {
-	return trackedLocationResponse{
+	resp := trackedLocationResponse{
 		UserID:    tl.User.ID,
 		Email:     tl.User.Email,
 		FirstName: tl.User.FirstName,
 		LastName:  tl.User.LastName,
-		Latitude:  tl.Location.Latitude,
-		Longitude: tl.Location.Longitude,
-		UpdatedAt: tl.Location.UpdatedAt,
 	}
+	if tl.Location != nil {
+		resp.Latitude = &tl.Location.Latitude
+		resp.Longitude = &tl.Location.Longitude
+		resp.UpdatedAt = &tl.Location.UpdatedAt
+	}
+	return resp
 }
 
 // LocationService is the subset of service.LocationService this handler needs.
@@ -57,22 +61,15 @@ type LocationService interface {
 }
 
 type LocationHandler struct {
-	users     UserService
 	locations LocationService
 }
 
-func NewLocationHandler(users UserService, locations LocationService) *LocationHandler {
-	return &LocationHandler{users: users, locations: locations}
+func NewLocationHandler(locations LocationService) *LocationHandler {
+	return &LocationHandler{locations: locations}
 }
 
 func (h *LocationHandler) UpdateMine(w http.ResponseWriter, r *http.Request) {
-	claims := auth.FromContext(r.Context())
-
-	user, err := h.users.GetOrCreateBySubject(r.Context(), claims.Subject, claims.Email, claims.FirstName, claims.LastName)
-	if err != nil {
-		httpserver.WriteError(w, err)
-		return
-	}
+	user := currentUserFromContext(r.Context())
 
 	var req updateLocationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -99,13 +96,7 @@ func (h *LocationHandler) UpdateMine(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LocationHandler) Tracked(w http.ResponseWriter, r *http.Request) {
-	claims := auth.FromContext(r.Context())
-
-	user, err := h.users.GetOrCreateBySubject(r.Context(), claims.Subject, claims.Email, claims.FirstName, claims.LastName)
-	if err != nil {
-		httpserver.WriteError(w, err)
-		return
-	}
+	user := currentUserFromContext(r.Context())
 
 	locations, err := h.locations.GetTrackedLocations(r.Context(), user.ID)
 	if err != nil {

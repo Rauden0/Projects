@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"github.com/Rauden0/bubutracker-api/internal/auth"
 	"github.com/Rauden0/bubutracker-api/internal/domain"
 	"github.com/Rauden0/bubutracker-api/internal/httpserver"
 )
@@ -25,29 +24,15 @@ type TrackingService interface {
 }
 
 type TrackingHandler struct {
-	users    UserService
 	tracking TrackingService
 }
 
-func NewTrackingHandler(users UserService, tracking TrackingService) *TrackingHandler {
-	return &TrackingHandler{users: users, tracking: tracking}
-}
-
-func (h *TrackingHandler) currentUser(w http.ResponseWriter, r *http.Request) (domain.User, bool) {
-	claims := auth.FromContext(r.Context())
-	user, err := h.users.GetOrCreateBySubject(r.Context(), claims.Subject, claims.Email, claims.FirstName, claims.LastName)
-	if err != nil {
-		httpserver.WriteError(w, err)
-		return domain.User{}, false
-	}
-	return user, true
+func NewTrackingHandler(tracking TrackingService) *TrackingHandler {
+	return &TrackingHandler{tracking: tracking}
 }
 
 func (h *TrackingHandler) List(w http.ResponseWriter, r *http.Request) {
-	user, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
+	user := currentUserFromContext(r.Context())
 
 	tracked, err := h.tracking.ListTracked(r.Context(), user.ID)
 	if err != nil {
@@ -63,10 +48,7 @@ func (h *TrackingHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TrackingHandler) Add(w http.ResponseWriter, r *http.Request) {
-	user, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
+	user := currentUserFromContext(r.Context())
 
 	var req addTrackingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -83,10 +65,7 @@ func (h *TrackingHandler) Add(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TrackingHandler) Remove(w http.ResponseWriter, r *http.Request) {
-	user, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
+	user := currentUserFromContext(r.Context())
 
 	trackedUserID, err := uuid.Parse(chi.URLParam(r, "trackedUserID"))
 	if err != nil {

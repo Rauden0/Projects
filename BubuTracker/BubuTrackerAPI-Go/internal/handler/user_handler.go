@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/Rauden0/bubutracker-api/internal/auth"
 	"github.com/Rauden0/bubutracker-api/internal/domain"
 	"github.com/Rauden0/bubutracker-api/internal/httpserver"
 )
@@ -51,25 +50,12 @@ func NewUserHandler(users UserService) *UserHandler {
 }
 
 func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
-	claims := auth.FromContext(r.Context())
-
-	user, err := h.users.GetOrCreateBySubject(r.Context(), claims.Subject, claims.Email, claims.FirstName, claims.LastName)
-	if err != nil {
-		httpserver.WriteError(w, err)
-		return
-	}
-
+	user := currentUserFromContext(r.Context())
 	httpserver.WriteJSON(w, http.StatusOK, toUserProfileResponse(user))
 }
 
 func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
-	claims := auth.FromContext(r.Context())
-
-	current, err := h.users.GetOrCreateBySubject(r.Context(), claims.Subject, claims.Email, claims.FirstName, claims.LastName)
-	if err != nil {
-		httpserver.WriteError(w, err)
-		return
-	}
+	current := currentUserFromContext(r.Context())
 
 	var req updateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

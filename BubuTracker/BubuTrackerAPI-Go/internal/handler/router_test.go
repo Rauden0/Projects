@@ -3,6 +3,7 @@ package handler_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -110,4 +111,44 @@ func TestRouter_RejectsOversizedBody(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
+}
+
+// panickyLocationService simulates an unexpected bug reaching production: a
+// handler dependency panics instead of returning an error.
+type panickyLocationService struct{ fakeLocationService }
+
+func (panickyLocationService) UpdateMyLocation(context.Context, uuid.UUID, float64, float64) (domain.Location, error) {
+	panic("simulated unexpected failure")
+}
+
+func TestRouter_PanicRecoveryReturnsJSONErrorEnvelope(t *testing.T) {
+	router := handler.NewRouter(handler.Deps{
+		Logger:         testLogger(),
+		AuthMiddleware: fakeAuthMiddleware(true),
+		Health:         handler.NewHealthHandler(alwaysUpPinger{}),
+		Users:          &fakeUserService{user: domain.User{ID: uuid.New(), Email: "alice@example.com"}},
+		Locations:      &panickyLocationService{},
+		Tracking:       &fakeTrackingService{},
+		CORSOrigins:    []string{"*"},
+		RequestTimeout: 5 * time.Second,
+		MaxBodyBytes:   1 << 20,
+	})
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	resp, err := http.Post(srv.URL+"/api/v1/locations/me", "application/json", bytes.NewReader([]byte(`{"latitude":1,"longitude":1}`)))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	var body struct {
+		Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.NotEmpty(t, body.Error.Code)
+	assert.NotEmpty(t, body.Error.Message)
 }

@@ -36,7 +36,7 @@ func NewRouter(d Deps) http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(httpserver.RequestLogger(d.Logger))
-	r.Use(middleware.Recoverer)
+	r.Use(httpserver.Recoverer)
 	r.Use(middleware.Timeout(d.RequestTimeout))
 	r.Use(httpserver.MaxBodyBytes(d.MaxBodyBytes))
 	r.Use(cors.Handler(cors.Options{
@@ -54,11 +54,12 @@ func NewRouter(d Deps) http.Handler {
 	r.Get("/readyz", d.Health.Ready)
 
 	userHandler := NewUserHandler(d.Users)
-	locationHandler := NewLocationHandler(d.Users, d.Locations)
-	trackingHandler := NewTrackingHandler(d.Users, d.Tracking)
+	locationHandler := NewLocationHandler(d.Locations)
+	trackingHandler := NewTrackingHandler(d.Tracking)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(d.AuthMiddleware)
+		r.Use(CurrentUserMiddleware(d.Users))
 
 		r.Get("/users/me", userHandler.Me)
 		r.Patch("/users/me", userHandler.UpdateMe)

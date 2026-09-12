@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Rauden0/bubutracker-api/internal/auth"
 	"github.com/Rauden0/bubutracker-api/internal/domain"
 	"github.com/Rauden0/bubutracker-api/internal/handler"
 )
@@ -48,18 +47,22 @@ func (f *fakeUserService) UpdateProfile(_ context.Context, _ uuid.UUID, firstNam
 	return updated, nil
 }
 
-func authedRequest(method, target, body string) *http.Request {
+// requestAsUser builds a request carrying user as the resolved current
+// user, exactly as handler.CurrentUserMiddleware would set it on a real
+// request. Handler-level tests call handlers directly (no router, no
+// middleware chain), so the middleware's job of resolving "who is the
+// current user" has to be done by hand here.
+func requestAsUser(method, target, body string, user domain.User) *http.Request {
 	req := httptest.NewRequest(method, target, strings.NewReader(body))
-	claims := auth.Claims{Subject: "auth0|123", Email: "alice@example.com"}
-	return req.WithContext(auth.NewContext(req.Context(), claims))
+	return req.WithContext(handler.WithCurrentUser(req.Context(), user))
 }
 
 func TestUserHandler_Me_ReturnsProfile(t *testing.T) {
-	svc := &fakeUserService{user: domain.User{ID: uuid.New(), Email: "alice@example.com", FirstName: "Alice"}}
-	h := handler.NewUserHandler(svc)
+	user := domain.User{ID: uuid.New(), Email: "alice@example.com", FirstName: "Alice"}
+	h := handler.NewUserHandler(&fakeUserService{})
 
 	rec := httptest.NewRecorder()
-	h.Me(rec, authedRequest(http.MethodGet, "/api/v1/users/me", ""))
+	h.Me(rec, requestAsUser(http.MethodGet, "/api/v1/users/me", "", user))
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -70,11 +73,12 @@ func TestUserHandler_Me_ReturnsProfile(t *testing.T) {
 }
 
 func TestUserHandler_UpdateMe_AppliesPartialUpdate(t *testing.T) {
-	svc := &fakeUserService{user: domain.User{ID: uuid.New(), Email: "alice@example.com", FirstName: "Alice", LastName: "Smith"}}
+	user := domain.User{ID: uuid.New(), Email: "alice@example.com", FirstName: "Alice", LastName: "Smith"}
+	svc := &fakeUserService{user: user}
 	h := handler.NewUserHandler(svc)
 
 	rec := httptest.NewRecorder()
-	h.UpdateMe(rec, authedRequest(http.MethodPatch, "/api/v1/users/me", `{"firstName":"Alicia"}`))
+	h.UpdateMe(rec, requestAsUser(http.MethodPatch, "/api/v1/users/me", `{"firstName":"Alicia"}`, user))
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.NotNil(t, svc.lastUpdate.firstName)
@@ -83,21 +87,11 @@ func TestUserHandler_UpdateMe_AppliesPartialUpdate(t *testing.T) {
 }
 
 func TestUserHandler_UpdateMe_RejectsMalformedBody(t *testing.T) {
-	svc := &fakeUserService{user: domain.User{ID: uuid.New()}}
-	h := handler.NewUserHandler(svc)
+	user := domain.User{ID: uuid.New()}
+	h := handler.NewUserHandler(&fakeUserService{user: user})
 
 	rec := httptest.NewRecorder()
-	h.UpdateMe(rec, authedRequest(http.MethodPatch, "/api/v1/users/me", `not json`))
+	h.UpdateMe(rec, requestAsUser(http.MethodPatch, "/api/v1/users/me", `not json`, user))
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-}
-
-func TestUserHandler_Me_PropagatesServiceError(t *testing.T) {
-	svc := &fakeUserService{getErr: domain.ErrUnauthenticated}
-	h := handler.NewUserHandler(svc)
-
-	rec := httptest.NewRecorder()
-	h.Me(rec, authedRequest(http.MethodGet, "/api/v1/users/me", ""))
-
-	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }

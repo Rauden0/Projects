@@ -42,45 +42,45 @@ func withURLParam(r *http.Request, key, value string) *http.Request {
 }
 
 func TestTrackingHandler_List_ReturnsTrackedUsers(t *testing.T) {
-	users := &fakeUserService{user: domain.User{ID: uuid.New()}}
+	user := domain.User{ID: uuid.New()}
 	tracking := &fakeTrackingService{tracked: []domain.User{{Email: "friend@example.com"}}}
-	h := handler.NewTrackingHandler(users, tracking)
+	h := handler.NewTrackingHandler(tracking)
 
 	rec := httptest.NewRecorder()
-	h.List(rec, authedRequest(http.MethodGet, "/api/v1/tracking", ""))
+	h.List(rec, requestAsUser(http.MethodGet, "/api/v1/tracking", "", user))
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Body.String(), "friend@example.com")
 }
 
 func TestTrackingHandler_Add_ReturnsConflictWhenAlreadyExists(t *testing.T) {
-	users := &fakeUserService{user: domain.User{ID: uuid.New()}}
+	user := domain.User{ID: uuid.New()}
 	tracking := &fakeTrackingService{addErr: domain.ErrAlreadyExists}
-	h := handler.NewTrackingHandler(users, tracking)
+	h := handler.NewTrackingHandler(tracking)
 
 	rec := httptest.NewRecorder()
-	h.Add(rec, authedRequest(http.MethodPost, "/api/v1/tracking", `{"email":"friend@example.com"}`))
+	h.Add(rec, requestAsUser(http.MethodPost, "/api/v1/tracking", `{"email":"friend@example.com"}`, user))
 
 	assert.Equal(t, http.StatusConflict, rec.Code)
 	assert.Equal(t, "friend@example.com", tracking.lastAddEmail)
 }
 
 func TestTrackingHandler_Add_ReturnsNotFoundForUnknownEmail(t *testing.T) {
-	users := &fakeUserService{user: domain.User{ID: uuid.New()}}
+	user := domain.User{ID: uuid.New()}
 	tracking := &fakeTrackingService{addErr: domain.ErrNotFound}
-	h := handler.NewTrackingHandler(users, tracking)
+	h := handler.NewTrackingHandler(tracking)
 
 	rec := httptest.NewRecorder()
-	h.Add(rec, authedRequest(http.MethodPost, "/api/v1/tracking", `{"email":"ghost@example.com"}`))
+	h.Add(rec, requestAsUser(http.MethodPost, "/api/v1/tracking", `{"email":"ghost@example.com"}`, user))
 
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
 
 func TestTrackingHandler_Remove_RejectsInvalidUUID(t *testing.T) {
-	users := &fakeUserService{user: domain.User{ID: uuid.New()}}
-	h := handler.NewTrackingHandler(users, &fakeTrackingService{})
+	user := domain.User{ID: uuid.New()}
+	h := handler.NewTrackingHandler(&fakeTrackingService{})
 
-	req := withURLParam(authedRequest(http.MethodDelete, "/api/v1/tracking/not-a-uuid", ""), "trackedUserID", "not-a-uuid")
+	req := withURLParam(requestAsUser(http.MethodDelete, "/api/v1/tracking/not-a-uuid", "", user), "trackedUserID", "not-a-uuid")
 	rec := httptest.NewRecorder()
 	h.Remove(rec, req)
 
@@ -88,11 +88,11 @@ func TestTrackingHandler_Remove_RejectsInvalidUUID(t *testing.T) {
 }
 
 func TestTrackingHandler_Remove_Succeeds(t *testing.T) {
-	users := &fakeUserService{user: domain.User{ID: uuid.New()}}
-	h := handler.NewTrackingHandler(users, &fakeTrackingService{})
+	user := domain.User{ID: uuid.New()}
+	h := handler.NewTrackingHandler(&fakeTrackingService{})
 
 	targetID := uuid.New()
-	req := withURLParam(authedRequest(http.MethodDelete, "/api/v1/tracking/"+targetID.String(), ""), "trackedUserID", targetID.String())
+	req := withURLParam(requestAsUser(http.MethodDelete, "/api/v1/tracking/"+targetID.String(), "", user), "trackedUserID", targetID.String())
 	rec := httptest.NewRecorder()
 	h.Remove(rec, req)
 
