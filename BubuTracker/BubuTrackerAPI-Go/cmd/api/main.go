@@ -36,6 +36,10 @@ func run() error {
 	logger := newLogger(cfg)
 	slog.SetDefault(logger)
 
+	if err := checkSchemaCurrent(cfg.DatabaseURL); err != nil {
+		return fmt.Errorf("schema check: %w", err)
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
