@@ -12,6 +12,9 @@ import (
 
 type Querier interface {
 	AddTracking(ctx context.Context, arg AddTrackingParams) error
+	// LEFT JOIN deliberately: a tracked user who hasn't reported a location yet
+	// must still appear (with null location fields) rather than silently
+	// vanishing from this list while still showing up in GetTrackedUsers.
 	GetTrackedLocations(ctx context.Context, trackerID uuid.UUID) ([]GetTrackedLocationsRow, error)
 	GetTrackedUsers(ctx context.Context, trackerID uuid.UUID) ([]User, error)
 	GetTracking(ctx context.Context, arg GetTrackingParams) (UserTracking, error)

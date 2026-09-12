@@ -23,7 +23,7 @@ SELECT
     l.updated_at
 FROM user_tracking t
 JOIN users u ON u.id = t.tracked_user_id
-JOIN locations l ON l.user_id = t.tracked_user_id
+LEFT JOIN locations l ON l.user_id = t.tracked_user_id
 WHERE t.tracker_id = $1
 ORDER BY u.email
 `
@@ -33,11 +33,14 @@ type GetTrackedLocationsRow struct {
 	Email     string             `json:"email"`
 	FirstName string             `json:"first_name"`
 	LastName  string             `json:"last_name"`
-	Latitude  float64            `json:"latitude"`
-	Longitude float64            `json:"longitude"`
+	Latitude  *float64           `json:"latitude"`
+	Longitude *float64           `json:"longitude"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// LEFT JOIN deliberately: a tracked user who hasn't reported a location yet
+// must still appear (with null location fields) rather than silently
+// vanishing from this list while still showing up in GetTrackedUsers.
 func (q *Queries) GetTrackedLocations(ctx context.Context, trackerID uuid.UUID) ([]GetTrackedLocationsRow, error) {
 	rows, err := q.db.Query(ctx, getTrackedLocations, trackerID)
 	if err != nil {

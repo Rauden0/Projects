@@ -38,20 +38,23 @@ func (r *LocationRepository) GetTrackedLocations(ctx context.Context, trackerID 
 
 	result := make([]domain.TrackedLocation, len(rows))
 	for i, row := range rows {
-		result[i] = domain.TrackedLocation{
-			User: domain.User{
+		tl := domain.TrackedLocation{
+			User: domain.UserSummary{
 				ID:        row.UserID,
 				Email:     row.Email,
 				FirstName: row.FirstName,
 				LastName:  row.LastName,
 			},
-			Location: domain.Location{
-				UserID:    row.UserID,
-				Latitude:  row.Latitude,
-				Longitude: row.Longitude,
-				UpdatedAt: row.UpdatedAt.Time,
-			},
 		}
+		if row.UpdatedAt.Valid {
+			tl.Location = &domain.Location{
+				UserID:    row.UserID,
+				Latitude:  *row.Latitude,
+				Longitude: *row.Longitude,
+				UpdatedAt: row.UpdatedAt.Time,
+			}
+		}
+		result[i] = tl
 	}
 	return result, nil
 }

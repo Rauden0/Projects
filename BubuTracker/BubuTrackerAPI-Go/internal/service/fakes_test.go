@@ -110,7 +110,8 @@ func (f *fakeLocationRepo) Upsert(_ context.Context, userID uuid.UUID, latitude,
 func (f *fakeLocationRepo) GetTrackedLocations(_ context.Context, _ uuid.UUID) ([]domain.TrackedLocation, error) {
 	var result []domain.TrackedLocation
 	for _, loc := range f.byUser {
-		result = append(result, domain.TrackedLocation{Location: loc})
+		loc := loc
+		result = append(result, domain.TrackedLocation{Location: &loc})
 	}
 	return result, nil
 }

@@ -26,9 +26,22 @@ type Location struct {
 	UpdatedAt time.Time
 }
 
-// TrackedLocation is a tracked user's location joined with their profile,
-// as returned to a tracker.
+// UserSummary is the partial profile projection returned alongside a
+// tracked user's location. It's a distinct type from User (rather than a
+// partially-populated User) so a future field added to User can't silently
+// end up zero-valued here by accident.
+type UserSummary struct {
+	ID        uuid.UUID
+	Email     string
+	FirstName string
+	LastName  string
+}
+
+// TrackedLocation is a tracked user's location joined with their profile, as
+// returned to a tracker. Location is nil if that user hasn't reported a
+// location yet — they still appear (matching GetTrackedUsers) rather than
+// silently vanishing from the list.
 type TrackedLocation struct {
-	User     User
-	Location Location
+	User     UserSummary
+	Location *Location
 }

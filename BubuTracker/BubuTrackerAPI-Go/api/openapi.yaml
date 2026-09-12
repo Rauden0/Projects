@@ -162,13 +162,19 @@ components:
         longitude: { type: number, format: double }
         updatedAt: { type: string, format: date-time }
     TrackedLocation:
-      allOf:
-        - $ref: "#/components/schemas/Location"
-        - type: object
-          properties:
-            email: { type: string }
-            firstName: { type: string }
-            lastName: { type: string }
+      type: object
+      description: >
+        latitude/longitude/updatedAt are null if this tracked user hasn't
+        reported a location yet — they still appear in the list rather than
+        being silently omitted.
+      properties:
+        userId: { type: string, format: uuid }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        latitude: { type: number, format: double, nullable: true }
+        longitude: { type: number, format: double, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
     UpdateLocationRequest:
       type: object
       required: [latitude, longitude]
