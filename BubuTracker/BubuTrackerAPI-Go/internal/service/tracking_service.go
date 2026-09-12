@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -51,10 +50,9 @@ func (s *TrackingService) AddTracking(ctx context.Context, trackerID uuid.UUID, 
 	return s.tracking.Add(ctx, trackerID, tracked.ID)
 }
 
+// RemoveTracking is idempotent by nature of the underlying DELETE: removing
+// an edge that doesn't exist affects zero rows rather than erroring, so
+// there's no "not found" case here to special-case.
 func (s *TrackingService) RemoveTracking(ctx context.Context, trackerID, trackedUserID uuid.UUID) error {
-	err := s.tracking.Remove(ctx, trackerID, trackedUserID)
-	if err != nil && !errors.Is(err, domain.ErrNotFound) {
-		return err
-	}
-	return nil
+	return s.tracking.Remove(ctx, trackerID, trackedUserID)
 }

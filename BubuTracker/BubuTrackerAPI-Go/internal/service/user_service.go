@@ -11,6 +11,11 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/domain"
 )
 
+// maxNameLength bounds first/last name input. Without it the only limit is
+// the HTTP layer's whole-request-body cap, so a single field could still be
+// stored as an almost-1MB string in an otherwise-unbounded text column.
+const maxNameLength = 100
+
 type UserService struct {
 	users UserRepository
 }
@@ -71,6 +76,9 @@ func trimmedOrError(field *string, name string) (*string, error) {
 	trimmed := strings.TrimSpace(*field)
 	if trimmed == "" {
 		return nil, fmt.Errorf("%w: %s cannot be blank", domain.ErrInvalidArgument, name)
+	}
+	if len(trimmed) > maxNameLength {
+		return nil, fmt.Errorf("%w: %s must be at most %d characters", domain.ErrInvalidArgument, name, maxNameLength)
 	}
 	return &trimmed, nil
 }

@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -76,6 +77,15 @@ func TestUserService_UpdateProfile_RejectsBlankName(t *testing.T) {
 
 	blank := "   "
 	_, err := svc.UpdateProfile(context.Background(), uuid.New(), &blank, nil)
+
+	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+}
+
+func TestUserService_UpdateProfile_RejectsOverlongName(t *testing.T) {
+	svc := service.NewUserService(newFakeUserRepo())
+
+	tooLong := strings.Repeat("a", 101)
+	_, err := svc.UpdateProfile(context.Background(), uuid.New(), &tooLong, nil)
 
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }
