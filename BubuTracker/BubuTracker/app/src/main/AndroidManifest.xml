@@ -14,7 +14,6 @@
         android:roundIcon="@drawable/ic_launcher_foreground"
         android:supportsRtl="true"
         android:theme="@style/Theme.BubuTracker"
-        android:usesCleartextTraffic="true"
         tools:targetApi="34" />
 
 </manifest>

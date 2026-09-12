@@ -19,18 +19,23 @@ android {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:5121/\"")
         manifestPlaceholders["auth0Domain"] = "YOUR_TENANT.auth0.com"
         manifestPlaceholders["auth0Scheme"] = "bubutracker"
     }
 
     buildTypes {
+        debug {
+            // 10.0.2.2 is the Android emulator's alias for the host machine's localhost.
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:5121/\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // TODO: point at the real production BubuTrackerAPI-Go HTTPS endpoint before shipping.
+            buildConfigField("String", "API_BASE_URL", "\"https://api.bubutracker.example.com/\"")
         }
     }
     compileOptions {

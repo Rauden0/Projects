@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+    Debug-only override: allows plain HTTP so the app can talk to the emulator-host
+    loopback (10.0.2.2) and to MockWebServer in androidTest without a real cert.
+    Release builds get no such override, so cleartext traffic is blocked by default.
+    -->
+    <application android:usesCleartextTraffic="true" />
+
+</manifest>
