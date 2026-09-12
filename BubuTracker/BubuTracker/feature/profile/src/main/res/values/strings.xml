@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="password">Password</string>
+    <string name="email_address">Email Address</string>
+    <string name="password_again">Password Again</string>
+    <string name="register">Register</string>
+    <string name="registration">Your profile</string>
+    <string name="edit_profile_subtitle">Update your name so people can recognize you</string>
+    <string name="save_profile">Save profile</string>
+</resources>

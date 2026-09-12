@@ -20,9 +20,6 @@ android {
         }
 
         buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:5121/\"")
-        buildConfigField("String", "AUTH0_DOMAIN", "\"YOUR_TENANT.auth0.com\"")
-        buildConfigField("String", "AUTH0_CLIENT_ID", "\"YOUR_AUTH0_CLIENT_CLIENT_ID\"")
-        buildConfigField("String", "AUTH0_AUDIENCE", "\"https://api.bubutracker\"")
         manifestPlaceholders["auth0Domain"] = "YOUR_TENANT.auth0.com"
         manifestPlaceholders["auth0Scheme"] = "bubutracker"
     }
@@ -58,6 +55,16 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:designsystem"))
+    implementation(project(":core:navigation"))
+    implementation(project(":core:network"))
+    implementation(project(":core:session"))
+    implementation(project(":core:location"))
+
+    implementation(project(":feature:auth"))
+    implementation(project(":feature:map"))
+    implementation(project(":feature:profile"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -66,24 +73,11 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.appcompat)
-    implementation(libs.androidx.appcompat.v141)
-    implementation(libs.material.v160)
-    implementation(libs.androidx.constraintlayout)
-    implementation(libs.play.services.maps.v1900)
-    implementation(libs.play.services.location)
-    implementation(libs.retrofit)
-    implementation(libs.converter.gson)
-    implementation(libs.gson)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-    implementation(libs.auth0)
-    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
-    testImplementation("org.robolectric:robolectric:4.11.1")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.mockwebserver)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)

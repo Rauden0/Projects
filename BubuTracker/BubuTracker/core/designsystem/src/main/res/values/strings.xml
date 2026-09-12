@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared across feature:auth (login title) and feature:map (activity label) -->
+    <string name="bubu_tracker">Bubu Tracker</string>
+</resources>

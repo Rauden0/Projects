@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login">Log in with Auth0</string>
+    <string name="login_subtitle">Sign in to share and view locations</string>
+    <string name="com_auth0_scheme">bubutracker</string>
+</resources>

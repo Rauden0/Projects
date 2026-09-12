@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="add_tracking">Track someone</string>
+    <string name="add_tracking_email_hint">Email Address</string>
+    <string name="add">Add</string>
+    <string name="logout">Log out</string>
+    <string name="tracking_added">User added to tracking list</string>
+    <string name="tracking_add_failed">Could not add user (HTTP %1$d)</string>
+    <string name="network_error">Network error: %1$s</string>
+    <string name="google_map_api_key">secret</string>
+</resources>

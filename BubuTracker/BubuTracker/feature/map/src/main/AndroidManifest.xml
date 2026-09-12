@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_map_api_key" />
+
+        <activity
+            android:name=".MapsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MyApp"
+            android:label="@string/bubu_tracker">
+            <intent-filter>
+                <action android:name="com.example.bubutracker.action.MAP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

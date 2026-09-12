@@ -21,4 +21,15 @@ dependencyResolutionManagement {
 
 rootProject.name = "BubuTracker"
 include(":app")
+
+include(":core:common")
+include(":core:designsystem")
+include(":core:navigation")
+include(":core:network")
+include(":core:session")
+include(":core:location")
+
+include(":feature:auth")
+include(":feature:map")
+include(":feature:profile")
  
