@@ -29,4 +29,20 @@ interface ApiService {
 
     @DELETE("api/v1/tracking/{userId}")
     fun removeTracking(@Path("userId") userId: String): Call<Void>
+
+    /** Other users' pending requests to track me - the consent inbox. */
+    @GET("api/v1/tracking/requests")
+    fun getIncomingTrackingRequests(): Call<List<UserProfileDto>>
+
+    /** Grants trackerId visibility into my location. */
+    @POST("api/v1/tracking/requests/{trackerId}/accept")
+    fun acceptTrackingRequest(@Path("trackerId") trackerId: String): Call<Void>
+
+    /** Users currently, with my consent, tracking me. */
+    @GET("api/v1/tracking/followers")
+    fun getFollowers(): Call<List<UserProfileDto>>
+
+    /** Rejects a pending request from trackerId, or revokes their already-accepted access. */
+    @DELETE("api/v1/tracking/followers/{trackerId}")
+    fun removeFollower(@Path("trackerId") trackerId: String): Call<Void>
 }

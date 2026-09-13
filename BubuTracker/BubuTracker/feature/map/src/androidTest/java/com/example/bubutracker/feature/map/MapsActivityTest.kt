@@ -87,6 +87,8 @@ class MapsActivityTest {
         ActivityScenario.launch(MapsActivity::class.java).use {
             onView(withId(R.id.addTrackingButton)).check(matches(isDisplayed()))
             onView(withId(R.id.logoutButton)).check(matches(isDisplayed()))
+            onView(withId(R.id.trackingRequestsButton)).check(matches(isDisplayed()))
+            onView(withId(R.id.followersButton)).check(matches(isDisplayed()))
         }
     }
 
@@ -108,6 +110,63 @@ class MapsActivityTest {
         assertNotNull("expected an addTracking request to reach the server", recorded)
         assertEquals("POST", recorded!!.method)
         assertTrue(recorded.body.readUtf8().contains("tracked@example.com"))
+    }
+
+    @Test
+    fun requestsDialogAcceptsPendingRequest() {
+        SessionHolder.instance.saveAccessToken("token")
+        val trackerId = "11111111-1111-1111-1111-111111111111"
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+                "/api/v1/tracking/requests" -> MockResponse().setResponseCode(200)
+                    .setBody("""[{"id":"$trackerId","email":"wannabe@example.com","firstName":"Wanda","lastName":"B"}]""")
+                "/api/v1/tracking/requests/$trackerId/accept" -> MockResponse().setResponseCode(204)
+                "/api/v1/locations/tracked" -> MockResponse().setResponseCode(200).setBody("[]")
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+
+        ActivityScenario.launch(MapsActivity::class.java).use {
+            onView(withId(R.id.trackingRequestsButton)).perform(click())
+            onView(withText("Wanda B")).perform(click())
+            onView(withText(R.string.accept)).perform(click())
+        }
+
+        var recorded = server.takeRequest(5, TimeUnit.SECONDS)
+        while (recorded != null && recorded.path != "/api/v1/tracking/requests/$trackerId/accept") {
+            recorded = server.takeRequest(5, TimeUnit.SECONDS)
+        }
+        assertNotNull("expected an accept request to reach the server", recorded)
+        assertEquals("POST", recorded!!.method)
+    }
+
+    @Test
+    fun followersDialogRevokesAFollower() {
+        SessionHolder.instance.saveAccessToken("token")
+        val trackerId = "22222222-2222-2222-2222-222222222222"
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.path == "/api/v1/tracking/followers" -> MockResponse().setResponseCode(200)
+                    .setBody("""[{"id":"$trackerId","email":"follower@example.com","firstName":"Fred","lastName":"O"}]""")
+                request.path == "/api/v1/tracking/followers/$trackerId" && request.method == "DELETE" ->
+                    MockResponse().setResponseCode(204)
+                request.path == "/api/v1/locations/tracked" -> MockResponse().setResponseCode(200).setBody("[]")
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+
+        ActivityScenario.launch(MapsActivity::class.java).use {
+            onView(withId(R.id.followersButton)).perform(click())
+            onView(withText("Fred O")).perform(click())
+            onView(withText(R.string.revoke)).perform(click())
+        }
+
+        var recorded = server.takeRequest(5, TimeUnit.SECONDS)
+        while (recorded != null && recorded.path != "/api/v1/tracking/followers/$trackerId") {
+            recorded = server.takeRequest(5, TimeUnit.SECONDS)
+        }
+        assertNotNull("expected a revoke request to reach the server", recorded)
+        assertEquals("DELETE", recorded!!.method)
     }
 
     @Test

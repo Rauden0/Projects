@@ -4,8 +4,24 @@
     <string name="add_tracking_email_hint">Email Address</string>
     <string name="add">Add</string>
     <string name="logout">Log out</string>
-    <string name="tracking_added">User added to tracking list</string>
-    <string name="tracking_add_failed">Could not add user (HTTP %1$d)</string>
+    <string name="tracking_added">Tracking request sent</string>
+    <string name="tracking_add_failed">Could not send request (HTTP %1$d)</string>
     <string name="network_error">Network error: %1$s</string>
     <string name="google_map_api_key">secret</string>
+
+    <string name="tracking_requests">Requests</string>
+    <string name="followers">Followers</string>
+    <string name="no_pending_requests">No pending tracking requests</string>
+    <string name="no_followers">No one is tracking you yet</string>
+    <string name="accept_request_title">Accept tracking request?</string>
+    <string name="accept_request_message">Allow %1$s to see your location?</string>
+    <string name="accept">Accept</string>
+    <string name="reject">Reject</string>
+    <string name="request_accepted">Request accepted</string>
+    <string name="request_rejected">Request rejected</string>
+    <string name="revoke_follower_title">Revoke access?</string>
+    <string name="revoke_follower_message">Stop %1$s from seeing your location?</string>
+    <string name="revoke">Revoke</string>
+    <string name="follower_revoked">Access revoked</string>
+    <string name="action_failed">Action failed (HTTP %1$d)</string>
 </resources>

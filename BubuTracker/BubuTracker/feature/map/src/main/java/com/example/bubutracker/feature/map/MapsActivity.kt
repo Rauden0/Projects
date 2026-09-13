@@ -21,6 +21,7 @@ import com.example.bubutracker.core.navigation.navigateTo
 import com.example.bubutracker.core.network.AddTrackingDto
 import com.example.bubutracker.core.network.ApiClient
 import com.example.bubutracker.core.network.TrackedLocationDto
+import com.example.bubutracker.core.network.UserProfileDto
 import com.example.bubutracker.core.session.SessionHolder
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -60,6 +61,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         findViewById<Button>(R.id.addTrackingButton).setOnClickListener { showAddTrackingDialog() }
         findViewById<Button>(R.id.logoutButton).setOnClickListener { logout() }
+        findViewById<Button>(R.id.trackingRequestsButton).setOnClickListener { showIncomingRequestsDialog() }
+        findViewById<Button>(R.id.followersButton).setOnClickListener { showFollowersDialog() }
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as? SupportMapFragment
         mapFragment?.getMapAsync(this) ?: throw NullPointerException("MapFragment is null")
@@ -219,6 +222,120 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                     ).show()
                 }
             })
+    }
+
+    // Reject and revoke both reduce to "delete this (tracker, me) edge", which the
+    // backend's DELETE /tracking/followers/{trackerId} handles regardless of whether
+    // the edge is still pending or already accepted - so both actions call the same
+    // removeFollower endpoint.
+    private fun showIncomingRequestsDialog() {
+        ApiClient.service.getIncomingTrackingRequests().enqueue(object : Callback<List<UserProfileDto>> {
+            override fun onResponse(
+                call: Call<List<UserProfileDto>>,
+                response: Response<List<UserProfileDto>>
+            ) {
+                if (!response.isSuccessful) {
+                    showActionFailedToast(response.code())
+                    return
+                }
+                val requests = response.body().orEmpty()
+                if (requests.isEmpty()) {
+                    Toast.makeText(this@MapsActivity, R.string.no_pending_requests, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                showPersonListDialog(R.string.tracking_requests, requests) { requester ->
+                    showAcceptRejectDialog(requester)
+                }
+            }
+
+            override fun onFailure(call: Call<List<UserProfileDto>>, t: Throwable) = showNetworkErrorToast(t)
+        })
+    }
+
+    private fun showAcceptRejectDialog(requester: UserProfileDto) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.accept_request_title)
+            .setMessage(getString(R.string.accept_request_message, displayName(requester)))
+            .setPositiveButton(R.string.accept) { _, _ ->
+                ApiClient.service.acceptTrackingRequest(requester.id)
+                    .enqueue(simpleResultCallback(R.string.request_accepted))
+            }
+            .setNegativeButton(R.string.reject) { _, _ ->
+                ApiClient.service.removeFollower(requester.id)
+                    .enqueue(simpleResultCallback(R.string.request_rejected))
+            }
+            .setNeutralButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showFollowersDialog() {
+        ApiClient.service.getFollowers().enqueue(object : Callback<List<UserProfileDto>> {
+            override fun onResponse(
+                call: Call<List<UserProfileDto>>,
+                response: Response<List<UserProfileDto>>
+            ) {
+                if (!response.isSuccessful) {
+                    showActionFailedToast(response.code())
+                    return
+                }
+                val followers = response.body().orEmpty()
+                if (followers.isEmpty()) {
+                    Toast.makeText(this@MapsActivity, R.string.no_followers, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                showPersonListDialog(R.string.followers, followers) { follower ->
+                    showRevokeDialog(follower)
+                }
+            }
+
+            override fun onFailure(call: Call<List<UserProfileDto>>, t: Throwable) = showNetworkErrorToast(t)
+        })
+    }
+
+    private fun showRevokeDialog(follower: UserProfileDto) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.revoke_follower_title)
+            .setMessage(getString(R.string.revoke_follower_message, displayName(follower)))
+            .setPositiveButton(R.string.revoke) { _, _ ->
+                ApiClient.service.removeFollower(follower.id)
+                    .enqueue(simpleResultCallback(R.string.follower_revoked))
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showPersonListDialog(titleRes: Int, people: List<UserProfileDto>, onPick: (UserProfileDto) -> Unit) {
+        val labels = people.map { displayName(it) }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(titleRes)
+            .setItems(labels) { _, index -> onPick(people[index]) }
+            .show()
+    }
+
+    private fun displayName(user: UserProfileDto): String =
+        listOf(user.firstName, user.lastName)
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+            .ifBlank { user.email }
+
+    private fun simpleResultCallback(successMessageRes: Int) = object : Callback<Void> {
+        override fun onResponse(call: Call<Void>, response: Response<Void>) {
+            if (response.isSuccessful) {
+                Toast.makeText(this@MapsActivity, successMessageRes, Toast.LENGTH_SHORT).show()
+            } else {
+                showActionFailedToast(response.code())
+            }
+        }
+
+        override fun onFailure(call: Call<Void>, t: Throwable) = showNetworkErrorToast(t)
+    }
+
+    private fun showActionFailedToast(code: Int) {
+        Toast.makeText(this, getString(R.string.action_failed, code), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showNetworkErrorToast(t: Throwable) {
+        Toast.makeText(this, getString(R.string.network_error, t.message), Toast.LENGTH_SHORT).show()
     }
 
     private fun logout() {
