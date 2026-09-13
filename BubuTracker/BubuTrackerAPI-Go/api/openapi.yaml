@@ -78,7 +78,10 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
   /api/v1/tracking:
     get:
-      summary: List the users I track
+      summary: List the users I track (accepted only)
+      description: >
+        Only users whose tracking request I sent has been accepted; a
+        pending request I'm still waiting on doesn't appear here.
       responses:
         "200":
           description: OK
@@ -89,27 +92,88 @@ paths:
                 items: { $ref: "#/components/schemas/UserProfile" }
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
-      summary: Start tracking a user by email
+      summary: Request to track a user by email
       description: >
-        Rate limited (10/minute per user): the 404-vs-201/409 distinction
-        below is enough to enumerate registered emails if left unthrottled.
+        Creates a pending request; the target user must accept it (see
+        POST /tracking/requests/{trackerID}/accept) before I get any
+        location visibility into their account. Rate limited (10/minute per
+        user): the 404-vs-201/409 distinction below is enough to enumerate
+        registered emails if left unthrottled.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/AddTrackingRequest" }
       responses:
-        "201": { description: tracking added }
+        "201": { description: tracking request sent }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { description: no user with that email }
-        "409": { description: already tracking this user }
+        "409": { description: already requested or already tracking this user }
         "429": { description: rate limit exceeded }
   /api/v1/tracking/{trackedUserID}:
     delete:
-      summary: Stop tracking a user
+      summary: Cancel my pending request, or stop tracking a user
       parameters:
         - name: trackedUserID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: removed (idempotent) }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/tracking/requests:
+    get:
+      summary: List other users' pending requests to track me
+      description: >
+        The consent inbox: requests I haven't accepted or rejected yet.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/tracking/requests/{trackerID}/accept:
+    post:
+      summary: Accept a pending request to track me
+      description: >
+        Grants trackerID visibility into my location. No-op-unsafe: fails
+        with 404 if there's no such pending request (already accepted,
+        rejected, or it never existed).
+      parameters:
+        - name: trackerID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: accepted }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: no pending request from that user }
+  /api/v1/tracking/followers:
+    get:
+      summary: List users currently tracking me, with my consent
+      description: >
+        Ongoing visibility into who has access, not just at request time -
+        use DELETE on this resource to revoke a follower.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/tracking/followers/{trackerID}:
+    delete:
+      summary: Reject a pending request, or revoke an accepted follower
+      parameters:
+        - name: trackerID
           in: path
           required: true
           schema: { type: string, format: uuid }

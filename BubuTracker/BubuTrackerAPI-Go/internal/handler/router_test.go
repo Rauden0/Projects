@@ -177,3 +177,33 @@ func TestRouter_TrackingAddIsRateLimited(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode, "the 11th request in a minute should be rate limited")
 }
+
+// TestRouter_TrackingSubRoutesAreNotShadowedByTheWildcardRoute guards
+// against a routing regression: DELETE /tracking/{trackedUserID} is a
+// wildcard on the same path prefix as the literal GET /tracking/requests
+// and GET /tracking/followers. If chi's static-route-wins-over-wildcard
+// behavior ever broke (or a route got reordered into the wrong place),
+// these would 400 on "requests"/"followers" as an invalid UUID instead of
+// reaching the intended handler.
+func TestRouter_TrackingSubRoutesAreNotShadowedByTheWildcardRoute(t *testing.T) {
+	srv := httptest.NewServer(newTestRouter(t, true))
+	defer srv.Close()
+
+	for _, path := range []string{"/api/v1/tracking/requests", "/api/v1/tracking/followers"} {
+		resp, err := http.Get(srv.URL + path)
+		require.NoError(t, err)
+		resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode, "GET %s", path)
+	}
+}
+
+func TestRouter_TrackingAccept_RejectsUnauthenticated(t *testing.T) {
+	srv := httptest.NewServer(newTestRouter(t, false))
+	defer srv.Close()
+
+	resp, err := http.Post(srv.URL+"/api/v1/tracking/requests/"+uuid.New().String()+"/accept", "application/json", nil)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}

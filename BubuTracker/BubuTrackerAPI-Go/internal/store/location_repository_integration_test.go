@@ -74,6 +74,8 @@ func TestLocationRepository_GetTrackedLocations_IncludesUsersWithoutLocation(t *
 
 	require.NoError(t, tracking.Add(ctx, tracker.ID, hasLoc.ID))
 	require.NoError(t, tracking.Add(ctx, tracker.ID, noLoc.ID))
+	require.NoError(t, tracking.Accept(ctx, tracker.ID, hasLoc.ID))
+	require.NoError(t, tracking.Accept(ctx, tracker.ID, noLoc.ID))
 
 	result, err := locations.GetTrackedLocations(ctx, tracker.ID)
 	require.NoError(t, err)
@@ -90,6 +92,31 @@ func TestLocationRepository_GetTrackedLocations_IncludesUsersWithoutLocation(t *
 
 	without := result[byEmail["noloc@example.com"]]
 	assert.Nil(t, without.Location)
+}
+
+// TestLocationRepository_GetTrackedLocations_ExcludesPendingRequests is the
+// regression test for the consent model at the location layer specifically:
+// a not-yet-accepted tracking request must grant zero location visibility,
+// not just be excluded from GetTrackedUsers.
+func TestLocationRepository_GetTrackedLocations_ExcludesPendingRequests(t *testing.T) {
+	_, queries := setupDB(t)
+	users := store.NewUserRepository(queries)
+	locations := store.NewLocationRepository(queries)
+	tracking := store.NewTrackingRepository(queries)
+	ctx := context.Background()
+
+	tracker, err := users.UpsertByAuth0Subject(ctx, "auth0|tracker", "tracker@example.com", "T", "T")
+	require.NoError(t, err)
+	target, err := users.UpsertByAuth0Subject(ctx, "auth0|target", "target@example.com", "X", "Y")
+	require.NoError(t, err)
+
+	_, err = locations.Upsert(ctx, target.ID, 50.1, 14.4)
+	require.NoError(t, err)
+	require.NoError(t, tracking.Add(ctx, tracker.ID, target.ID))
+
+	result, err := locations.GetTrackedLocations(ctx, tracker.ID)
+	require.NoError(t, err)
+	assert.Empty(t, result, "a pending request must grant no location visibility")
 }
 
 func TestLocationRepository_DeletingUserCascadesLocation(t *testing.T) {

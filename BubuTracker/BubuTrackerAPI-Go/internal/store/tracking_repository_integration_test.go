@@ -108,6 +108,8 @@ func TestTrackingRepository_GetTrackedUsers_OrderedByEmail(t *testing.T) {
 
 	require.NoError(t, tracking.Add(ctx, tracker.ID, zed.ID))
 	require.NoError(t, tracking.Add(ctx, tracker.ID, amy.ID))
+	require.NoError(t, tracking.Accept(ctx, tracker.ID, zed.ID))
+	require.NoError(t, tracking.Accept(ctx, tracker.ID, amy.ID))
 
 	result, err := tracking.GetTrackedUsers(ctx, tracker.ID)
 
@@ -115,4 +117,64 @@ func TestTrackingRepository_GetTrackedUsers_OrderedByEmail(t *testing.T) {
 	require.Len(t, result, 2)
 	assert.Equal(t, "amy@example.com", result[0].Email)
 	assert.Equal(t, "zed@example.com", result[1].Email)
+}
+
+// TestTrackingRepository_PendingRequestGrantsNoVisibilityUntilAccepted is
+// the direct regression test for the consent model: Add alone must not
+// make a tracked user show up in GetTrackedUsers, and Accept is what
+// transitions it - covering both directions plus the request/follower
+// inboxes each side sees.
+func TestTrackingRepository_PendingRequestGrantsNoVisibilityUntilAccepted(t *testing.T) {
+	_, queries := setupDB(t)
+	users := store.NewUserRepository(queries)
+	tracking := store.NewTrackingRepository(queries)
+	ctx := context.Background()
+
+	tracker, err := users.UpsertByAuth0Subject(ctx, "auth0|1", "tracker@example.com", "T", "T")
+	require.NoError(t, err)
+	target, err := users.UpsertByAuth0Subject(ctx, "auth0|2", "target@example.com", "X", "Y")
+	require.NoError(t, err)
+
+	require.NoError(t, tracking.Add(ctx, tracker.ID, target.ID))
+
+	tracked, err := tracking.GetTrackedUsers(ctx, tracker.ID)
+	require.NoError(t, err)
+	assert.Empty(t, tracked, "a pending request must not grant tracking visibility")
+
+	incoming, err := tracking.GetIncomingRequests(ctx, target.ID)
+	require.NoError(t, err)
+	require.Len(t, incoming, 1)
+	assert.Equal(t, "tracker@example.com", incoming[0].Email)
+
+	require.NoError(t, tracking.Accept(ctx, tracker.ID, target.ID))
+
+	tracked, err = tracking.GetTrackedUsers(ctx, tracker.ID)
+	require.NoError(t, err)
+	require.Len(t, tracked, 1)
+	assert.Equal(t, "target@example.com", tracked[0].Email)
+
+	followers, err := tracking.GetFollowers(ctx, target.ID)
+	require.NoError(t, err)
+	require.Len(t, followers, 1)
+	assert.Equal(t, "tracker@example.com", followers[0].Email)
+
+	incoming, err = tracking.GetIncomingRequests(ctx, target.ID)
+	require.NoError(t, err)
+	assert.Empty(t, incoming, "an accepted request must no longer appear as pending")
+}
+
+func TestTrackingRepository_Accept_ReturnsNotFoundWhenNoPendingRequest(t *testing.T) {
+	_, queries := setupDB(t)
+	users := store.NewUserRepository(queries)
+	tracking := store.NewTrackingRepository(queries)
+	ctx := context.Background()
+
+	tracker, err := users.UpsertByAuth0Subject(ctx, "auth0|1", "tracker@example.com", "T", "T")
+	require.NoError(t, err)
+	target, err := users.UpsertByAuth0Subject(ctx, "auth0|2", "target@example.com", "X", "Y")
+	require.NoError(t, err)
+
+	err = tracking.Accept(ctx, tracker.ID, target.ID)
+
+	assert.ErrorIs(t, err, domain.ErrNotFound)
 }

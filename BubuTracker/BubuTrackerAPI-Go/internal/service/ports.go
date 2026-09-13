@@ -33,6 +33,20 @@ type LocationRepository interface {
 type TrackingRepository interface {
 	Get(ctx context.Context, trackerID, trackedUserID uuid.UUID) (bool, error)
 	GetTrackedUsers(ctx context.Context, trackerID uuid.UUID) ([]domain.User, error)
+	// GetIncomingRequests lists other users' pending requests to track
+	// trackedUserID - the consent inbox they accept or reject from.
+	GetIncomingRequests(ctx context.Context, trackedUserID uuid.UUID) ([]domain.User, error)
+	// GetFollowers lists users currently, with consent, tracking
+	// trackedUserID, so they have ongoing visibility into who has access.
+	GetFollowers(ctx context.Context, trackedUserID uuid.UUID) ([]domain.User, error)
+	// Add creates a pending request; the tracked user must Accept it before
+	// the tracker gets any location visibility.
 	Add(ctx context.Context, trackerID, trackedUserID uuid.UUID) error
+	// Accept transitions a pending request to accepted. Returns
+	// domain.ErrNotFound if there was no such pending request.
+	Accept(ctx context.Context, trackerID, trackedUserID uuid.UUID) error
+	// Remove deletes the edge regardless of status: used both for the
+	// tracker canceling/stopping tracking, and the tracked user
+	// rejecting/revoking it.
 	Remove(ctx context.Context, trackerID, trackedUserID uuid.UUID) error
 }

@@ -9,6 +9,8 @@ RETURNING *;
 -- LEFT JOIN deliberately: a tracked user who hasn't reported a location yet
 -- must still appear (with null location fields) rather than silently
 -- vanishing from this list while still showing up in GetTrackedUsers.
+-- Only accepted edges: a pending, not-yet-consented-to request must grant
+-- no location visibility at all.
 SELECT
     u.id AS user_id,
     u.email,
@@ -20,5 +22,5 @@ SELECT
 FROM user_tracking t
 JOIN users u ON u.id = t.tracked_user_id
 LEFT JOIN locations l ON l.user_id = t.tracked_user_id
-WHERE t.tracker_id = $1
+WHERE t.tracker_id = $1 AND t.status = 'accepted'
 ORDER BY u.email;

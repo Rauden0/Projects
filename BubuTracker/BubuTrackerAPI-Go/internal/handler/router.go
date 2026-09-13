@@ -75,6 +75,13 @@ func NewRouter(d Deps) http.Handler {
 		r.With(httpserver.RateLimit(10, time.Minute, currentUserRateLimitKey)).
 			Post("/tracking", trackingHandler.Add)
 		r.Delete("/tracking/{trackedUserID}", trackingHandler.Remove)
+
+		// The consent side: who wants to track me (Requests), who already
+		// does (Followers), and accepting/rejecting/revoking that access.
+		r.Get("/tracking/requests", trackingHandler.Requests)
+		r.Post("/tracking/requests/{trackerID}/accept", trackingHandler.Accept)
+		r.Get("/tracking/followers", trackingHandler.Followers)
+		r.Delete("/tracking/followers/{trackerID}", trackingHandler.RemoveFollower)
 	})
 
 	return r

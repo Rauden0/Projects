@@ -58,13 +58,22 @@ func (f *fakeUserRepo) GetByEmail(_ context.Context, email string) (domain.User,
 // UpsertByAuth0Subject mirrors the real ON CONFLICT (auth0_subject_id)
 // upsert: existing rows only ever get their email touched here, matching
 // the production query, which never overwrites a name the user has since
-// edited via UpdateProfile.
+// edited via UpdateProfile. It also mirrors the real users.email UNIQUE
+// constraint: a write that would give this row an email already owned by a
+// *different* subject fails with ErrEmailConflict instead of succeeding.
 func (f *fakeUserRepo) UpsertByAuth0Subject(_ context.Context, subjectID, email, firstName, lastName string) (domain.User, error) {
 	if id, ok := f.bySubject[subjectID]; ok {
+		if ownerID, taken := f.byEmail[email]; taken && ownerID != id {
+			return domain.User{}, domain.ErrEmailConflict
+		}
 		u := f.byID[id]
 		u.Email = email
 		f.seed(u)
 		return u, nil
+	}
+
+	if _, taken := f.byEmail[email]; taken {
+		return domain.User{}, domain.ErrEmailConflict
 	}
 
 	u := domain.User{
@@ -120,31 +129,64 @@ type trackingKey struct {
 	tracker, tracked uuid.UUID
 }
 
+// fakeTrackingRepo mirrors the real schema's status column: an edge is
+// either "pending" (created by Add, not yet visible to anyone) or
+// "accepted" (created by Accept). Absence from the map means no edge.
 type fakeTrackingRepo struct {
-	edges map[trackingKey]bool
+	edges map[trackingKey]string
 	users map[uuid.UUID]domain.User
 }
 
 func newFakeTrackingRepo() *fakeTrackingRepo {
-	return &fakeTrackingRepo{edges: map[trackingKey]bool{}, users: map[uuid.UUID]domain.User{}}
+	return &fakeTrackingRepo{edges: map[trackingKey]string{}, users: map[uuid.UUID]domain.User{}}
 }
 
 func (f *fakeTrackingRepo) Get(_ context.Context, trackerID, trackedUserID uuid.UUID) (bool, error) {
-	return f.edges[trackingKey{trackerID, trackedUserID}], nil
+	_, ok := f.edges[trackingKey{trackerID, trackedUserID}]
+	return ok, nil
 }
 
 func (f *fakeTrackingRepo) GetTrackedUsers(_ context.Context, trackerID uuid.UUID) ([]domain.User, error) {
 	var result []domain.User
-	for k := range f.edges {
-		if k.tracker == trackerID {
+	for k, status := range f.edges {
+		if k.tracker == trackerID && status == "accepted" {
 			result = append(result, f.users[k.tracked])
 		}
 	}
 	return result, nil
 }
 
+func (f *fakeTrackingRepo) GetIncomingRequests(_ context.Context, trackedUserID uuid.UUID) ([]domain.User, error) {
+	var result []domain.User
+	for k, status := range f.edges {
+		if k.tracked == trackedUserID && status == "pending" {
+			result = append(result, f.users[k.tracker])
+		}
+	}
+	return result, nil
+}
+
+func (f *fakeTrackingRepo) GetFollowers(_ context.Context, trackedUserID uuid.UUID) ([]domain.User, error) {
+	var result []domain.User
+	for k, status := range f.edges {
+		if k.tracked == trackedUserID && status == "accepted" {
+			result = append(result, f.users[k.tracker])
+		}
+	}
+	return result, nil
+}
+
 func (f *fakeTrackingRepo) Add(_ context.Context, trackerID, trackedUserID uuid.UUID) error {
-	f.edges[trackingKey{trackerID, trackedUserID}] = true
+	f.edges[trackingKey{trackerID, trackedUserID}] = "pending"
+	return nil
+}
+
+func (f *fakeTrackingRepo) Accept(_ context.Context, trackerID, trackedUserID uuid.UUID) error {
+	key := trackingKey{trackerID, trackedUserID}
+	if f.edges[key] != "pending" {
+		return domain.ErrNotFound
+	}
+	f.edges[key] = "accepted"
 	return nil
 }
 

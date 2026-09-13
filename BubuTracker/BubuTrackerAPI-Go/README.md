@@ -41,9 +41,13 @@ All routes except `/healthz` and `/readyz` require `Authorization: Bearer <Auth0
 | PATCH  | /api/v1/users/me           | Update my first/last name                 |
 | POST   | /api/v1/locations/me       | Upsert my current location                 |
 | GET    | /api/v1/locations/tracked  | Locations of the users I track            |
-| GET    | /api/v1/tracking           | List the users I track                    |
-| POST   | /api/v1/tracking           | Start tracking a user by email (rate limited: 10/min/user) |
-| DELETE | /api/v1/tracking/{userID}  | Stop tracking a user                      |
+| GET    | /api/v1/tracking           | List the users I track (accepted only)    |
+| POST   | /api/v1/tracking           | Request to track a user by email (rate limited: 10/min/user) |
+| DELETE | /api/v1/tracking/{userID}  | Cancel my request, or stop tracking a user |
+| GET    | /api/v1/tracking/requests  | Pending requests from others to track me  |
+| POST   | /api/v1/tracking/requests/{trackerID}/accept | Accept a pending request      |
+| GET    | /api/v1/tracking/followers | Users currently tracking me, with consent |
+| DELETE | /api/v1/tracking/followers/{trackerID} | Reject a request, or revoke a follower |
 
 Full request/response schemas and error codes: [`api/openapi.yaml`](api/openapi.yaml)
 (open with the [Swagger Editor](https://editor.swagger.io) or any OpenAPI viewer).
