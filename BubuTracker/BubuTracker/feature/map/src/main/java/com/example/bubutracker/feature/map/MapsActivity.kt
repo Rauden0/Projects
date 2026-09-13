@@ -63,6 +63,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         findViewById<Button>(R.id.logoutButton).setOnClickListener { logout() }
         findViewById<Button>(R.id.trackingRequestsButton).setOnClickListener { showIncomingRequestsDialog() }
         findViewById<Button>(R.id.followersButton).setOnClickListener { showFollowersDialog() }
+        findViewById<Button>(R.id.peopleITrackButton).setOnClickListener { showTrackedUsersDialog() }
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as? SupportMapFragment
         mapFragment?.getMapAsync(this) ?: throw NullPointerException("MapFragment is null")
@@ -81,11 +82,22 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+        applyMapChromePadding()
         if (hasLocationPermission()) {
             enableMyLocation()
         } else {
             requestLocationPermissions()
         }
+    }
+
+    // Without this, Maps' own controls (compass, My Location button, logo, zoom
+    // controls) render underneath our overlay buttons instead of avoiding them -
+    // padding tells Maps to keep its controls clear of these edges.
+    private fun applyMapChromePadding() {
+        val density = resources.displayMetrics.density
+        val topPx = (TOP_BUTTONS_HEIGHT_DP * density).toInt()
+        val bottomPx = (BOTTOM_BUTTONS_HEIGHT_DP * density).toInt()
+        mMap.setPadding(0, topPx, 0, bottomPx)
     }
 
     private fun hasLocationPermission(): Boolean =
@@ -304,6 +316,52 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             .show()
     }
 
+    private fun showTrackedUsersDialog() {
+        ApiClient.service.getTrackedUsers().enqueue(object : Callback<List<UserProfileDto>> {
+            override fun onResponse(
+                call: Call<List<UserProfileDto>>,
+                response: Response<List<UserProfileDto>>
+            ) {
+                if (!response.isSuccessful) {
+                    showActionFailedToast(response.code())
+                    return
+                }
+                val tracked = response.body().orEmpty()
+                if (tracked.isEmpty()) {
+                    Toast.makeText(this@MapsActivity, R.string.no_tracked_users, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                showPersonListDialog(R.string.people_i_track, tracked) { user ->
+                    showStopTrackingDialog(user)
+                }
+            }
+
+            override fun onFailure(call: Call<List<UserProfileDto>>, t: Throwable) = showNetworkErrorToast(t)
+        })
+    }
+
+    private fun showStopTrackingDialog(user: UserProfileDto) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.stop_tracking_title)
+            .setMessage(getString(R.string.stop_tracking_message, displayName(user)))
+            .setPositiveButton(R.string.stop_tracking) { _, _ ->
+                ApiClient.service.removeTracking(user.id).enqueue(object : Callback<Void> {
+                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                        if (response.isSuccessful) {
+                            Toast.makeText(this@MapsActivity, R.string.tracking_stopped, Toast.LENGTH_SHORT).show()
+                            refreshTrackedLocations()
+                        } else {
+                            showActionFailedToast(response.code())
+                        }
+                    }
+
+                    override fun onFailure(call: Call<Void>, t: Throwable) = showNetworkErrorToast(t)
+                })
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun showPersonListDialog(titleRes: Int, people: List<UserProfileDto>, onPick: (UserProfileDto) -> Unit) {
         val labels = people.map { displayName(it) }.toTypedArray()
         AlertDialog.Builder(this)
@@ -364,5 +422,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     companion object {
         private const val POLL_INTERVAL_MS = 15_000L
+
+        // Matches the top button stack in activity_map.xml: 24dp top margin + three
+        // 40dp buttons (Requests/Followers/People I track) + two 8dp gaps, plus some
+        // breathing room so Maps' compass/My Location button clear the last button.
+        private const val TOP_BUTTONS_HEIGHT_DP = 176
+
+        // Matches the bottom button row: 24dp bottom margin + 52dp button height,
+        // plus breathing room so the Google logo clears it.
+        private const val BOTTOM_BUTTONS_HEIGHT_DP = 92
     }
 }

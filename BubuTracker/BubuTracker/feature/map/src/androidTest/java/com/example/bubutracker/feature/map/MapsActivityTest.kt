@@ -89,6 +89,7 @@ class MapsActivityTest {
             onView(withId(R.id.logoutButton)).check(matches(isDisplayed()))
             onView(withId(R.id.trackingRequestsButton)).check(matches(isDisplayed()))
             onView(withId(R.id.followersButton)).check(matches(isDisplayed()))
+            onView(withId(R.id.peopleITrackButton)).check(matches(isDisplayed()))
         }
     }
 
@@ -166,6 +167,35 @@ class MapsActivityTest {
             recorded = server.takeRequest(5, TimeUnit.SECONDS)
         }
         assertNotNull("expected a revoke request to reach the server", recorded)
+        assertEquals("DELETE", recorded!!.method)
+    }
+
+    @Test
+    fun peopleITrackDialogStopsTracking() {
+        SessionHolder.instance.saveAccessToken("token")
+        val trackedId = "33333333-3333-3333-3333-333333333333"
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.path == "/api/v1/tracking" && request.method == "GET" -> MockResponse().setResponseCode(200)
+                    .setBody("""[{"id":"$trackedId","email":"tracked@example.com","firstName":"Tina","lastName":"K"}]""")
+                request.path == "/api/v1/tracking/$trackedId" && request.method == "DELETE" ->
+                    MockResponse().setResponseCode(204)
+                request.path == "/api/v1/locations/tracked" -> MockResponse().setResponseCode(200).setBody("[]")
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+
+        ActivityScenario.launch(MapsActivity::class.java).use {
+            onView(withId(R.id.peopleITrackButton)).perform(click())
+            onView(withText("Tina K")).perform(click())
+            onView(withText(R.string.stop_tracking)).perform(click())
+        }
+
+        var recorded = server.takeRequest(5, TimeUnit.SECONDS)
+        while (recorded != null && recorded.path != "/api/v1/tracking/$trackedId") {
+            recorded = server.takeRequest(5, TimeUnit.SECONDS)
+        }
+        assertNotNull("expected a stop-tracking request to reach the server", recorded)
         assertEquals("DELETE", recorded!!.method)
     }
 

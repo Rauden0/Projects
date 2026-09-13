@@ -24,4 +24,11 @@
     <string name="revoke">Revoke</string>
     <string name="follower_revoked">Access revoked</string>
     <string name="action_failed">Action failed (HTTP %1$d)</string>
+
+    <string name="people_i_track">People I track</string>
+    <string name="no_tracked_users">You aren\'t tracking anyone yet</string>
+    <string name="stop_tracking_title">Stop tracking?</string>
+    <string name="stop_tracking_message">Stop tracking %1$s? This cancels the request if it\'s still pending.</string>
+    <string name="stop_tracking">Stop tracking</string>
+    <string name="tracking_stopped">Stopped tracking</string>
 </resources>

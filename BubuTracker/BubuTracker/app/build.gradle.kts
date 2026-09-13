@@ -26,7 +26,8 @@ android {
     buildTypes {
         debug {
             // 10.0.2.2 is the Android emulator's alias for the host machine's localhost.
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:5121/\"")
+            // Port 8080 matches BubuTrackerAPI-Go's default HTTP_PORT (internal/config/config.go).
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/\"")
         }
         release {
             isMinifyEnabled = false
