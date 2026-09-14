@@ -7,11 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// If this fails after adding a migration, bump the expected version — it's
-// meant to catch latestMigrationVersion() silently returning the wrong
-// number (e.g. an off-by-one or a parsing regression), not to move on its
-// own.
-const expectedLatestMigrationVersion = 3
+// Bump when adding a migration; guards latestMigrationVersion() parsing regressions.
+const expectedLatestMigrationVersion = 5
 
 func TestLatestMigrationVersion(t *testing.T) {
 	got, err := latestMigrationVersion()

@@ -10,10 +10,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-// RequestLogger logs one structured line per request: method, path, status,
-// duration, and the request ID chi's RequestID middleware attaches. It also
-// echoes that ID back as a response header, so a client-reported issue can
-// be tied to a specific server log line.
 func RequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -39,17 +35,11 @@ func RequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 	}
 }
 
-// Recoverer recovers panics and responds through the same JSON error
-// envelope every other error path uses (see WriteError), instead of
-// chi/middleware.Recoverer's bare, empty-body 500. A panicking handler
-// should still look like any other server error to the client rather than
-// silently breaking the API's documented error contract.
 func Recoverer(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rvr := recover(); rvr != nil {
 				if rvr == http.ErrAbortHandler { //nolint:errorlint // sentinel value, not an error to unwrap
-					// Not ours to recover: let net/http abort the response.
 					panic(rvr)
 				}
 				slog.Error("panic recovered",
@@ -64,8 +54,6 @@ func Recoverer(next http.Handler) http.Handler {
 	})
 }
 
-// MaxBodyBytes caps request body size so a large or runaway payload can't
-// exhaust server memory before handler-level JSON decoding even runs.
 func MaxBodyBytes(max int64) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

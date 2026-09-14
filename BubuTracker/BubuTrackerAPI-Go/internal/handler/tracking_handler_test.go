@@ -18,6 +18,7 @@ import (
 type fakeTrackingService struct {
 	tracked           []domain.User
 	incomingRequests  []domain.User
+	outgoingRequests  []domain.User
 	followers         []domain.User
 	addErr            error
 	acceptErr         error
@@ -34,6 +35,10 @@ func (f *fakeTrackingService) ListTracked(_ context.Context, _ uuid.UUID) ([]dom
 
 func (f *fakeTrackingService) ListIncomingRequests(_ context.Context, _ uuid.UUID) ([]domain.User, error) {
 	return f.incomingRequests, nil
+}
+
+func (f *fakeTrackingService) ListOutgoingRequests(_ context.Context, _ uuid.UUID) ([]domain.User, error) {
+	return f.outgoingRequests, nil
 }
 
 func (f *fakeTrackingService) ListFollowers(_ context.Context, _ uuid.UUID) ([]domain.User, error) {
@@ -86,15 +91,18 @@ func TestTrackingHandler_Add_ReturnsConflictWhenAlreadyExists(t *testing.T) {
 	assert.Equal(t, "friend@example.com", tracking.lastAddEmail)
 }
 
-func TestTrackingHandler_Add_ReturnsNotFoundForUnknownEmail(t *testing.T) {
+func TestTrackingHandler_Add_ReturnsCreatedForUnknownEmail(t *testing.T) {
+	// TrackingService.AddTracking never returns ErrNotFound for an unknown
+	// email (it silently no-ops) specifically so this stays a 201, not a 404
+	// that would let a caller enumerate registered emails.
 	user := domain.User{ID: uuid.New()}
-	tracking := &fakeTrackingService{addErr: domain.ErrNotFound}
+	tracking := &fakeTrackingService{}
 	h := handler.NewTrackingHandler(tracking)
 
 	rec := httptest.NewRecorder()
 	h.Add(rec, requestAsUser(http.MethodPost, "/api/v1/tracking", `{"email":"ghost@example.com"}`, user))
 
-	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.Equal(t, http.StatusCreated, rec.Code)
 }
 
 func TestTrackingHandler_Remove_RejectsInvalidUUID(t *testing.T) {
@@ -204,9 +212,7 @@ func TestTrackingHandler_RemoveFollower_RemovesEdgeFromTheTrackedSide(t *testing
 	h.RemoveFollower(rec, req)
 
 	assert.Equal(t, http.StatusNoContent, rec.Code)
-	// Args must be swapped relative to Remove: trackerID from the URL, and
-	// the current (tracked) user as trackedUserID - not the other way
-	// around, or this would let a user revoke someone ELSE's follower.
+	// RemoveFollower swaps args vs Remove (tracker from URL, current user as tracked).
 	assert.Equal(t, trackerID, tracking.lastRemoveTracker)
 	assert.Equal(t, user.ID, tracking.lastRemoveTracked)
 }

@@ -47,6 +47,17 @@ paths:
               schema: { $ref: "#/components/schemas/UserProfile" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      summary: Delete my account
+      description: >
+        Removes the user row, which cascades to their stored location and
+        every tracking edge they're part of, as either tracker or tracked
+        user (migration 000005). Irreversible; does not revoke the Auth0
+        identity itself, so signing in again afterwards provisions a fresh,
+        empty account for the same Auth0 subject.
+      responses:
+        "204": { description: account deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /api/v1/locations/me:
     post:
       summary: Upsert my current location
@@ -67,6 +78,10 @@ paths:
   /api/v1/locations/tracked:
     get:
       summary: Locations of the users I track
+      description: >
+        Accepted tracking only. Pending requests never appear here — they
+        are listed on GET /tracking/outgoing with profile fields only (no
+        coordinates).
       responses:
         "200":
           description: OK
@@ -122,6 +137,22 @@ paths:
       responses:
         "204": { description: removed (idempotent) }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/tracking/outgoing:
+    get:
+      summary: List pending tracking requests I have sent
+      description: >
+        Profile-only list of people I'm waiting on. No location fields —
+        consent has not been granted yet. After they accept, they appear
+        on GET /locations/tracked instead.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserProfile" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /api/v1/tracking/requests:
     get:
@@ -234,12 +265,13 @@ components:
       description: >
         latitude/longitude/updatedAt are null if this tracked user hasn't
         reported a location yet — they still appear in the list rather than
-        being silently omitted.
+        being silently omitted. Only accepted tracking edges are included.
       properties:
         userId: { type: string, format: uuid }
         email: { type: string }
         firstName: { type: string }
         lastName: { type: string }
+        markerColor: { type: string }
         latitude: { type: number, format: double, nullable: true }
         longitude: { type: number, format: double, nullable: true }
         updatedAt: { type: string, format: date-time, nullable: true }

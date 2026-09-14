@@ -1,6 +1,3 @@
-// Package store adapts the sqlc-generated query layer to the repository
-// interfaces the service layer depends on, translating between pgx/SQL
-// concerns (pgtype, driver errors) and plain domain types.
 package store
 
 import (
@@ -11,8 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// PoolConfig tunes the connection pool. Zero values keep pgx's own
-// defaults, so callers only need to set what they care about.
 type PoolConfig struct {
 	DatabaseURL     string
 	MaxConns        int32
@@ -21,7 +16,6 @@ type PoolConfig struct {
 	MaxConnIdleTime time.Duration
 }
 
-// NewPool creates and validates a pgx connection pool for the given config.
 func NewPool(ctx context.Context, cfg PoolConfig) (*pgxpool.Pool, error) {
 	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {

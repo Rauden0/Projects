@@ -18,6 +18,7 @@ SELECT
     u.email,
     u.first_name,
     u.last_name,
+    u.marker_color,
     l.latitude,
     l.longitude,
     l.updated_at
@@ -29,20 +30,17 @@ ORDER BY u.email
 `
 
 type GetTrackedLocationsRow struct {
-	UserID    uuid.UUID          `json:"user_id"`
-	Email     string             `json:"email"`
-	FirstName string             `json:"first_name"`
-	LastName  string             `json:"last_name"`
-	Latitude  *float64           `json:"latitude"`
-	Longitude *float64           `json:"longitude"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	UserID      uuid.UUID          `json:"user_id"`
+	Email       string             `json:"email"`
+	FirstName   string             `json:"first_name"`
+	LastName    string             `json:"last_name"`
+	MarkerColor string             `json:"marker_color"`
+	Latitude    *float64           `json:"latitude"`
+	Longitude   *float64           `json:"longitude"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
-// LEFT JOIN deliberately: a tracked user who hasn't reported a location yet
-// must still appear (with null location fields) rather than silently
-// vanishing from this list while still showing up in GetTrackedUsers.
-// Only accepted edges: a pending, not-yet-consented-to request must grant
-// no location visibility at all.
+// LEFT JOIN so users without a location still appear; accepted edges only.
 func (q *Queries) GetTrackedLocations(ctx context.Context, trackerID uuid.UUID) ([]GetTrackedLocationsRow, error) {
 	rows, err := q.db.Query(ctx, getTrackedLocations, trackerID)
 	if err != nil {
@@ -57,6 +55,7 @@ func (q *Queries) GetTrackedLocations(ctx context.Context, trackerID uuid.UUID) 
 			&i.Email,
 			&i.FirstName,
 			&i.LastName,
+			&i.MarkerColor,
 			&i.Latitude,
 			&i.Longitude,
 			&i.UpdatedAt,

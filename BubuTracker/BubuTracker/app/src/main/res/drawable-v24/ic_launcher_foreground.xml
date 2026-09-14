@@ -1,15 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <path
-        android:fillColor="#9C27B0"
-        android:fillType="nonZero"
-        android:pathData="M54,94.41c-19.69,0-35.62-15.93-35.62-35.62c0-21.32,28.07-47.43,35.62-56.49c7.55,9.06,35.62,35.17,35.62,56.49
-            C89.62,78.48,73.69,94.41,54,94.41z M54,26.11c-8.24,7.84-31.91,30.51-31.91,44.28c0,13.03,10.61,23.64,23.64,23.64
-            c10.17,0,25.46-10.81,31.91-16.44c6.45,5.63,21.74,16.44,31.91,16.44c13.03,0,23.64-10.61,23.64-23.64
-            c0-13.77-23.67-36.44-31.91-44.28C77.67,12.63,62.33,25.34,54,26.11z" />
-
+    <!--
+      Same lizard silhouette as the login badge (ic_lizard_mascot) and the map
+      markers (ic_tracked_marker), just scaled from its native 24x24 viewport
+      into the adaptive icon's 108x108 canvas, centered in the ~72dp safe zone
+      that survives circular/squircle/rounded-square launcher masks.
+    -->
+    <group
+        android:scaleX="3.2"
+        android:scaleY="3.2"
+        android:translateX="19.12"
+        android:translateY="15.92">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M7,15.5 C4.5,16.4 1.8,15.2 1.4,12.4 C1.1,10.1 2.7,8.1 5,8.3 C6.7,8.45 7.7,10.1 6.7,11.4 C6.1,12.15 4.9,12 4.6,11.1 C4.5,10.75 4.7,10.4 5,10.35 C4.7,10.9 5.3,11.4 5.8,11 C6.3,10.6 6.1,9.7 5.3,9.5 C4,9.15 2.9,10.3 3.1,11.9 C3.35,13.85 5.3,14.9 7.3,14.2 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M5.5,17.3 A1.5,1.15 0 1,0 8.5,17.3 A1.5,1.15 0 1,0 5.5,17.3 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M12.1,17.5 A1.5,1.15 0 1,0 15.1,17.5 A1.5,1.15 0 1,0 12.1,17.5 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M4.8,14 A5.4,3.7 0 1,0 15.6,14 A5.4,3.7 0 1,0 4.8,14 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M12.5,9.2 A4.1,4.1 0 1,0 20.7,9.2 A4.1,4.1 0 1,0 12.5,9.2 Z" />
+        <path
+            android:fillColor="#EC4899"
+            android:pathData="M17.25,8.1 A0.85,0.85 0 1,0 18.95,8.1 A0.85,0.85 0 1,0 17.25,8.1 Z" />
+    </group>
 </vector>

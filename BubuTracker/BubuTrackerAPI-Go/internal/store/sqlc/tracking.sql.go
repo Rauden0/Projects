@@ -22,9 +22,7 @@ type AcceptTrackingParams struct {
 	TrackedUserID uuid.UUID `json:"tracked_user_id"`
 }
 
-// Only transitions a still-pending request, so accepting a request that's
-// already accepted (or was rejected/removed) affects zero rows instead of
-// silently no-op'ing on the wrong state - the caller can tell the two apart.
+// Only pending→accepted; 0 rows means no such pending request.
 func (q *Queries) AcceptTracking(ctx context.Context, arg AcceptTrackingParams) (int64, error) {
 	result, err := q.db.Exec(ctx, acceptTracking, arg.TrackerID, arg.TrackedUserID)
 	if err != nil {
@@ -43,25 +41,19 @@ type AddTrackingParams struct {
 	TrackedUserID uuid.UUID `json:"tracked_user_id"`
 }
 
-// Creates a pending request rather than an active tracking edge; the
-// tracked user must accept it (AcceptTracking) before the tracker gets any
-// location visibility.
 func (q *Queries) AddTracking(ctx context.Context, arg AddTrackingParams) error {
 	_, err := q.db.Exec(ctx, addTracking, arg.TrackerID, arg.TrackedUserID)
 	return err
 }
 
 const getFollowers = `-- name: GetFollowers :many
-SELECT u.id, u.auth0_subject_id, u.email, u.first_name, u.last_name, u.created_at
+SELECT u.id, u.auth0_subject_id, u.email, u.first_name, u.last_name, u.created_at, u.marker_color
 FROM user_tracking t
 JOIN users u ON u.id = t.tracker_id
 WHERE t.tracked_user_id = $1 AND t.status = 'accepted'
 ORDER BY u.email
 `
 
-// Users who are currently, with consent, tracking the current user - so
-// they have ongoing visibility into (and can revoke) who has access, not
-// just at request time.
 func (q *Queries) GetFollowers(ctx context.Context, trackedUserID uuid.UUID) ([]User, error) {
 	rows, err := q.db.Query(ctx, getFollowers, trackedUserID)
 	if err != nil {
@@ -78,6 +70,7 @@ func (q *Queries) GetFollowers(ctx context.Context, trackedUserID uuid.UUID) ([]
 			&i.FirstName,
 			&i.LastName,
 			&i.CreatedAt,
+			&i.MarkerColor,
 		); err != nil {
 			return nil, err
 		}
@@ -90,15 +83,13 @@ func (q *Queries) GetFollowers(ctx context.Context, trackedUserID uuid.UUID) ([]
 }
 
 const getIncomingTrackingRequests = `-- name: GetIncomingTrackingRequests :many
-SELECT u.id, u.auth0_subject_id, u.email, u.first_name, u.last_name, u.created_at
+SELECT u.id, u.auth0_subject_id, u.email, u.first_name, u.last_name, u.created_at, u.marker_color
 FROM user_tracking t
 JOIN users u ON u.id = t.tracker_id
 WHERE t.tracked_user_id = $1 AND t.status = 'pending'
 ORDER BY u.email
 `
 
-// Pending requests from other users to track the current user - the
-// consent inbox they accept or reject from.
 func (q *Queries) GetIncomingTrackingRequests(ctx context.Context, trackedUserID uuid.UUID) ([]User, error) {
 	rows, err := q.db.Query(ctx, getIncomingTrackingRequests, trackedUserID)
 	if err != nil {
@@ -115,6 +106,44 @@ func (q *Queries) GetIncomingTrackingRequests(ctx context.Context, trackedUserID
 			&i.FirstName,
 			&i.LastName,
 			&i.CreatedAt,
+			&i.MarkerColor,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOutgoingTrackingRequests = `-- name: GetOutgoingTrackingRequests :many
+SELECT u.id, u.auth0_subject_id, u.email, u.first_name, u.last_name, u.created_at, u.marker_color
+FROM user_tracking t
+JOIN users u ON u.id = t.tracked_user_id
+WHERE t.tracker_id = $1 AND t.status = 'pending'
+ORDER BY u.email
+`
+
+// Profile only; no locations join (consent not granted yet).
+func (q *Queries) GetOutgoingTrackingRequests(ctx context.Context, trackerID uuid.UUID) ([]User, error) {
+	rows, err := q.db.Query(ctx, getOutgoingTrackingRequests, trackerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Auth0SubjectID,
+			&i.Email,
+			&i.FirstName,
+			&i.LastName,
+			&i.CreatedAt,
+			&i.MarkerColor,
 		); err != nil {
 			return nil, err
 		}
@@ -127,15 +156,13 @@ func (q *Queries) GetIncomingTrackingRequests(ctx context.Context, trackedUserID
 }
 
 const getTrackedUsers = `-- name: GetTrackedUsers :many
-SELECT u.id, u.auth0_subject_id, u.email, u.first_name, u.last_name, u.created_at
+SELECT u.id, u.auth0_subject_id, u.email, u.first_name, u.last_name, u.created_at, u.marker_color
 FROM user_tracking t
 JOIN users u ON u.id = t.tracked_user_id
 WHERE t.tracker_id = $1 AND t.status = 'accepted'
 ORDER BY u.email
 `
 
-// Only users whose tracking request has been accepted - a pending request
-// grants no visibility into the target's location yet.
 func (q *Queries) GetTrackedUsers(ctx context.Context, trackerID uuid.UUID) ([]User, error) {
 	rows, err := q.db.Query(ctx, getTrackedUsers, trackerID)
 	if err != nil {
@@ -152,6 +179,7 @@ func (q *Queries) GetTrackedUsers(ctx context.Context, trackerID uuid.UUID) ([]U
 			&i.FirstName,
 			&i.LastName,
 			&i.CreatedAt,
+			&i.MarkerColor,
 		); err != nil {
 			return nil, err
 		}
@@ -193,10 +221,6 @@ type RemoveTrackingParams struct {
 	TrackedUserID uuid.UUID `json:"tracked_user_id"`
 }
 
-// Deletes the (tracker, tracked) edge regardless of its status, so this one
-// statement serves four call sites: the tracker canceling their own pending
-// request or stopping active tracking, and the tracked user rejecting a
-// pending request or revoking consent already given.
 func (q *Queries) RemoveTracking(ctx context.Context, arg RemoveTrackingParams) error {
 	_, err := q.db.Exec(ctx, removeTracking, arg.TrackerID, arg.TrackedUserID)
 	return err

@@ -13,32 +13,35 @@ import (
 )
 
 type userProfileResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Email     string    `json:"email"`
-	FirstName string    `json:"firstName"`
-	LastName  string    `json:"lastName"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID          uuid.UUID `json:"id"`
+	Email       string    `json:"email"`
+	FirstName   string    `json:"firstName"`
+	LastName    string    `json:"lastName"`
+	MarkerColor string    `json:"markerColor"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 func toUserProfileResponse(u domain.User) userProfileResponse {
 	return userProfileResponse{
-		ID:        u.ID,
-		Email:     u.Email,
-		FirstName: u.FirstName,
-		LastName:  u.LastName,
-		CreatedAt: u.CreatedAt,
+		ID:          u.ID,
+		Email:       u.Email,
+		FirstName:   u.FirstName,
+		LastName:    u.LastName,
+		MarkerColor: u.MarkerColor,
+		CreatedAt:   u.CreatedAt,
 	}
 }
 
 type updateUserRequest struct {
-	FirstName *string `json:"firstName"`
-	LastName  *string `json:"lastName"`
+	FirstName   *string `json:"firstName"`
+	LastName    *string `json:"lastName"`
+	MarkerColor *string `json:"markerColor"`
 }
 
-// UserService is the subset of service.UserService each handler needs.
 type UserService interface {
-	GetOrCreateBySubject(ctx context.Context, subjectID, email, firstName, lastName string) (domain.User, error)
-	UpdateProfile(ctx context.Context, userID uuid.UUID, firstName, lastName *string) (domain.User, error)
+	GetOrCreateBySubject(ctx context.Context, subjectID, email string, emailVerified *bool, firstName, lastName string) (domain.User, error)
+	UpdateProfile(ctx context.Context, userID uuid.UUID, firstName, lastName, markerColor *string) (domain.User, error)
+	DeleteAccount(ctx context.Context, userID uuid.UUID, subjectID string) error
 }
 
 type UserHandler struct {
@@ -63,11 +66,22 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, err := h.users.UpdateProfile(r.Context(), current.ID, req.FirstName, req.LastName)
+	updated, err := h.users.UpdateProfile(r.Context(), current.ID, req.FirstName, req.LastName, req.MarkerColor)
 	if err != nil {
 		httpserver.WriteError(w, err)
 		return
 	}
 
 	httpserver.WriteJSON(w, http.StatusOK, toUserProfileResponse(updated))
+}
+
+func (h *UserHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
+	current := currentUserFromContext(r.Context())
+
+	if err := h.users.DeleteAccount(r.Context(), current.ID, current.Auth0SubjectID); err != nil {
+		httpserver.WriteError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

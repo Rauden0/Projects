@@ -10,10 +10,6 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/config"
 )
 
-// clearAll resets every variable config.Load reads to unset/empty via
-// t.Setenv, so each test starts from a known-blank slate regardless of
-// what's set in the surrounding environment, and t.Setenv restores the
-// prior value automatically once the test ends.
 func clearAll(t *testing.T) {
 	t.Helper()
 	for _, key := range []string{

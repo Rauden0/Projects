@@ -1,10 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.BubuTracker" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Light-only, not DayNight: every color in this app is hardcoded for a light
+         pink theme with no dark-mode design. DayNight silently pulls dark-appropriate
+         defaults (e.g. a light hint-text color meant for dark backgrounds) for any
+         Material widget state we haven't explicitly colored ourselves, which is
+         invisible against our forced-light surfaces on a device in system dark mode. -->
+    <style name="Theme.BubuTracker" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/brand_primary</item>
         <item name="colorPrimaryDark">@color/brand_primary_dark</item>
         <item name="colorAccent">@color/brand_primary</item>
         <item name="android:windowBackground">@color/background</item>
         <item name="android:statusBarColor">@color/brand_primary_dark</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.BubuTracker.AlertDialog</item>
+    </style>
+
+    <!-- Without this, MaterialAlertDialogBuilder falls back to a plain dark
+         system dialog (square corners, no brand color) instead of matching
+         the rest of the app. -->
+    <style name="ThemeOverlay.BubuTracker.AlertDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <!-- A clearly pink card, not a barely-tinted white - a subtle off-white read as
+             "generic dialog" regardless of the hex value, given how close it sits to
+             @color/surface. -->
+        <item name="colorSurface">@color/dialog_surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.BubuTracker.AlertDialog</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.BubuTracker.AlertDialog" parent="">
+        <item name="cornerSize">20dp</item>
     </style>
 </resources>

@@ -20,8 +20,6 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/handler"
 )
 
-// alwaysUpPinger satisfies handler.Pinger without a real database, for
-// router tests that don't care about readiness-check behavior.
 type alwaysUpPinger struct{}
 
 func (alwaysUpPinger) Ping(context.Context) error { return nil }
@@ -30,9 +28,6 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-// fakeAuthMiddleware stands in for a real Auth0 verifier: it either injects
-// fixed claims (as auth.Verifier.Middleware would for a valid token) or
-// rejects with 401 (as it would for a missing/invalid one).
 func fakeAuthMiddleware(authenticated bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -98,10 +93,7 @@ func TestRouter_RejectsOversizedBody(t *testing.T) {
 	srv := httptest.NewServer(newTestRouter(t, true))
 	defer srv.Close()
 
-	// A syntactically-open JSON string of padding, not arbitrary zero bytes:
-	// the decoder must keep pulling bytes (rather than failing on the first
-	// invalid token) so it actually hits the MaxBodyBytes limit instead of a
-	// plain syntax error.
+	// Open JSON string so the decoder keeps reading until MaxBodyBytes, not a syntax error.
 	oversized := append([]byte(`{"padding":"`), bytes.Repeat([]byte("a"), 2<<20)...) // 2 MiB against the 1 MiB test limit
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/locations/me", bytes.NewReader(oversized))
 	require.NoError(t, err)
@@ -113,8 +105,6 @@ func TestRouter_RejectsOversizedBody(t *testing.T) {
 	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
 }
 
-// panickyLocationService simulates an unexpected bug reaching production: a
-// handler dependency panics instead of returning an error.
 type panickyLocationService struct{ fakeLocationService }
 
 func (panickyLocationService) UpdateMyLocation(context.Context, uuid.UUID, float64, float64) (domain.Location, error) {
@@ -153,10 +143,6 @@ func TestRouter_PanicRecoveryReturnsJSONErrorEnvelope(t *testing.T) {
 	assert.NotEmpty(t, body.Error.Message)
 }
 
-// TestRouter_TrackingAddIsRateLimited is the regression test for the email
-// enumeration finding: POST /tracking distinguishes "unknown email" (404)
-// from "known email" (201/409), so without a rate limit an authenticated
-// user could probe arbitrary emails to discover who has an account.
 func TestRouter_TrackingAddIsRateLimited(t *testing.T) {
 	srv := httptest.NewServer(newTestRouter(t, true))
 	defer srv.Close()
@@ -178,23 +164,42 @@ func TestRouter_TrackingAddIsRateLimited(t *testing.T) {
 	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode, "the 11th request in a minute should be rate limited")
 }
 
-// TestRouter_TrackingSubRoutesAreNotShadowedByTheWildcardRoute guards
-// against a routing regression: DELETE /tracking/{trackedUserID} is a
-// wildcard on the same path prefix as the literal GET /tracking/requests
-// and GET /tracking/followers. If chi's static-route-wins-over-wildcard
-// behavior ever broke (or a route got reordered into the wrong place),
-// these would 400 on "requests"/"followers" as an invalid UUID instead of
-// reaching the intended handler.
 func TestRouter_TrackingSubRoutesAreNotShadowedByTheWildcardRoute(t *testing.T) {
 	srv := httptest.NewServer(newTestRouter(t, true))
 	defer srv.Close()
 
-	for _, path := range []string{"/api/v1/tracking/requests", "/api/v1/tracking/followers"} {
+	for _, path := range []string{"/api/v1/tracking/requests", "/api/v1/tracking/followers", "/api/v1/tracking/outgoing"} {
 		resp, err := http.Get(srv.URL + path)
 		require.NoError(t, err)
 		resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "GET %s", path)
 	}
+}
+
+func TestRouter_DeleteMe_RejectsUnauthenticated(t *testing.T) {
+	srv := httptest.NewServer(newTestRouter(t, false))
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/users/me", nil)
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestRouter_DeleteMe_SucceedsWhenAuthenticated(t *testing.T) {
+	srv := httptest.NewServer(newTestRouter(t, true))
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/users/me", nil)
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
 
 func TestRouter_TrackingAccept_RejectsUnauthenticated(t *testing.T) {

@@ -31,14 +31,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.TimeUnit
 
-/**
- * End-to-end test across the real assembled app: Login (pre-authenticated, since Auth0's
- * hosted OAuth page can't be driven without a live tenant/credentials) -> real MapsActivity
- * -> add a tracked user -> logout -> back to the real LoginActivity. Unlike the per-feature
- * instrumented tests, :app has every feature module on its classpath, so this exercises the
- * actual implicit-intent navigation between real Activities, not a stub. The backend is an
- * in-process MockWebServer standing in for BubuTrackerAPI-Go.
- */
 @RunWith(AndroidJUnit4::class)
 class EndToEndFlowTest {
     private lateinit var server: MockWebServer
@@ -72,8 +64,6 @@ class EndToEndFlowTest {
     @Test
     fun loginRedirectsToMapAddsTrackingThenLogsOutBackToLogin() {
         ActivityScenario.launch(LoginActivity::class.java).use {
-            // Already logged in -> LoginActivity's implicit ACTION_MAP intent resolves to
-            // the real MapsActivity from :feature:map, no stubbing needed here.
             onView(withId(MapR.id.addTrackingButton)).check(matches(isDisplayed()))
 
             onView(withId(MapR.id.addTrackingButton)).perform(click())
@@ -90,7 +80,6 @@ class EndToEndFlowTest {
 
             onView(withId(MapR.id.logoutButton)).perform(click())
 
-            // Real ACTION_LOGIN intent resolves back to the real LoginActivity.
             onView(withId(AuthR.id.loginButton)).check(matches(isDisplayed()))
         }
     }

@@ -54,9 +54,7 @@ func TestTrackingRepository_Add_DuplicateReturnsAlreadyExists(t *testing.T) {
 }
 
 func TestTrackingRepository_Add_SelfTrackingRejectedByConstraint(t *testing.T) {
-	// The service layer already rejects self-tracking with a clear error;
-	// this proves the chk_no_self_tracking CHECK constraint holds too, as a
-	// second line of defense.
+	// Proves chk_no_self_tracking holds at the DB layer.
 	_, queries := setupDB(t)
 	users := store.NewUserRepository(queries)
 	tracking := store.NewTrackingRepository(queries)
@@ -81,7 +79,6 @@ func TestTrackingRepository_Remove_IsIdempotent(t *testing.T) {
 	target, err := users.UpsertByAuth0Subject(ctx, "auth0|2", "target@example.com", "X", "Y")
 	require.NoError(t, err)
 
-	// Removing an edge that was never added must not error.
 	require.NoError(t, tracking.Remove(ctx, tracker.ID, target.ID))
 
 	require.NoError(t, tracking.Add(ctx, tracker.ID, target.ID))
@@ -119,11 +116,6 @@ func TestTrackingRepository_GetTrackedUsers_OrderedByEmail(t *testing.T) {
 	assert.Equal(t, "zed@example.com", result[1].Email)
 }
 
-// TestTrackingRepository_PendingRequestGrantsNoVisibilityUntilAccepted is
-// the direct regression test for the consent model: Add alone must not
-// make a tracked user show up in GetTrackedUsers, and Accept is what
-// transitions it - covering both directions plus the request/follower
-// inboxes each side sees.
 func TestTrackingRepository_PendingRequestGrantsNoVisibilityUntilAccepted(t *testing.T) {
 	_, queries := setupDB(t)
 	users := store.NewUserRepository(queries)

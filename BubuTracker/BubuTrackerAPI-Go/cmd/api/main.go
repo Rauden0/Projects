@@ -1,4 +1,3 @@
-// Command api runs the BubuTracker HTTP API.
 package main
 
 import (

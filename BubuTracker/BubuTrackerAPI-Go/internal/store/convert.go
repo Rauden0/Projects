@@ -10,12 +10,12 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/store/sqlc"
 )
 
-// postgres error codes we branch on. See:
 // https://www.postgresql.org/docs/current/errcodes-appendix.html
 const pgUniqueViolation = "23505"
 
-// mapError normalizes pgx/postgres errors into the sentinel domain errors
-// the service layer expects, so callers never need to know about SQL.
+// Auto-generated name for users.email UNIQUE (db/migrations/000001).
+const usersEmailKeyConstraint = "users_email_key"
+
 func mapError(err error) error {
 	if err == nil {
 		return nil
@@ -30,6 +30,18 @@ func mapError(err error) error {
 	return err
 }
 
+// Upsert ON CONFLICT is only on auth0_subject_id; email UNIQUE → ErrEmailConflict.
+func mapUpsertUserError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation && pgErr.ConstraintName == usersEmailKeyConstraint {
+		return domain.ErrEmailConflict
+	}
+	return mapError(err)
+}
+
 func toDomainUser(u sqlc.User) domain.User {
 	return domain.User{
 		ID:             u.ID,
@@ -37,6 +49,7 @@ func toDomainUser(u sqlc.User) domain.User {
 		Email:          u.Email,
 		FirstName:      u.FirstName,
 		LastName:       u.LastName,
+		MarkerColor:    u.MarkerColor,
 		CreatedAt:      u.CreatedAt.Time,
 	}
 }

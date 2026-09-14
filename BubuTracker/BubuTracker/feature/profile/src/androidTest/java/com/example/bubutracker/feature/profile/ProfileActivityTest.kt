@@ -22,10 +22,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * feature:profile doesn't depend on feature:map, so Espresso-Intents stubs the MAP target
- * (same rationale as feature:auth/feature:map's tests). The backend is a MockWebServer.
- */
 @RunWith(AndroidJUnit4::class)
 class ProfileActivityTest {
     private lateinit var server: MockWebServer
@@ -73,17 +69,13 @@ class ProfileActivityTest {
         ActivityScenario.launch(ProfileActivity::class.java).use {
             onView(withId(R.id.FirstNameTextInput)).perform(replaceText("Jane"))
             onView(withId(R.id.LastNameTextInput)).perform(replaceText("Doe"))
-            onView(withId(R.id.registerConfirmationButton)).perform(click())
+            onView(withId(R.id.saveProfileButton)).perform(click())
 
             waitFor { intended(hasAction(AppActions.ACTION_MAP)) }
         }
     }
 
-    /**
-     * ProfileActivity uses Retrofit's callback API directly (no coroutines/idling resource
-     * wired up), so Espresso can't automatically wait for the async network round trip.
-     * Polling is the pragmatic stand-in until the app exposes an IdlingResource.
-     */
+    // Poll until assertion passes — no IdlingResource wired for Retrofit callbacks.
     private fun waitFor(timeoutMs: Long = 5_000, intervalMs: Long = 100, assertion: () -> Unit) {
         val deadline = System.currentTimeMillis() + timeoutMs
         var lastError: Throwable? = null

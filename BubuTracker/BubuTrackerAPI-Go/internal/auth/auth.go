@@ -1,6 +1,3 @@
-// Package auth validates Auth0-issued access tokens (RS256 JWTs) using the
-// tenant's published OIDC discovery document and JWKS, and exposes the
-// authenticated subject's claims to downstream handlers via context.
 package auth
 
 import (
@@ -16,9 +13,6 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/httpserver"
 )
 
-// Bounds for OIDC discovery at startup: each attempt gets its own timeout so
-// an unreachable/slow tenant fails fast instead of hanging the process, and
-// a couple of retries ride out a transient DNS or network blip on boot.
 const (
 	discoveryAttempts = 3
 	discoveryTimeout  = 10 * time.Second
@@ -29,23 +23,24 @@ type ctxKey int
 
 const claimsCtxKey ctxKey = iota
 
-// Claims is the subset of the Auth0 access token we care about.
+// Access tokens for a custom API audience omit plain OIDC profile claims;
+// an Auth0 Action must set these namespaced custom claims on the access token.
+//
+// EmailVerified is a *bool, not bool: the Action may not set this claim yet,
+// and a missing claim (nil) must be treated differently from an explicit
+// false — see UserService.GetOrCreateBySubject.
 type Claims struct {
-	Subject   string `json:"sub"`
-	Email     string `json:"email"`
-	FirstName string `json:"given_name"`
-	LastName  string `json:"family_name"`
+	Subject       string `json:"sub"`
+	Email         string `json:"https://bubutracker.app/email"`
+	EmailVerified *bool  `json:"https://bubutracker.app/email_verified"`
+	FirstName     string `json:"https://bubutracker.app/given_name"`
+	LastName      string `json:"https://bubutracker.app/family_name"`
 }
 
-// Verifier validates bearer tokens against a single Auth0 tenant/audience.
 type Verifier struct {
 	idTokenVerifier *oidc.IDTokenVerifier
 }
 
-// NewVerifier fetches the OIDC discovery document for the given Auth0 domain
-// and builds a verifier scoped to the given API audience. It fails fast if
-// the tenant's discovery document can't be reached, so a misconfiguration is
-// caught at startup rather than on the first request.
 func NewVerifier(ctx context.Context, auth0Domain, audience string) (*Verifier, error) {
 	issuer := fmt.Sprintf("https://%s/", auth0Domain)
 
@@ -62,10 +57,6 @@ func NewVerifier(ctx context.Context, auth0Domain, audience string) (*Verifier, 
 	return &Verifier{idTokenVerifier: verifier}, nil
 }
 
-// discoverProvider fetches the OIDC discovery document, retrying a bounded
-// number of times with a fixed backoff so a transient failure at boot
-// (e.g. a DNS blip) doesn't crash-loop the process, while a persistently
-// unreachable tenant still fails within a predictable amount of time.
 func discoverProvider(ctx context.Context, issuer string) (*oidc.Provider, error) {
 	var lastErr error
 	for attempt := 1; attempt <= discoveryAttempts; attempt++ {
@@ -88,12 +79,6 @@ func discoverProvider(ctx context.Context, issuer string) (*oidc.Provider, error
 	return nil, lastErr
 }
 
-// Middleware authenticates the request's bearer token and injects its claims
-// into the request context, rejecting the request with 401 otherwise. On
-// rejection it goes through httpserver.WriteError like every other error
-// path in the API, rather than net/http's plain-text http.Error — a client
-// parsing the documented JSON error envelope shouldn't need a special case
-// for auth failures.
 func (v *Verifier) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := bearerToken(r)
@@ -129,9 +114,6 @@ func bearerToken(r *http.Request) string {
 	return header[len(prefix):]
 }
 
-// FromContext returns the claims attached by Middleware. It panics if called
-// on a request that Middleware did not process, since that indicates a
-// routing bug (an unauthenticated route reaching an authenticated handler).
 func FromContext(ctx context.Context) Claims {
 	claims, ok := ctx.Value(claimsCtxKey).(Claims)
 	if !ok {
@@ -140,9 +122,6 @@ func FromContext(ctx context.Context) Claims {
 	return claims
 }
 
-// NewContext returns a copy of ctx carrying claims, as Middleware would set
-// it on a real request. It exists so handler tests can simulate an
-// authenticated request without standing up a real Auth0 verifier.
 func NewContext(ctx context.Context, claims Claims) context.Context {
 	return context.WithValue(ctx, claimsCtxKey, claims)
 }

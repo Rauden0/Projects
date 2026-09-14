@@ -1,7 +1,3 @@
-// Command migrate applies (or rolls back) database migrations. It is a
-// separate binary from the API server on purpose: schema changes are a
-// distinct, auditable deploy step, not something the API silently does on
-// every boot.
 package main
 
 import (

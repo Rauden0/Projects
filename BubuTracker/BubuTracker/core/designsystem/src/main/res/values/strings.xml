@@ -2,4 +2,5 @@
 <resources>
     <!-- Shared across feature:auth (login title) and feature:map (activity label) -->
     <string name="bubu_tracker">Bubu Tracker</string>
+    <string name="privacy_policy">Privacy policy</string>
 </resources>

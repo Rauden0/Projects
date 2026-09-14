@@ -12,7 +12,7 @@
         android:background="@drawable/bg_circle_primary"
         android:contentDescription="@null"
         android:padding="22dp"
-        android:src="@drawable/ic_map_pin"
+        android:src="@drawable/ic_lizard_mascot"
         app:layout_constraintBottom_toTopOf="@id/loginTitle"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -58,9 +58,24 @@
         android:textSize="16sp"
         app:backgroundTint="@color/brand_primary"
         app:cornerRadius="28dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:elevation="0dp"
+        app:layout_constraintBottom_toTopOf="@id/privacyPolicyLink"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/loginSubtitle" />
+
+    <TextView
+        android:id="@+id/privacyPolicyLink"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:padding="8dp"
+        android:text="@string/privacy_policy"
+        android:textColor="@color/brand_primary"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/loginButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

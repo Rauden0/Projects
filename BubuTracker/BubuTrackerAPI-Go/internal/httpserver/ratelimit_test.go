@@ -52,7 +52,6 @@ func TestRateLimit_ScopesByKeyIndependently(t *testing.T) {
 	limited.ServeHTTP(rec1, req1)
 	require.Equal(t, http.StatusOK, rec1.Code)
 
-	// Alice is now at her limit, but Bob has his own independent bucket.
 	req2 := httptest.NewRequest(http.MethodPost, "/", nil)
 	req2.Header.Set("X-User", "bob")
 	rec2 := httptest.NewRecorder()

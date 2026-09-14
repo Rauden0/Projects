@@ -12,13 +12,15 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/service"
 )
 
-func TestTrackingService_AddTracking_RejectsUnknownEmail(t *testing.T) {
+func TestTrackingService_AddTracking_SilentlyNoOpsForUnknownEmail(t *testing.T) {
 	users := newFakeUserRepo()
 	svc := service.NewTrackingService(users, newFakeTrackingRepo())
 
+	// Must not return ErrNotFound: a caller distinguishing this from a real
+	// "request sent" response could enumerate which emails have accounts.
 	err := svc.AddTracking(context.Background(), uuid.New(), "ghost@example.com")
 
-	assert.ErrorIs(t, err, domain.ErrNotFound)
+	assert.NoError(t, err)
 }
 
 func TestTrackingService_AddTracking_MatchesEmailCaseInsensitively(t *testing.T) {
@@ -82,6 +84,11 @@ func TestTrackingService_AddTracking_CreatesPendingRequestNotVisibleYet(t *testi
 	tracked, err := svc.ListTracked(context.Background(), tracker.ID)
 	require.NoError(t, err)
 	assert.Empty(t, tracked, "a pending request must not grant tracking visibility yet")
+
+	outgoing, err := svc.ListOutgoingRequests(context.Background(), tracker.ID)
+	require.NoError(t, err)
+	require.Len(t, outgoing, 1)
+	assert.Equal(t, target.Email, outgoing[0].Email)
 
 	requests, err := svc.ListIncomingRequests(context.Background(), target.ID)
 	require.NoError(t, err)
@@ -148,13 +155,11 @@ func TestTrackingService_RemoveTracking_RejectsAPendingRequest(t *testing.T) {
 	svc := service.NewTrackingService(users, tracking)
 	require.NoError(t, svc.AddTracking(context.Background(), tracker.ID, target.Email))
 
-	// The tracked user rejects by removing the edge from their side.
 	require.NoError(t, svc.RemoveTracking(context.Background(), tracker.ID, target.ID))
 
 	requests, err := svc.ListIncomingRequests(context.Background(), target.ID)
 	require.NoError(t, err)
 	assert.Empty(t, requests)
 
-	// Rejected, not blocked forever: the tracker can request again.
 	assert.NoError(t, svc.AddTracking(context.Background(), tracker.ID, target.Email))
 }

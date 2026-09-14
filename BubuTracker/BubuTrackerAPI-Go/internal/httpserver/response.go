@@ -1,6 +1,3 @@
-// Package httpserver holds transport-level concerns shared by every
-// handler: JSON encoding, error translation, middleware, and the HTTP
-// server lifecycle. It knows nothing about business logic.
 package httpserver
 
 import (
@@ -12,11 +9,7 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/domain"
 )
 
-// WriteJSON encodes v as the response body with the given status code. Every
-// response goes through here, and every response (profile, location,
-// tracking data) is per-user PII, so it's never cacheable by an
-// intermediary — hence the blanket Cache-Control rather than an opt-in set
-// on individual handlers.
+// Per-user PII responses must not be cached by intermediaries.
 func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
@@ -36,8 +29,6 @@ type errorBody struct {
 	} `json:"error"`
 }
 
-// WriteError translates a domain/service error (or a handler-local one) into
-// the appropriate HTTP status and a consistent JSON error envelope.
 func WriteError(w http.ResponseWriter, err error) {
 	status, code := statusFor(err)
 
@@ -63,6 +54,8 @@ func statusFor(err error) (int, string) {
 		return http.StatusBadRequest, "invalid_argument"
 	case errors.Is(err, domain.ErrSelfTracking):
 		return http.StatusBadRequest, "self_tracking"
+	case errors.Is(err, domain.ErrEmailConflict):
+		return http.StatusConflict, "email_conflict"
 	case errors.Is(err, domain.ErrUnauthenticated):
 		return http.StatusUnauthorized, "unauthenticated"
 	case errors.Is(err, domain.ErrPayloadTooLarge):

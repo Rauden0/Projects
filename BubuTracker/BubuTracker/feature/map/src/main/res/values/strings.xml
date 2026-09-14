@@ -1,14 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ok">OK</string>
     <string name="add_tracking">Track someone</string>
+    <string name="outgoing_pending_title">Pending requests</string>
+    <string name="no_outgoing_pending">No pending requests yet. Add someone by email.</string>
+    <string name="track_new_person">Track new person</string>
     <string name="add_tracking_email_hint">Email Address</string>
     <string name="add">Add</string>
+    <string name="cancel">Cancel</string>
     <string name="logout">Log out</string>
     <string name="tracking_added">Tracking request sent</string>
-    <string name="tracking_add_failed">Could not send request (HTTP %1$d)</string>
-    <string name="network_error">Network error: %1$s</string>
-    <string name="google_map_api_key">secret</string>
+    <string name="tracking_add_failed">Could not send the request. Please try again.</string>
+    <string name="tracking_add_not_found">No BubuTracker account for that email. They need to open the app and sign in once first.</string>
+    <string name="tracking_add_already_exists">You already sent a request to this person, or you\'re already tracking them.</string>
+    <string name="tracking_add_invalid">Enter a valid email. You can\'t track yourself.</string>
+    <string name="tracking_add_rate_limited">Too many requests. Wait a moment and try again.</string>
+    <string name="network_error">Couldn\'t reach the server. Check your connection and try again.</string>
 
+    <string name="manage">Manage</string>
+    <string name="edit_profile">My profile</string>
     <string name="tracking_requests">Requests</string>
     <string name="followers">Followers</string>
     <string name="no_pending_requests">No pending tracking requests</string>
@@ -23,12 +33,21 @@
     <string name="revoke_follower_message">Stop %1$s from seeing your location?</string>
     <string name="revoke">Revoke</string>
     <string name="follower_revoked">Access revoked</string>
-    <string name="action_failed">Action failed (HTTP %1$d)</string>
+    <string name="action_failed">Please try again.</string>
+    <string name="action_failed_not_found">That request is no longer available.</string>
+    <string name="action_failed_unauthorized">Your session expired. Please sign in again.</string>
+    <string name="action_failed_rate_limited">Too many requests. Wait a moment and try again.</string>
 
-    <string name="people_i_track">People I track</string>
-    <string name="no_tracked_users">You aren\'t tracking anyone yet</string>
     <string name="stop_tracking_title">Stop tracking?</string>
     <string name="stop_tracking_message">Stop tracking %1$s? This cancels the request if it\'s still pending.</string>
     <string name="stop_tracking">Stop tracking</string>
     <string name="tracking_stopped">Stopped tracking</string>
+
+    <string name="last_seen_label">Last seen</string>
+    <string name="no_location_reported">No location reported yet</string>
+    <string name="location_label">Location</string>
+    <string name="location_resolving">Locating…</string>
+    <string name="location_unknown">Unknown location</string>
+    <string name="tracking_pending">Pending</string>
+    <string name="tracking_pending_waiting">Waiting for them to accept</string>
 </resources>

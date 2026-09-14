@@ -41,11 +41,6 @@ func TestUserRepository_UpsertByAuth0Subject_CreatesOnFirstCall(t *testing.T) {
 	assert.Equal(t, user, fetched)
 }
 
-// TestUserRepository_UpsertByAuth0Subject_ConvergesWithoutError is the
-// direct regression test for the race this API used to have: two upserts
-// for the same subject (simulating two concurrent first-sign-in requests,
-// or a later login with a drifted email) must converge onto one row
-// instead of the second call erroring with a unique-violation.
 func TestUserRepository_UpsertByAuth0Subject_ConvergesWithoutError(t *testing.T) {
 	_, queries := setupDB(t)
 	repo := store.NewUserRepository(queries)
@@ -64,9 +59,7 @@ func TestUserRepository_UpsertByAuth0Subject_ConvergesWithoutError(t *testing.T)
 }
 
 func TestUserRepository_UpsertByAuth0Subject_RejectsUppercaseEmail(t *testing.T) {
-	// The service layer normalizes email casing before this is ever called;
-	// this proves the DB CHECK constraint holds as a second line of defense
-	// even if that normalization were ever bypassed or removed by mistake.
+	// Proves email lowercase CHECK holds even if service normalization is bypassed.
 	_, queries := setupDB(t)
 	repo := store.NewUserRepository(queries)
 
@@ -85,7 +78,7 @@ func TestUserRepository_UpsertByAuth0Subject_DuplicateEmailDifferentSubjectFails
 
 	_, err = repo.UpsertByAuth0Subject(ctx, "auth0|2", "shared@example.com", "C", "D")
 
-	assert.ErrorIs(t, err, domain.ErrAlreadyExists)
+	assert.ErrorIs(t, err, domain.ErrEmailConflict)
 }
 
 func TestUserRepository_UpdateProfile_PartialUpdateLeavesOtherFieldAlone(t *testing.T) {
@@ -97,7 +90,7 @@ func TestUserRepository_UpdateProfile_PartialUpdateLeavesOtherFieldAlone(t *test
 	require.NoError(t, err)
 
 	newFirst := "Caroline"
-	updated, err := repo.UpdateProfile(ctx, user.ID, &newFirst, nil)
+	updated, err := repo.UpdateProfile(ctx, user.ID, &newFirst, nil, nil)
 
 	require.NoError(t, err)
 	assert.Equal(t, "Caroline", updated.FirstName)
@@ -109,16 +102,52 @@ func TestUserRepository_UpdateProfile_NotFoundForUnknownID(t *testing.T) {
 	repo := store.NewUserRepository(queries)
 
 	name := "Nobody"
-	_, err := repo.UpdateProfile(context.Background(), uuid.New(), &name, nil)
+	_, err := repo.UpdateProfile(context.Background(), uuid.New(), &name, nil, nil)
+
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+}
+
+func TestUserRepository_Delete_CascadesToLocationAndTrackingEdges(t *testing.T) {
+	// Proves migration 000005 actually took effect: before it, this would fail
+	// with a foreign-key violation (user_tracking was ON DELETE RESTRICT)
+	// instead of cleanly removing every row that referenced this user.
+	_, queries := setupDB(t)
+	repo := store.NewUserRepository(queries)
+	trackingRepo := store.NewTrackingRepository(queries)
+	locationRepo := store.NewLocationRepository(queries)
+	ctx := context.Background()
+
+	alice, err := repo.UpsertByAuth0Subject(ctx, "auth0|alice", "alice@example.com", "Alice", "A")
+	require.NoError(t, err)
+	bob, err := repo.UpsertByAuth0Subject(ctx, "auth0|bob", "bob@example.com", "Bob", "B")
+	require.NoError(t, err)
+
+	_, err = locationRepo.Upsert(ctx, alice.ID, 1.0, 2.0)
+	require.NoError(t, err)
+	require.NoError(t, trackingRepo.Add(ctx, alice.ID, bob.ID)) // alice tracks bob (pending)
+	require.NoError(t, trackingRepo.Add(ctx, bob.ID, alice.ID)) // bob tracks alice (pending)
+
+	err = repo.Delete(ctx, alice.ID)
+	require.NoError(t, err, "delete must succeed despite existing location + tracking edges in both directions")
+
+	_, err = repo.GetByID(ctx, alice.ID)
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+
+	tracked, err := trackingRepo.GetOutgoingRequests(ctx, bob.ID)
+	require.NoError(t, err)
+	assert.Empty(t, tracked, "bob's pending request to alice must be gone, not orphaned")
+}
+
+func TestUserRepository_Delete_NotFoundForUnknownID(t *testing.T) {
+	_, queries := setupDB(t)
+	repo := store.NewUserRepository(queries)
+
+	err := repo.Delete(context.Background(), uuid.New())
 
 	assert.ErrorIs(t, err, domain.ErrNotFound)
 }
 
 func TestUserRepository_GetByEmail_IsCaseSensitiveAtStorageLayer(t *testing.T) {
-	// Case-insensitivity is a service-layer guarantee (normalize before
-	// write and before lookup); the repository itself does an exact match,
-	// so this documents that boundary rather than asserting a repo-level
-	// case-insensitive lookup that doesn't exist.
 	_, queries := setupDB(t)
 	repo := store.NewUserRepository(queries)
 	ctx := context.Background()

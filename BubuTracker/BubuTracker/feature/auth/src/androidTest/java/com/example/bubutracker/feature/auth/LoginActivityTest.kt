@@ -21,11 +21,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * feature:auth doesn't depend on feature:map, so MAP/PROFILE targets don't exist in this
- * module's own test APK. Espresso-Intents lets us verify the *right navigation intent was
- * fired* without needing the real cross-module target present (see [Intents.intending]).
- */
 @RunWith(AndroidJUnit4::class)
 class LoginActivityTest {
 

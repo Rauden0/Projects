@@ -4,12 +4,14 @@ data class UserProfileDto(
     val id: String,
     val email: String,
     val firstName: String,
-    val lastName: String
+    val lastName: String,
+    val markerColor: String
 )
 
 data class UserUpdateDto(
     val firstName: String?,
-    val lastName: String?
+    val lastName: String?,
+    val markerColor: String? = null
 )
 
 data class LocationUpdateData(
@@ -22,8 +24,9 @@ data class TrackedLocationDto(
     val email: String,
     val firstName: String,
     val lastName: String,
-    val latitude: Double,
-    val longitude: Double,
+    val markerColor: String,
+    val latitude: Double?,
+    val longitude: Double?,
     val updatedAt: String?
 )
 

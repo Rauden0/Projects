@@ -11,50 +11,27 @@ import (
 )
 
 type Querier interface {
-	// Only transitions a still-pending request, so accepting a request that's
-	// already accepted (or was rejected/removed) affects zero rows instead of
-	// silently no-op'ing on the wrong state - the caller can tell the two apart.
+	// Only pending→accepted; 0 rows means no such pending request.
 	AcceptTracking(ctx context.Context, arg AcceptTrackingParams) (int64, error)
-	// Creates a pending request rather than an active tracking edge; the
-	// tracked user must accept it (AcceptTracking) before the tracker gets any
-	// location visibility.
 	AddTracking(ctx context.Context, arg AddTrackingParams) error
-	// Users who are currently, with consent, tracking the current user - so
-	// they have ongoing visibility into (and can revoke) who has access, not
-	// just at request time.
+	// Cascades to locations and every user_tracking edge (migration 000005).
+	DeleteUser(ctx context.Context, id uuid.UUID) (int64, error)
 	GetFollowers(ctx context.Context, trackedUserID uuid.UUID) ([]User, error)
-	// Pending requests from other users to track the current user - the
-	// consent inbox they accept or reject from.
 	GetIncomingTrackingRequests(ctx context.Context, trackedUserID uuid.UUID) ([]User, error)
-	// LEFT JOIN deliberately: a tracked user who hasn't reported a location yet
-	// must still appear (with null location fields) rather than silently
-	// vanishing from this list while still showing up in GetTrackedUsers.
-	// Only accepted edges: a pending, not-yet-consented-to request must grant
-	// no location visibility at all.
+	// Profile only; no locations join (consent not granted yet).
+	GetOutgoingTrackingRequests(ctx context.Context, trackerID uuid.UUID) ([]User, error)
+	// LEFT JOIN so users without a location still appear; accepted edges only.
 	GetTrackedLocations(ctx context.Context, trackerID uuid.UUID) ([]GetTrackedLocationsRow, error)
-	// Only users whose tracking request has been accepted - a pending request
-	// grants no visibility into the target's location yet.
 	GetTrackedUsers(ctx context.Context, trackerID uuid.UUID) ([]User, error)
 	GetTracking(ctx context.Context, arg GetTrackingParams) (UserTracking, error)
 	GetUserByAuth0SubjectID(ctx context.Context, auth0SubjectID string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
-	// Deletes the (tracker, tracked) edge regardless of its status, so this one
-	// statement serves four call sites: the tracker canceling their own pending
-	// request or stopping active tracking, and the tracked user rejecting a
-	// pending request or revoking consent already given.
 	RemoveTracking(ctx context.Context, arg RemoveTrackingParams) error
-	// Partial update: a NULL argument leaves the existing column value
-	// untouched, so this single atomic statement replaces a read-modify-write
-	// round trip (and the lost-update race that pattern invites).
+	// NULL args leave the existing column value unchanged.
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
 	UpsertLocation(ctx context.Context, arg UpsertLocationParams) (Location, error)
-	// Creates the user on first sign-in, or converges the cached email on every
-	// later one. ON CONFLICT makes this safe under concurrent first-sign-in
-	// requests for the same subject: whichever call loses the race still gets
-	// back the winning row instead of a unique-violation error. first_name and
-	// last_name are only applied on insert, so a later Auth0 claim never
-	// overwrites a name the user has since edited via UpdateUserProfile.
+	// Names only applied on INSERT so Auth0 never overwrites an edited profile.
 	UpsertUserByAuth0Subject(ctx context.Context, arg UpsertUserByAuth0SubjectParams) (User, error)
 }
 

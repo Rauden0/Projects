@@ -14,3 +14,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+secrets.properties
+keystore.properties
+*.jks
+*.keystore
+play/service-account.json
+play/out/

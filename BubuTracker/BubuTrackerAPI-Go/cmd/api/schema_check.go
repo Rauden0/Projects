@@ -14,13 +14,7 @@ import (
 	dbmigrations "github.com/Rauden0/bubutracker-api/db"
 )
 
-// checkSchemaCurrent refuses to let the API start against a database whose
-// schema is behind what this binary expects. cmd/migrate is a deliberately
-// separate deploy step (see its doc comment), and the failure mode for
-// skipping that step by mistake would otherwise be silent: the process
-// boots, health checks pass, and only individual requests touching the
-// missing columns/tables fail with opaque 500s. This turns that into a
-// clear, fail-fast startup error instead.
+// Fail-fast if cmd/migrate was skipped (avoids opaque 500s on missing schema).
 func checkSchemaCurrent(databaseURL string) error {
 	latest, err := latestMigrationVersion()
 	if err != nil {
@@ -59,8 +53,6 @@ func checkSchemaCurrent(databaseURL string) error {
 	return nil
 }
 
-// latestMigrationVersion returns the highest version number embedded in the
-// binary, parsed from migration filenames like "000002_normalize_email.up.sql".
 func latestMigrationVersion() (uint64, error) {
 	entries, err := dbmigrations.MigrationsFS.ReadDir("migrations")
 	if err != nil {

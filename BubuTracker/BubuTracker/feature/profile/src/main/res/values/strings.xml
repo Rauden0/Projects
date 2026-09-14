@@ -2,11 +2,17 @@
 <resources>
     <string name="first_name">First Name</string>
     <string name="last_name">Last Name</string>
-    <string name="password">Password</string>
     <string name="email_address">Email Address</string>
-    <string name="password_again">Password Again</string>
-    <string name="register">Register</string>
-    <string name="registration">Your profile</string>
+    <string name="profile_title">Your profile</string>
+    <string name="back">Back</string>
     <string name="edit_profile_subtitle">Update your name so people can recognize you</string>
+    <string name="edit_profile_subtitle_required">Add your name so people can recognize you - this is required to continue</string>
     <string name="save_profile">Save profile</string>
+    <string name="marker_color_label">Marker color</string>
+    <string name="delete_account">Delete my account</string>
+    <string name="delete_account_confirm_title">Delete your account?</string>
+    <string name="delete_account_confirm_message">This permanently removes your profile, location, and every tracking relationship. This cannot be undone.</string>
+    <string name="delete_account_confirm_positive">Delete</string>
+    <string name="delete_account_confirm_negative">Cancel</string>
+    <string name="delete_account_failed">Couldn\'t delete your account: %1$s</string>
 </resources>

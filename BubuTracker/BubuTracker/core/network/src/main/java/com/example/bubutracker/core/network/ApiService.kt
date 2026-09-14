@@ -15,6 +15,9 @@ interface ApiService {
     @PATCH("api/v1/users/me")
     fun updateMe(@Body update: UserUpdateDto): Call<UserProfileDto>
 
+    @DELETE("api/v1/users/me")
+    fun deleteMe(): Call<Void>
+
     @POST("api/v1/locations/me")
     fun updateLocation(@Body location: LocationUpdateData): Call<Void>
 
@@ -30,19 +33,18 @@ interface ApiService {
     @DELETE("api/v1/tracking/{userId}")
     fun removeTracking(@Path("userId") userId: String): Call<Void>
 
-    /** Other users' pending requests to track me - the consent inbox. */
     @GET("api/v1/tracking/requests")
     fun getIncomingTrackingRequests(): Call<List<UserProfileDto>>
 
-    /** Grants trackerId visibility into my location. */
+    @GET("api/v1/tracking/outgoing")
+    fun getOutgoingTrackingRequests(): Call<List<UserProfileDto>>
+
     @POST("api/v1/tracking/requests/{trackerId}/accept")
     fun acceptTrackingRequest(@Path("trackerId") trackerId: String): Call<Void>
 
-    /** Users currently, with my consent, tracking me. */
     @GET("api/v1/tracking/followers")
     fun getFollowers(): Call<List<UserProfileDto>>
 
-    /** Rejects a pending request from trackerId, or revokes their already-accepted access. */
     @DELETE("api/v1/tracking/followers/{trackerId}")
     fun removeFollower(@Path("trackerId") trackerId: String): Call<Void>
 }

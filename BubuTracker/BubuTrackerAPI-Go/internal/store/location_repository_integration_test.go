@@ -33,9 +33,7 @@ func TestLocationRepository_Upsert_InsertsThenUpdatesInPlace(t *testing.T) {
 }
 
 func TestLocationRepository_Upsert_RejectsOutOfRangeCoordinates(t *testing.T) {
-	// The service layer already validates this; this proves the DB CHECK
-	// constraints (chk_latitude_range/chk_longitude_range) hold as a second
-	// line of defense.
+	// Proves chk_latitude_range / chk_longitude_range hold at the DB layer.
 	_, queries := setupDB(t)
 	users := store.NewUserRepository(queries)
 	locations := store.NewLocationRepository(queries)
@@ -51,10 +49,6 @@ func TestLocationRepository_Upsert_RejectsOutOfRangeCoordinates(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestLocationRepository_GetTrackedLocations_IncludesUsersWithoutLocation is
-// the direct regression test for the INNER JOIN bug: a tracked user with no
-// reported location must still appear, with a nil Location, instead of
-// silently vanishing from the list.
 func TestLocationRepository_GetTrackedLocations_IncludesUsersWithoutLocation(t *testing.T) {
 	_, queries := setupDB(t)
 	users := store.NewUserRepository(queries)
@@ -94,10 +88,6 @@ func TestLocationRepository_GetTrackedLocations_IncludesUsersWithoutLocation(t *
 	assert.Nil(t, without.Location)
 }
 
-// TestLocationRepository_GetTrackedLocations_ExcludesPendingRequests is the
-// regression test for the consent model at the location layer specifically:
-// a not-yet-accepted tracking request must grant zero location visibility,
-// not just be excluded from GetTrackedUsers.
 func TestLocationRepository_GetTrackedLocations_ExcludesPendingRequests(t *testing.T) {
 	_, queries := setupDB(t)
 	users := store.NewUserRepository(queries)

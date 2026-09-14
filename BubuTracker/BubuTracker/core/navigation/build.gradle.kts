@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.bubutracker.core.navigation"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24

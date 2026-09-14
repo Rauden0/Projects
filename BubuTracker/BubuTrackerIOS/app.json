@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "BubuTrackerIOS",
+    "slug": "BubuTrackerIOS",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "bubutracker",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.martinmucka.bubutrackerios",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Bubu Tracker uses your location to show it to people you've approved."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Bubu Tracker uses your location to show it to people you've approved."
+        }
+      ]
+    ]
+  }
+}

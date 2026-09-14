@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.bubutracker.core.network"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -21,8 +21,7 @@ android {
 }
 
 dependencies {
-    // Retrofit types (Call/Response) appear in ApiService's public signatures, so
-    // consumers need them on their compile classpath too -> exposed as `api`.
+    // Retrofit types appear in ApiService signatures — expose as api.
     api(libs.retrofit)
 
     implementation(libs.converter.gson)

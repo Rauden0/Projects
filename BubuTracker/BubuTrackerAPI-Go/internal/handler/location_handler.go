@@ -12,9 +12,7 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/httpserver"
 )
 
-// Latitude and Longitude are pointers so a missing field can be told apart
-// from an explicit 0 (a valid coordinate, on the equator/prime meridian)
-// and rejected instead of silently overwriting the user's location.
+// Pointers distinguish missing fields from explicit 0 (valid equator/prime meridian).
 type updateLocationRequest struct {
 	Latitude  *float64 `json:"latitude"`
 	Longitude *float64 `json:"longitude"`
@@ -27,24 +25,24 @@ type locationResponse struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-// Latitude, Longitude, and UpdatedAt are nullable: a tracked user who hasn't
-// reported a location yet still appears in the list, just without these.
 type trackedLocationResponse struct {
-	UserID    uuid.UUID  `json:"userId"`
-	Email     string     `json:"email"`
-	FirstName string     `json:"firstName"`
-	LastName  string     `json:"lastName"`
-	Latitude  *float64   `json:"latitude"`
-	Longitude *float64   `json:"longitude"`
-	UpdatedAt *time.Time `json:"updatedAt"`
+	UserID      uuid.UUID  `json:"userId"`
+	Email       string     `json:"email"`
+	FirstName   string     `json:"firstName"`
+	LastName    string     `json:"lastName"`
+	MarkerColor string     `json:"markerColor"`
+	Latitude    *float64   `json:"latitude"`
+	Longitude   *float64   `json:"longitude"`
+	UpdatedAt   *time.Time `json:"updatedAt"`
 }
 
 func toTrackedLocationResponse(tl domain.TrackedLocation) trackedLocationResponse {
 	resp := trackedLocationResponse{
-		UserID:    tl.User.ID,
-		Email:     tl.User.Email,
-		FirstName: tl.User.FirstName,
-		LastName:  tl.User.LastName,
+		UserID:      tl.User.ID,
+		Email:       tl.User.Email,
+		FirstName:   tl.User.FirstName,
+		LastName:    tl.User.LastName,
+		MarkerColor: tl.User.MarkerColor,
 	}
 	if tl.Location != nil {
 		resp.Latitude = &tl.Location.Latitude
@@ -54,7 +52,6 @@ func toTrackedLocationResponse(tl domain.TrackedLocation) trackedLocationRespons
 	return resp
 }
 
-// LocationService is the subset of service.LocationService this handler needs.
 type LocationService interface {
 	UpdateMyLocation(ctx context.Context, userID uuid.UUID, latitude, longitude float64) (domain.Location, error)
 	GetTrackedLocations(ctx context.Context, trackerID uuid.UUID) ([]domain.TrackedLocation, error)

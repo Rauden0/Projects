@@ -9,7 +9,6 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/store/sqlc"
 )
 
-// UserRepository implements service.UserRepository backed by Postgres.
 type UserRepository struct {
 	q *sqlc.Queries
 }
@@ -50,19 +49,31 @@ func (r *UserRepository) UpsertByAuth0Subject(ctx context.Context, subjectID, em
 		LastName:       lastName,
 	})
 	if err != nil {
-		return domain.User{}, mapError(err)
+		return domain.User{}, mapUpsertUserError(err)
 	}
 	return toDomainUser(upserted), nil
 }
 
-func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, firstName, lastName *string) (domain.User, error) {
+func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, firstName, lastName, markerColor *string) (domain.User, error) {
 	updated, err := r.q.UpdateUserProfile(ctx, sqlc.UpdateUserProfileParams{
-		ID:        id,
-		FirstName: firstName,
-		LastName:  lastName,
+		ID:          id,
+		FirstName:   firstName,
+		LastName:    lastName,
+		MarkerColor: markerColor,
 	})
 	if err != nil {
 		return domain.User{}, mapError(err)
 	}
 	return toDomainUser(updated), nil
+}
+
+func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	rows, err := r.q.DeleteUser(ctx, id)
+	if err != nil {
+		return mapError(err)
+	}
+	if rows == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
 }

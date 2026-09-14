@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.bubutracker.core.location"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -22,6 +22,7 @@ android {
 
 dependencies {
     implementation(project(":core:network"))
+    implementation(project(":core:session"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.play.services.location)
 }

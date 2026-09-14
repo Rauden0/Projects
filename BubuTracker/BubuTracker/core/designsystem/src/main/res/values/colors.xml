@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand_primary">#6750A4</color>
-    <color name="brand_primary_dark">#4A3780</color>
-    <color name="background">#FFFBFE</color>
+    <color name="brand_primary">#EC4899</color>
+    <color name="brand_primary_dark">#BE185D</color>
+    <color name="background">#FFF8FB</color>
     <color name="surface">#FFFFFF</color>
     <color name="on_surface">#1C1B1F</color>
     <color name="on_surface_variant">#49454F</color>
     <color name="outline_variant">#CAC4D0</color>
+    <color name="dialog_surface">#FCE4EC</color>
+    <color name="error">#B3261E</color>
+
+    <!-- Marker color palette - must stay in sync with the API's
+         chk_marker_color CHECK constraint (db/migrations/000004). -->
+    <color name="marker_orange">#FF9800</color>
+    <color name="marker_pink">#E91E63</color>
+    <color name="marker_purple">#8E24AA</color>
+    <color name="marker_indigo">#3949AB</color>
+    <color name="marker_teal">#00897B</color>
+    <color name="marker_green">#43A047</color>
+    <color name="marker_deep_orange">#F4511E</color>
+    <color name="marker_brown">#6D4C41</color>
 </resources>

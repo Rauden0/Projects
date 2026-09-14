@@ -6,16 +6,13 @@ DO UPDATE SET latitude = $2, longitude = $3, updated_at = now()
 RETURNING *;
 
 -- name: GetTrackedLocations :many
--- LEFT JOIN deliberately: a tracked user who hasn't reported a location yet
--- must still appear (with null location fields) rather than silently
--- vanishing from this list while still showing up in GetTrackedUsers.
--- Only accepted edges: a pending, not-yet-consented-to request must grant
--- no location visibility at all.
+-- LEFT JOIN so users without a location still appear; accepted edges only.
 SELECT
     u.id AS user_id,
     u.email,
     u.first_name,
     u.last_name,
+    u.marker_color,
     l.latitude,
     l.longitude,
     l.updated_at

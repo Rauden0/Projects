@@ -10,11 +10,6 @@ import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import java.security.GeneralSecurityException
 
-/**
- * Persists the access/refresh tokens encrypted at rest. Both live in [prefs] as
- * ciphertext; the AEAD key that protects them is generated and wrapped by the Android
- * Keystore (via [AndroidKeysetManager]) and never leaves the device in usable form.
- */
 class SessionManager internal constructor(
     context: Context,
     private val aead: Aead,
@@ -24,7 +19,6 @@ class SessionManager internal constructor(
 
     constructor(context: Context) : this(context, buildAead(context))
 
-    /** @param refreshToken Null when the identity provider didn't issue one. */
     fun saveCredentials(accessToken: String, refreshToken: String?) {
         saveAccessToken(accessToken)
         if (refreshToken != null) {
@@ -56,8 +50,7 @@ class SessionManager internal constructor(
         return try {
             String(aead.decrypt(Base64.decode(encoded, Base64.NO_WRAP), null), Charsets.UTF_8)
         } catch (_: GeneralSecurityException) {
-            // Ciphertext can't be decrypted with the current keyset (e.g. Keystore was
-            // wiped, or the keyset was rotated) - treat as absent rather than crashing.
+            // Unreadable ciphertext (e.g. Keystore wipe) — treat as absent.
             null
         }
     }

@@ -34,11 +34,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.TimeUnit
 
-/**
- * feature:map doesn't depend on feature:auth, so the LOGIN target doesn't exist in this
- * module's own test APK; Espresso-Intents stubs it (see feature:auth's LoginActivityTest
- * for the same rationale). The backend is stood in for by an in-process MockWebServer.
- */
 @RunWith(AndroidJUnit4::class)
 class MapsActivityTest {
     private lateinit var server: MockWebServer

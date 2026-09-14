@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.bubutracker.feature.profile"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":core:session"))
     implementation(project(":core:navigation"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:location"))
 
     implementation(libs.appcompat)
     implementation(libs.material)

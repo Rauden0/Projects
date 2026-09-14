@@ -1,0 +1,5 @@
+BubuTracker/secrets.properties
+BubuTracker/keystore.properties
+BubuTracker/*.jks
+play/service-account.json
+play/out/

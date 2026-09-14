@@ -22,11 +22,6 @@ import (
 
 const testAudience = "https://api.test"
 
-// fakeOIDCProvider is a minimal, self-contained stand-in for Auth0: it
-// serves the two endpoints go-oidc needs (OIDC discovery and JWKS) over TLS
-// from an in-process httptest server, so auth.NewVerifier and
-// Verifier.Middleware can be exercised against a real signature/audience/
-// expiry check instead of trusting that the library "just works".
 type fakeOIDCProvider struct {
 	server     *httptest.Server
 	signingKey *rsa.PrivateKey
@@ -75,10 +70,7 @@ func (p *fakeOIDCProvider) serveJWKS(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// issuer is the domain:port string auth.NewVerifier expects (it builds the
-// full "https://<domain>/" issuer URL itself), with a trailing slash since
-// that's what ends up in the discovery document's "issuer" field and must
-// match exactly for go-oidc's issuer check to pass.
+// Domain:port with trailing slash — must match discovery document issuer exactly.
 func (p *fakeOIDCProvider) issuer() string {
 	return p.server.URL + "/"
 }
@@ -101,6 +93,12 @@ func withExpiry(t time.Time) tokenOpt {
 	return func(c *josejwt.Claims, _ map[string]any) { c.Expiry = josejwt.NewNumericDate(t) }
 }
 
+func withEmailVerified(verified bool) tokenOpt {
+	return func(_ *josejwt.Claims, extra map[string]any) {
+		extra["https://bubutracker.app/email_verified"] = verified
+	}
+}
+
 func (p *fakeOIDCProvider) issueToken(t *testing.T, signingKey *rsa.PrivateKey, subject string, opts ...tokenOpt) string {
 	t.Helper()
 
@@ -111,10 +109,11 @@ func (p *fakeOIDCProvider) issueToken(t *testing.T, signingKey *rsa.PrivateKey, 
 		Expiry:   josejwt.NewNumericDate(time.Now().Add(time.Hour)),
 		IssuedAt: josejwt.NewNumericDate(time.Now()),
 	}
+	// Namespaced Auth0 Action custom claims (not plain OIDC profile claim names).
 	extra := map[string]any{
-		"email":       "alice@example.com",
-		"given_name":  "Alice",
-		"family_name": "Smith",
+		"https://bubutracker.app/email":       "alice@example.com",
+		"https://bubutracker.app/given_name":  "Alice",
+		"https://bubutracker.app/family_name": "Smith",
 	}
 	for _, opt := range opts {
 		opt(&claims, extra)
@@ -139,7 +138,6 @@ func newVerifier(t *testing.T, p *fakeOIDCProvider) *auth.Verifier {
 	return verifier
 }
 
-// recordingHandler reports whether it ran and, if so, the claims it saw.
 func recordingHandler(t *testing.T) (http.Handler, *bool, *auth.Claims) {
 	t.Helper()
 	called := false
@@ -170,6 +168,23 @@ func TestVerifierMiddleware_AcceptsValidToken(t *testing.T) {
 	assert.Equal(t, "alice@example.com", seenClaims.Email)
 	assert.Equal(t, "Alice", seenClaims.FirstName)
 	assert.Equal(t, "Smith", seenClaims.LastName)
+	assert.Nil(t, seenClaims.EmailVerified, "must be nil, not false, when the Action doesn't set this claim")
+}
+
+func TestVerifierMiddleware_ParsesEmailVerifiedClaimWhenPresent(t *testing.T) {
+	provider := newFakeOIDCProvider(t)
+	verifier := newVerifier(t, provider)
+	next, _, seenClaims := recordingHandler(t)
+
+	token := provider.issueToken(t, provider.signingKey, "auth0|abc123", withEmailVerified(false))
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	verifier.Middleware(next).ServeHTTP(rec, req)
+
+	require.NotNil(t, seenClaims.EmailVerified)
+	assert.False(t, *seenClaims.EmailVerified)
 }
 
 func TestVerifierMiddleware_RejectsMissingToken(t *testing.T) {

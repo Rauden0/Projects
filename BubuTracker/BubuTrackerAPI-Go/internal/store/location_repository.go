@@ -9,7 +9,6 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/store/sqlc"
 )
 
-// LocationRepository implements service.LocationRepository backed by Postgres.
 type LocationRepository struct {
 	q *sqlc.Queries
 }
@@ -40,10 +39,11 @@ func (r *LocationRepository) GetTrackedLocations(ctx context.Context, trackerID 
 	for i, row := range rows {
 		tl := domain.TrackedLocation{
 			User: domain.UserSummary{
-				ID:        row.UserID,
-				Email:     row.Email,
-				FirstName: row.FirstName,
-				LastName:  row.LastName,
+				ID:          row.UserID,
+				Email:       row.Email,
+				FirstName:   row.FirstName,
+				LastName:    row.LastName,
+				MarkerColor: row.MarkerColor,
 			},
 		}
 		if row.UpdatedAt.Valid {

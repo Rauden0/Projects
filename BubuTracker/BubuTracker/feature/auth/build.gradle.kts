@@ -1,24 +1,35 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
 }
 
+val secrets = rootProject.extra["bubutrackerSecrets"] as Properties
+
+fun secret(key: String, default: String): String =
+    secrets.getProperty(key)?.trim()?.takeIf { it.isNotEmpty() } ?: default
+
+val auth0Domain = secret("auth0Domain", "YOUR_TENANT.auth0.com")
+val auth0ClientId = secret("auth0ClientId", "YOUR_AUTH0_CLIENT_ID")
+val auth0Audience = secret("auth0Audience", "https://api.bubutracker")
+val auth0Scheme = secret("auth0Scheme", "bubutracker")
+
 android {
     namespace = "com.example.bubutracker.feature.auth"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "AUTH0_DOMAIN", "\"YOUR_TENANT.auth0.com\"")
-        buildConfigField("String", "AUTH0_CLIENT_ID", "\"YOUR_AUTH0_CLIENT_CLIENT_ID\"")
-        buildConfigField("String", "AUTH0_AUDIENCE", "\"https://api.bubutracker\"")
+        buildConfigField("String", "AUTH0_DOMAIN", "\"$auth0Domain\"")
+        buildConfigField("String", "AUTH0_CLIENT_ID", "\"$auth0ClientId\"")
+        buildConfigField("String", "AUTH0_AUDIENCE", "\"$auth0Audience\"")
 
-        // Only needed so this module's OWN standalone androidTest APK can merge its
-        // manifest; when built as part of :app, :app's own placeholders take over.
-        manifestPlaceholders["auth0Domain"] = "YOUR_TENANT.auth0.com"
-        manifestPlaceholders["auth0Scheme"] = "bubutracker"
+        // Placeholders for this module's standalone androidTest APK merge.
+        manifestPlaceholders["auth0Domain"] = auth0Domain
+        manifestPlaceholders["auth0Scheme"] = auth0Scheme
     }
 
     buildFeatures {

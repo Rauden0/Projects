@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.bubutracker.feature.map"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -31,7 +31,7 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.constraintlayout)
-    implementation(libs.play.services.maps.v1900)
+    implementation(libs.osmdroid.android)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

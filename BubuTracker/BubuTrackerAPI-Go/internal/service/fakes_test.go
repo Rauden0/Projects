@@ -8,13 +8,11 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/domain"
 )
 
-// In-memory fakes for the repository ports, used to unit test the service
-// layer without a database.
-
 type fakeUserRepo struct {
 	byID      map[uuid.UUID]domain.User
 	bySubject map[string]uuid.UUID
 	byEmail   map[string]uuid.UUID
+	deleted   map[uuid.UUID]bool
 }
 
 func newFakeUserRepo() *fakeUserRepo {
@@ -22,6 +20,7 @@ func newFakeUserRepo() *fakeUserRepo {
 		byID:      map[uuid.UUID]domain.User{},
 		bySubject: map[string]uuid.UUID{},
 		byEmail:   map[string]uuid.UUID{},
+		deleted:   map[uuid.UUID]bool{},
 	}
 }
 
@@ -55,12 +54,7 @@ func (f *fakeUserRepo) GetByEmail(_ context.Context, email string) (domain.User,
 	return f.byID[id], nil
 }
 
-// UpsertByAuth0Subject mirrors the real ON CONFLICT (auth0_subject_id)
-// upsert: existing rows only ever get their email touched here, matching
-// the production query, which never overwrites a name the user has since
-// edited via UpdateProfile. It also mirrors the real users.email UNIQUE
-// constraint: a write that would give this row an email already owned by a
-// *different* subject fails with ErrEmailConflict instead of succeeding.
+// Mirrors ON CONFLICT (auth0_subject_id) + users.email UNIQUE → ErrEmailConflict.
 func (f *fakeUserRepo) UpsertByAuth0Subject(_ context.Context, subjectID, email, firstName, lastName string) (domain.User, error) {
 	if id, ok := f.bySubject[subjectID]; ok {
 		if ownerID, taken := f.byEmail[email]; taken && ownerID != id {
@@ -87,7 +81,7 @@ func (f *fakeUserRepo) UpsertByAuth0Subject(_ context.Context, subjectID, email,
 	return u, nil
 }
 
-func (f *fakeUserRepo) UpdateProfile(_ context.Context, id uuid.UUID, firstName, lastName *string) (domain.User, error) {
+func (f *fakeUserRepo) UpdateProfile(_ context.Context, id uuid.UUID, firstName, lastName, markerColor *string) (domain.User, error) {
 	u, ok := f.byID[id]
 	if !ok {
 		return domain.User{}, domain.ErrNotFound
@@ -98,8 +92,24 @@ func (f *fakeUserRepo) UpdateProfile(_ context.Context, id uuid.UUID, firstName,
 	if lastName != nil {
 		u.LastName = *lastName
 	}
+	if markerColor != nil {
+		u.MarkerColor = *markerColor
+	}
 	f.seed(u)
 	return u, nil
+}
+
+// Mirrors migration 000005: cascades to every tracking edge involving this user.
+func (f *fakeUserRepo) Delete(_ context.Context, id uuid.UUID) error {
+	u, ok := f.byID[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	delete(f.byID, id)
+	delete(f.bySubject, u.Auth0SubjectID)
+	delete(f.byEmail, u.Email)
+	f.deleted[id] = true
+	return nil
 }
 
 type fakeLocationRepo struct {
@@ -129,9 +139,6 @@ type trackingKey struct {
 	tracker, tracked uuid.UUID
 }
 
-// fakeTrackingRepo mirrors the real schema's status column: an edge is
-// either "pending" (created by Add, not yet visible to anyone) or
-// "accepted" (created by Accept). Absence from the map means no edge.
 type fakeTrackingRepo struct {
 	edges map[trackingKey]string
 	users map[uuid.UUID]domain.User
@@ -161,6 +168,16 @@ func (f *fakeTrackingRepo) GetIncomingRequests(_ context.Context, trackedUserID 
 	for k, status := range f.edges {
 		if k.tracked == trackedUserID && status == "pending" {
 			result = append(result, f.users[k.tracker])
+		}
+	}
+	return result, nil
+}
+
+func (f *fakeTrackingRepo) GetOutgoingRequests(_ context.Context, trackerID uuid.UUID) ([]domain.User, error) {
+	var result []domain.User
+	for k, status := range f.edges {
+		if k.tracker == trackerID && status == "pending" {
+			result = append(result, f.users[k.tracked])
 		}
 	}
 	return result, nil

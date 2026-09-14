@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <application>
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_map_api_key" />
+    <!-- osmdroid checks connectivity before hitting the tile server. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <application>
         <activity
             android:name=".MapsActivity"
             android:exported="false"
-            android:theme="@style/Theme.MyApp"
+            android:theme="@style/Theme.BubuTracker"
             android:label="@string/bubu_tracker">
             <intent-filter>
                 <action android:name="com.example.bubutracker.action.MAP" />

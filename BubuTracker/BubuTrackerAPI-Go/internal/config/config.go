@@ -1,6 +1,3 @@
-// Package config loads process configuration from environment variables.
-// It fails fast at startup rather than letting a missing value surface as a
-// confusing runtime error later.
 package config
 
 import (
@@ -31,9 +28,6 @@ type Config struct {
 	DBMaxConnIdleTime time.Duration
 }
 
-// Load reads configuration from the environment, applying sane defaults for
-// optional values and returning an error listing everything required but
-// missing.
 func Load() (Config, error) {
 	cfg := Config{
 		Env:             getEnv("APP_ENV", "development"),

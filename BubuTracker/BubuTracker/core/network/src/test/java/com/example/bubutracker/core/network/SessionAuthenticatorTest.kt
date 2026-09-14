@@ -1,7 +1,9 @@
 package com.example.bubutracker.core.network
 
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -122,5 +124,39 @@ class SessionAuthenticatorTest {
         assertEquals(401, response.code)
         assertEquals(1, refreshCalls)
         assertTrue(sessionExpired)
+    }
+
+    @Test
+    fun reusesAlreadyRefreshedTokenInsteadOfRefreshingAgain() {
+        // Simulates losing the race to a concurrent authenticate() call that
+        // already refreshed the token: getAccessToken() returns something
+        // other than the token this particular request failed with.
+        var refreshCalls = 0
+        var tokenRefreshedCalls = 0
+        val authenticator = SessionAuthenticator(
+            getAccessToken = { "already-refreshed-token" },
+            getRefreshToken = { "refresh-token" },
+            tokenRefresher = TokenRefresher { refreshCalls++; "should-not-be-used" },
+            onTokenRefreshed = { tokenRefreshedCalls++ },
+            onSessionExpired = { },
+        )
+
+        val failedResponse = Response.Builder()
+            .request(
+                Request.Builder()
+                    .url("http://localhost/ping")
+                    .header("Authorization", "Bearer stale-token")
+                    .build(),
+            )
+            .protocol(Protocol.HTTP_1_1)
+            .code(401)
+            .message("Unauthorized")
+            .build()
+
+        val retried = authenticator.authenticate(null, failedResponse)
+
+        assertEquals("Bearer already-refreshed-token", retried?.header("Authorization"))
+        assertEquals(0, refreshCalls)
+        assertEquals(0, tokenRefreshedCalls)
     }
 }

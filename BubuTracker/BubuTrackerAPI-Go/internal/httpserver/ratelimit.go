@@ -8,19 +8,12 @@ import (
 	"github.com/Rauden0/bubutracker-api/internal/domain"
 )
 
-// KeyFunc extracts the identity a rate limit is scoped to from a request —
-// e.g. the authenticated user's ID, so the limit follows the account rather
-// than an IP that's easy to rotate.
 type KeyFunc func(r *http.Request) string
 
-// RateLimit caps each key to limit requests per window, using a simple
-// fixed-window counter in memory. That's enough for a single-instance
-// deployment; a multi-instance one would need a shared store (Redis) instead
-// so instances don't each enforce their own independent limit.
-//
-// Bucket entries for keys that are only ever seen once are never evicted,
-// so memory grows with the number of distinct keys seen — acceptable here
-// since keys are user IDs from a small, known user base, not raw client IPs.
+// sweepEvery caps how often we walk the whole bucket map looking for expired
+// entries, so a busy server isn't paying for a full-map scan on every request.
+const sweepEvery = 500
+
 func RateLimit(limit int, window time.Duration, key KeyFunc) func(http.Handler) http.Handler {
 	type bucket struct {
 		count      int
@@ -29,6 +22,7 @@ func RateLimit(limit int, window time.Duration, key KeyFunc) func(http.Handler) 
 
 	var mu sync.Mutex
 	buckets := make(map[string]*bucket)
+	requestsSinceSweep := 0
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +37,19 @@ func RateLimit(limit int, window time.Duration, key KeyFunc) func(http.Handler) 
 			}
 			b.count++
 			exceeded := b.count > limit
+
+			// Every key that has ever hit this route otherwise stays in the map
+			// forever; periodically drop entries whose window has long since
+			// closed so long-running processes don't leak memory.
+			requestsSinceSweep++
+			if requestsSinceSweep >= sweepEvery {
+				requestsSinceSweep = 0
+				for k, b := range buckets {
+					if now.After(b.windowEnds) {
+						delete(buckets, k)
+					}
+				}
+			}
 			mu.Unlock()
 
 			if exceeded {
