@@ -1,0 +1,63 @@
+name: Job Matcher CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "JobMatcher/**"
+      - ".github/workflows/jobmatcher-ci.yml"
+  pull_request:
+    paths:
+      - "JobMatcher/**"
+      - ".github/workflows/jobmatcher-ci.yml"
+
+defaults:
+  run:
+    working-directory: JobMatcher
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: jobmatcher
+          POSTGRES_PASSWORD: jobmatcher
+          POSTGRES_DB: jobmatcher
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      rabbitmq:
+        image: rabbitmq:3.13
+        ports:
+          - 5672:5672
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher
+      AMQP_URL: amqp://guest:guest@localhost:5672/
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src tests alembic
+
+      - name: Migrate
+        run: alembic upgrade head
+
+      - name: Test
+        run: pytest -q
