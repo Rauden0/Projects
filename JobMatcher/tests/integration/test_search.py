@@ -61,4 +61,7 @@ async def test_filters_exclude_by_years_and_remote(
             k=10,
         )
     assert "py-senior" not in {h.url.rsplit("/", 1)[1] for h in hits}
-    assert [h.url.rsplit("/", 1)[1] for h in remote] == ["go-remote"]
+    remote_ids = [h.url.rsplit("/", 1)[1] for h in remote]
+    # Hybrid jobs are excluded; jobs with an unknown policy ("sales") are kept.
+    assert "go-remote" in remote_ids
+    assert not {"py-brno", "py-senior"} & set(remote_ids)

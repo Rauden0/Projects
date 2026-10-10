@@ -16,6 +16,7 @@ from jobmatcher.search.embeddings import Embedder
 
 RRF_K = 60
 CANDIDATES = 50
+LOCAL_BOOST = 1.0 / (RRF_K + 1)
 
 Mode = Literal["hybrid", "vector", "fulltext"]
 
@@ -51,7 +52,8 @@ class SearchHit(BaseModel):
 def _filter_sql(filters: SearchFilters, params: dict[str, object]) -> str:
     clauses = ["j.status = 'open'"]
     if filters.remote_policy:
-        clauses.append("j.remote_policy = ANY(:remote_policy)")
+        # Unknown policy is kept, as for the other filters: many postings never state it.
+        clauses.append("(j.remote_policy IS NULL OR j.remote_policy = ANY(:remote_policy))")
         params["remote_policy"] = filters.remote_policy
     if filters.city:
         # A remote job is acceptable whatever its office city.
@@ -120,6 +122,16 @@ async def search_jobs(
             """
         )
 
+    # With a city filter, remote jobs from anywhere also pass; postings actually in that city
+    # get a boost worth about one first-place rank so they are not buried by remote ones.
+    local_boost = "0"
+    if filters and filters.city:
+        local_boost = (
+            "CASE WHEN j.office_city ILIKE '%' || :city || '%'"
+            " OR j.location_raw ILIKE '%' || :city || '%' THEN :local_boost ELSE 0 END"
+        )
+        params["local_boost"] = LOCAL_BOOST
+
     sql = f"""
         WITH candidates AS ({" UNION ALL ".join(ranked)}),
         fused AS (
@@ -132,11 +144,11 @@ async def search_jobs(
         )
         SELECT j.id AS job_id, j.title, j.company, j.location_raw AS location, j.url,
                j.seniority, j.years_required_min, j.remote_policy,
-               c.content AS snippet, b.score
+               c.content AS snippet, b.score + {local_boost} AS score
         FROM best b
         JOIN job j ON j.id = b.job_id
         JOIN job_chunk c ON c.id = b.chunk_id
-        ORDER BY b.score DESC, j.id
+        ORDER BY score DESC, j.id
         LIMIT :k
     """
     rows = (await session.execute(text(sql), params)).mappings().all()
