@@ -74,7 +74,8 @@ class Toolbox:
         filters = SearchFilters.model_validate(args.model_dump(exclude={"query", "k"}))
         hits = await search_jobs(self.session, self.embedder, args.query, filters, k=args.k)
         self.seen_urls.update(h.url for h in hits)
-        return [h.model_dump() for h in hits]
+        # Snippets are for the model to judge relevance; keep them short to save tokens.
+        return [{**h.model_dump(), "snippet": h.snippet[:300]} for h in hits]
 
     async def _job(self, job_id: int) -> Job:
         job = await self.session.get(Job, job_id)
@@ -97,7 +98,7 @@ class Toolbox:
             "remote_policy": job.remote_policy,
             "salary": [job.salary_min, job.salary_max, job.currency],
             "tech_stack": job.tech_stack,
-            "description": job.description[:6000],
+            "description": job.description[:3000],
         }
 
     async def compare_with_cv(self, raw: dict[str, Any]) -> dict[str, Any]:
