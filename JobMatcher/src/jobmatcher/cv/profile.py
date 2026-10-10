@@ -58,27 +58,37 @@ def _mentions(text: str, term: str) -> bool:
 
 # Extracted skills are free-form ("async programming", "rest apis", "testing"), CVs name the
 # tools ("asyncio", "FastAPI", "pytest"). Matching word stems bridges most of that gap.
-_STOPWORDS = {"and", "or", "of", "the", "with", "in", "for", "experience", "knowledge",
-              "skills", "development", "programming", "design", "systems", "system"}
+_STOPWORDS = {
+    "and", "or", "of", "the", "with", "in", "for", "experience", "knowledge", "skills",
+    "development", "programming", "design", "systems", "system",
+    # Czech postings
+    "pro", "nebo", "jako", "další", "zkušenost", "zkušenosti", "znalost", "znalosti", "práce",
+    "vývoj", "služby",
+}
 _ALIASES = {
     "postgres": "postgresql", "k8s": "kubernetes", "js": "javascript", "ts": "typescript",
     "rest": "api", "apis": "api", "unit": "test", "testing": "test", "ci/cd": "ci",
     "message": "rabbitmq", "queues": "rabbitmq", "queue": "rabbitmq",
+    "database": "sql", "databases": "sql", "databáze": "sql", "relational": "sql",
+    "relační": "sql",
 }
 
 
 def _skill_words(skill: str) -> list[str]:
-    words = [w for w in re.findall(r"[a-z0-9+#/]+", skill.lower()) if w not in _STOPWORDS]
-    return [_ALIASES.get(w, w) for w in words]
+    words = re.findall(r"[\w+#/]+", skill.lower())
+    return [_ALIASES.get(w, w) for w in words if len(w) >= 2 and w not in _STOPWORDS]
 
 
 def _covers(cv_haystack: str, skill: str) -> bool:
-    """True when the CV mentions the skill or every meaningful word of it (by 4-letter stem,
-    so "async" matches "asyncio" and "test" matches "pytest")."""
+    """True when the CV mentions the skill, or at least half of its meaningful words by
+    4-letter stem ("async" matches "asyncio", "test" matches "pytest"). Half rather than all,
+    because postings pad tools with descriptions: "docker a kontejnerizace",
+    "message brokery (rabbitmq, sqs)"."""
     if _mentions(cv_haystack, skill):
         return True
     words = _skill_words(skill)
-    return bool(words) and all(w[:4] in cv_haystack for w in words)
+    hits = sum(w[:4] in cv_haystack for w in words)
+    return bool(words) and hits * 2 >= len(words)
 
 
 def compare(

@@ -78,3 +78,19 @@ def test_free_form_skills_match_cv_tools() -> None:
         cv_text=cv,
     )
     assert result.missing_required == ["graphql"]
+
+
+def test_czech_padded_skills_are_matched() -> None:
+    profile = CvProfile(skills=["python", "docker", "rabbitmq", "postgresql"])
+    cv = "Python, Docker, RabbitMQ, PostgreSQL, SQLAlchemy."
+    result = compare(
+        profile, [], "", "", None, None, None,
+        required_skills=[
+            "docker a kontejnerizace",
+            "message brokery (rabbitmq, sqs)",
+            "relační databáze a sql",
+            "aws služby",
+        ],
+        cv_text=cv,
+    )
+    assert result.missing_required == ["aws služby"]
