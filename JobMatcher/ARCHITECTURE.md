@@ -57,7 +57,8 @@ flowchart LR
 ## 2. Data sources
 
 Only **public, documented JSON endpoints** that companies publish for their own job
-boards — no HTML scraping, no logged-in sessions:
+boards, plus Jobs.cz as the one exception where a Czech board has no API — never logged-in
+sessions:
 
 | Source | Endpoint | Notes |
 |---|---|---|
@@ -65,6 +66,7 @@ boards — no HTML scraping, no logged-in sessions:
 | Lever | `api.lever.co/v0/postings/{company}?mode=json` | |
 | Ashby | `api.ashbyhq.com/posting-api/job-board/{company}` | |
 | Workday | `POST {tenant}.wd{n}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs` | Detail needs a second call. |
+| Jobs.cz | `www.jobs.cz/prace/{locality}/?q[]=…` + `/rpd/{id}/` | No API: server-rendered HTML, only robots.txt-allowed paths, one request per second, capped pages. |
 
 The list of companies lives in `sources.yaml` (company slug, ATS type, optional location
 filter). Each source is a small adapter implementing one protocol:

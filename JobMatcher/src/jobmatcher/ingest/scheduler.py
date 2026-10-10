@@ -37,7 +37,8 @@ async def crawl_once(exchange: aio_pika.abc.AbstractExchange) -> None:
     settings = get_settings()
     sources = load_sources(settings.sources_file)
     limits = httpx.Limits(max_connections=settings.http_concurrency_per_host)
-    async with httpx.AsyncClient(timeout=30, limits=limits) as client:
+    headers = {"User-Agent": "JobMatcher/0.1 (personal job search; +https://github.com/Rauden0/Projects)"}
+    async with httpx.AsyncClient(timeout=30, limits=limits, headers=headers) as client:
         results = await asyncio.gather(
             *(crawl_source(s, client, exchange) for s in sources), return_exceptions=True
         )

@@ -1,4 +1,4 @@
-# Companies to crawl. kind: greenhouse | lever | ashby | workday
+# Companies to crawl. kind: greenhouse | lever | ashby | workday | jobscz
 # location_filter is a case-insensitive regex applied to the posting location.
 # Workday sources also need host + site, and search_text to narrow very large listings.
 sources:
@@ -29,6 +29,11 @@ sources:
     site: Jobs
     search_text: Brno
     location_filter: brno
+
+  # Jobs.cz (Czech job board, many Brno employers without a public ATS API)
+  - { kind: jobscz, company: python-brno, search_text: python, locality: brno, max_pages: 3 }
+  - { kind: jobscz, company: backend-brno, search_text: backend, locality: brno, max_pages: 2 }
+  - { kind: jobscz, company: data-brno, search_text: data engineer, locality: brno, max_pages: 1 }
 
   # Remote within Europe / EMEA
   - { kind: greenhouse, company: canonical, location_filter: "emea|europe" }
