@@ -288,8 +288,8 @@ Retrieval quality is measured, not eyeballed:
 - `eval/run_retrieval.py` computes **hit@5**, **recall@10** and **MRR** for
   (a) vector only, (b) full-text only, (c) hybrid — so the README can show *why* hybrid
   was chosen, with numbers.
-- `eval/run_agent.py` (optional, costs tokens) checks answer faithfulness: every URL in the
-  answer must exist in the tool results of that conversation.
+- Answer faithfulness is checked on every chat turn: URLs in the final answer that no tool
+  returned are reported as `unverified_urls` in the answer event.
 - Evaluation runs against a frozen fixture snapshot of postings (`eval/fixtures/*.json`)
   so results are reproducible and CI does not depend on live job boards.
 
