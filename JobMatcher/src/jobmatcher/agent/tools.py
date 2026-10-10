@@ -15,7 +15,7 @@ from jobmatcher.search.hybrid import SearchFilters, search_jobs
 
 class SearchJobsInput(SearchFilters):
     query: str = Field(description="What to look for, in natural language or keywords")
-    k: int = Field(default=8, ge=1, le=20)
+    k: int = Field(default=5, ge=1, le=10)
 
 
 class GetJobInput(BaseModel):
@@ -75,7 +75,7 @@ class Toolbox:
         hits = await search_jobs(self.session, self.embedder, args.query, filters, k=args.k)
         self.seen_urls.update(h.url for h in hits)
         # Snippets are for the model to judge relevance; keep them short to save tokens.
-        return [{**h.model_dump(), "snippet": h.snippet[:300]} for h in hits]
+        return [{**h.model_dump(), "snippet": h.snippet[:200]} for h in hits]
 
     async def _job(self, job_id: int) -> Job:
         job = await self.session.get(Job, job_id)

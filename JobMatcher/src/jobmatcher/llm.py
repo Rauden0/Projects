@@ -8,7 +8,7 @@ import httpx
 
 from jobmatcher.config import get_settings
 
-MAX_RATE_LIMIT_WAIT_S = 30.0
+MAX_RATE_LIMIT_WAIT_S = 60.0
 
 
 class LLMClient(Protocol):
