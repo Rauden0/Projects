@@ -1,0 +1,10 @@
+# Companies to crawl. kind: greenhouse | lever | ashby | workday
+# location_filter is a case-insensitive regex applied to the posting location.
+sources:
+  - { kind: greenhouse, company: canonical, location_filter: "emea|europe" }
+  - { kind: greenhouse, company: jamf, location_filter: "brno|czech" }
+  - { kind: greenhouse, company: bloomreach, location_filter: "czech|slovakia|remote" }
+  - { kind: greenhouse, company: productboard }
+  - { kind: lever, company: oxylabs }
+  - { kind: ashby, company: resend, location_filter: "europe" }
+  - { kind: ashby, company: supabase }
