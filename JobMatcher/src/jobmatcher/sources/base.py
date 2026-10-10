@@ -16,6 +16,9 @@ class SourceConfig(BaseModel):
     host: str | None = None
     site: str | None = None
     search_text: str | None = None
+    # Jobs.cz only: locality path segment (e.g. "brno") and how many result pages to read.
+    locality: str | None = None
+    max_pages: int | None = None
 
 
 class PostingRef(BaseModel):
@@ -30,6 +33,9 @@ class PostingRef(BaseModel):
 class RawPosting(BaseModel):
     kind: str
     company: str
+    # Source this posting was crawled from, when it differs from the employer (job boards
+    # list many employers under one configured source). Defaults to ``company``.
+    source: str | None = None
     external_id: str
     url: str
     title: str

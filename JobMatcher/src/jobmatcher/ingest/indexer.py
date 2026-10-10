@@ -38,7 +38,7 @@ class Indexer:
 
         async with self.sessionmaker() as session, session.begin():
             source_id = await repository.get_or_create_source(
-                session, posting.kind, posting.company
+                session, posting.kind, posting.source or posting.company
             )
             existing = await repository.find_job(session, source_id, posting.external_id)
             if existing is not None and existing.content_hash == digest:
