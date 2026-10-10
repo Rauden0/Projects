@@ -70,14 +70,16 @@ The list of companies lives in `sources.yaml` (company slug, ATS type, optional 
 filter). Each source is a small adapter implementing one protocol:
 
 ```python
-class SourceAdapter(Protocol):
-    name: str
-    async def list_postings(self) -> AsyncIterator[PostingRef]: ...
-    async def fetch_posting(self, ref: PostingRef) -> RawPosting: ...
+class SourceAdapter(ABC):
+    kind: str
+    def list_postings(self) -> AsyncIterator[RawPosting]: ...
 ```
 
-Crawling is polite: per-host concurrency limit, `If-None-Match`/ETag where supported,
-exponential backoff on 429/5xx.
+Greenhouse, Lever and Ashby return full descriptions in the listing call, so the scheduler
+publishes complete postings and the worker never calls the source. A Workday adapter would
+fetch details in `list_postings` the same way.
+
+Crawling is polite: a bounded connection pool per crawl and one request per company per run.
 
 ---
 
@@ -91,9 +93,9 @@ sequenceDiagram
     participant DB as Postgres
     participant R as Outbox relay
 
-    S->>Q: job.discovered {source, external_id, url}
+    S->>Q: job.discovered {full posting}
     Q->>W: deliver (prefetch=N)
-    W->>W: fetch detail, compute content_hash
+    W->>W: html → text, compute content_hash
     alt hash unchanged
         W->>DB: touch last_seen_at
     else new or changed
@@ -115,15 +117,22 @@ Key decisions:
 - **Structured extraction.** The LLM fills a Pydantic model
   (`seniority`, `years_required_min`, `remote_policy`, `office_city`, `salary_min/max`,
   `currency`, `contract_type`, `tech_stack[]`, `languages_required[]`). Output is validated;
-  on validation failure the worker retries once with the error message, then stores
-  `extraction_status='failed'` instead of blocking the pipeline.
+  on validation failure the extractor retries once with the error message, then falls back
+  to a heuristic extractor (also used when no API key is configured) instead of blocking
+  the pipeline.
   These fields are what make filters like *"no Prague hybrid, ≤ 3 years required"* reliable —
   the exact filtering done by hand during the job search.
 - **Chunking.** Postings are split by section (about / responsibilities / requirements /
-  benefits), max ~500 tokens, with the title and company prepended to each chunk.
-- **Retries and DLQ.** `job.discovered` → on failure republished to a delay queue
-  (TTL 30 s → 5 min → 30 min) via `x-death` count; after 3 attempts → `job.discovered.dlq`.
-- **Closed postings.** A posting not seen in two consecutive crawls is marked
+  benefits, nice to have), max ~350 words, with the title and company prepended to each
+  chunk. The section label is stored and used by `compare_with_cv`.
+- **Retries and DLQ.** On failure the worker republishes the message to
+  `job.discovered.retry.{n}` — one queue per delay (30 s, 5 min, 30 min) with a queue-level
+  TTL that dead-letters back to `job.discovered` — tracking the attempt in an `x-attempt`
+  header; after 3 attempts → `job.discovered.dlq`. One queue per delay avoids the
+  head-of-line blocking of per-message TTLs. The original is acked only after the republish
+  succeeded.
+- **Closed postings.** After a complete, successful listing of a source, open postings
+  missing from it are marked
   `status='closed'` (and a `job.closed` event is emitted) — never deleted, so history and
   evaluation sets stay stable.
 - **Outbox.** Downstream events are written in the same transaction as the job row and
@@ -246,8 +255,8 @@ is visible and testable.
 - Max 6 tool-call rounds per question, max 3 parallel tool calls per round; then the
   model must answer with what it has.
 - Tool errors are returned to the model as structured `is_error` results, not raised.
-- The final answer is streamed to the client over **SSE**; tool calls are streamed as
-  events too, so the UI can show "searching remote Python roles…".
+- Agent events (tool calls, tool results, final answer) are streamed to the client over
+  **SSE**, so the UI can show "searching remote Python roles…" while the agent works.
 - Token usage and latency per request are logged.
 
 `compare_with_cv` is deterministic first (set overlap of normalized skills, years and
@@ -274,7 +283,7 @@ Request/response models are Pydantic v2; OpenAPI docs come for free from FastAPI
 
 Retrieval quality is measured, not eyeballed:
 
-- `eval/golden.yaml`: 30 questions, each with the set of job ids that a human marked as
+- `eval/golden.yaml`: 15 questions (to grow to ~30), each with the set of job ids that a human marked as
   relevant, e.g. *"remote Python backend, max 3 years, no relocation"*.
 - `eval/run_retrieval.py` computes **hit@5**, **recall@10** and **MRR** for
   (a) vector only, (b) full-text only, (c) hybrid — so the README can show *why* hybrid
@@ -310,19 +319,20 @@ JobMatcher/
 ├── sources.yaml
 ├── src/jobmatcher/
 │   ├── config.py               # pydantic-settings
+│   ├── llm.py                  # provider wrapper (Anthropic)
+│   ├── messaging.py            # RabbitMQ topology
 │   ├── db/                     # SQLAlchemy models, session, repositories
-│   ├── sources/                # greenhouse.py, lever.py, ashby.py, workday.py
-│   ├── ingest/                 # scheduler.py, worker.py, normalize.py, chunking.py, extraction.py
+│   ├── sources/                # base.py, greenhouse.py, lever.py, ashby.py
+│   ├── ingest/                 # scheduler, worker, indexer, normalize, chunking, extraction
 │   ├── outbox/relay.py
-│   ├── search/                 # embeddings.py, hybrid.py
+│   ├── search/                 # embeddings.py, hybrid.py, metrics.py
 │   ├── agent/                  # loop.py, tools.py, prompts.py
-│   ├── cv/                     # parsing.py, profile.py
-│   └── api/                    # main.py, routes/, schemas.py, sse.py
+│   ├── cv/                     # profile.py (extraction + comparison)
+│   └── api/                    # main.py, deps.py, routes/, schemas.py
 ├── eval/
 │   ├── golden.yaml
 │   ├── fixtures/
-│   ├── run_retrieval.py
-│   └── run_agent.py
+│   └── run_retrieval.py
 └── tests/
     ├── unit/
     └── integration/
@@ -341,8 +351,8 @@ All configuration via environment variables loaded by `pydantic-settings`
 ## 12. Deployment
 
 **Phase 1 — local:** `docker compose up` brings up postgres (pgvector image), rabbitmq
-(management plugin), api, worker, scheduler, outbox-relay. `make seed` loads the eval
-fixtures so the app works without crawling.
+(management plugin), a one-shot migration, api, worker, scheduler, outbox-relay.
+`eval/run_retrieval.py` loads the eval fixtures, so the app is usable without crawling.
 
 **Phase 2 — cloud via Terraform** (separate milestone, `infra/`):
 - GCP Cloud Run for `api` and `worker`, Cloud Scheduler triggering the crawl,
