@@ -35,6 +35,7 @@ services:
 
   migrate:
     build: .
+    image: jobmatcher:latest
     env_file: .env
     command: ["alembic", "upgrade", "head"]
     depends_on:
@@ -42,6 +43,7 @@ services:
 
   api:
     build: .
+    image: jobmatcher:latest
     restart: unless-stopped
     env_file: .env
     volumes: [models:/models]
@@ -52,6 +54,7 @@ services:
 
   worker:
     build: .
+    image: jobmatcher:latest
     restart: unless-stopped
     env_file: .env
     volumes: [models:/models]
@@ -62,6 +65,7 @@ services:
 
   scheduler:
     build: .
+    image: jobmatcher:latest
     restart: unless-stopped
     env_file: .env
     command: ["python", "-m", "jobmatcher.ingest.scheduler"]
@@ -71,6 +75,7 @@ services:
 
   outbox-relay:
     build: .
+    image: jobmatcher:latest
     restart: unless-stopped
     env_file: .env
     command: ["python", "-m", "jobmatcher.outbox.relay"]
