@@ -106,3 +106,24 @@ def test_chat_overrides_only_the_chat_client(monkeypatch: pytest.MonkeyPatch) ->
     )
     assert chat.model == "llama-3.3-70b-versatile"
     assert chat._http.headers["Authorization"] == "Bearer gsk_test"
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_and_tool_use_failed_are_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    from jobmatcher import llm as llm_module
+
+    async def no_sleep(_: float) -> None:
+        return None
+
+    monkeypatch.setattr(llm_module.asyncio, "sleep", no_sleep)
+    responses = [
+        httpx.Response(429, headers={"retry-after": "2"}, json={"error": "rate"}),
+        httpx.Response(400, json={"error": {"code": "tool_use_failed"}}),
+        httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]}),
+    ]
+    client = OpenAICompatClient("http://groq/v1", "m")
+    client._http = httpx.AsyncClient(
+        base_url="http://groq/v1", transport=httpx.MockTransport(lambda _: responses.pop(0))
+    )
+    assert await client.complete(system="s", user="u") == "ok"
+    assert responses == []

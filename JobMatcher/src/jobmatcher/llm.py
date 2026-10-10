@@ -1,11 +1,14 @@
 """Thin wrapper over the LLM provider so the rest of the code (and tests) never import the SDK."""
 
+import asyncio
 import json
 from typing import Any, Literal, Protocol
 
 import httpx
 
 from jobmatcher.config import get_settings
+
+MAX_RATE_LIMIT_WAIT_S = 30.0
 
 
 class LLMClient(Protocol):
@@ -77,12 +80,15 @@ class OpenAICompatClient:
             # Groq validates generated tool arguments against the schema and answers 400
             # "tool_use_failed" when the model produced invalid ones; sampling again usually
             # succeeds.
-            if (
-                response.status_code == 400
-                and "tool_use_failed" in response.text
-                and attempt < attempts - 1
-            ):
+            retryable = attempt < attempts - 1
+            if response.status_code == 400 and "tool_use_failed" in response.text and retryable:
                 continue
+            # Free tiers have tight per-minute token limits; waiting is better than failing.
+            if response.status_code == 429 and retryable:
+                delay = float(response.headers.get("retry-after", "10"))
+                if delay <= MAX_RATE_LIMIT_WAIT_S:
+                    await asyncio.sleep(delay + 0.5)
+                    continue
             if response.is_error:
                 raise httpx.HTTPStatusError(
                     f"{response.status_code} from LLM: {response.text[:500]}",
