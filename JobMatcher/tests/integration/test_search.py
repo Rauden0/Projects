@@ -65,3 +65,29 @@ async def test_filters_exclude_by_years_and_remote(
     # Hybrid jobs are excluded; jobs with an unknown policy ("sales") are kept.
     assert "go-remote" in remote_ids
     assert not {"py-brno", "py-senior"} & set(remote_ids)
+
+
+async def test_thin_board_copy_is_hidden_when_full_copy_exists(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    indexer = Indexer(sessionmaker, HeuristicExtractor(), EMBEDDER)
+    full_text = "<p>" + "Python data collection and MES integration. " * 20 + "</p>"
+    for kind, company, external_id, body in [
+        ("jobscz", "Thermo Fisher Scientific", "board", "<p>Python Developer</p>"),
+        ("workday", "thermofisher", "ats", full_text),
+    ]:
+        await indexer.index(
+            RawPosting(
+                kind=kind,
+                company=company,
+                external_id=external_id,
+                url=f"https://example.com/{external_id}",
+                title="Python Developer - Manufacturing",
+                location="Brno",
+                description_html=body,
+            )
+        )
+
+    async with sessionmaker() as session:
+        hits = await search_jobs(session, EMBEDDER, "python developer", k=10)
+    assert [h.url.rsplit("/", 1)[1] for h in hits] == ["ats"]

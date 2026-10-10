@@ -28,5 +28,7 @@ def test_filter_sql_binds_every_value() -> None:
     }
 
 
-def test_no_filters_only_open_jobs() -> None:
-    assert _filter_sql(SearchFilters(), {}) == "j.status = 'open'"
+def test_no_filters_only_open_jobs_without_thin_duplicates() -> None:
+    sql = _filter_sql(SearchFilters(), {})
+    assert sql.startswith("j.status = 'open' AND NOT (")
+    assert "length(j.description) <" in sql

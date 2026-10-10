@@ -10,11 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobmatcher.cv.profile import CvProfile, compare
 from jobmatcher.db.models import Cv, Job, JobChunk
 from jobmatcher.search.embeddings import Embedder
-from jobmatcher.search.hybrid import SearchFilters, search_jobs
+from jobmatcher.search.hybrid import THIN_DESCRIPTION_CHARS, SearchFilters, search_jobs
 
 MAX_K = 6
 REMOTE_POLICIES = ["remote_country", "remote_region", "remote_global"]
-THIN_DESCRIPTION_CHARS = 300
 
 
 class SearchJobsInput(SearchFilters):
