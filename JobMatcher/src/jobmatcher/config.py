@@ -28,3 +28,12 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def configure_logging() -> None:
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    # Per-request logs from HTTP clients (job boards, Hugging Face, Ollama) drown the app's own.
+    for noisy in ("httpx", "huggingface_hub", "sentence_transformers"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)

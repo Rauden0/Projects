@@ -16,7 +16,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher import messaging
-from jobmatcher.config import get_settings
+from jobmatcher.config import configure_logging, get_settings
 from jobmatcher.db.models import Outbox
 from jobmatcher.db.session import get_sessionmaker
 
@@ -55,7 +55,7 @@ async def relay_batch(
 
 
 async def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    configure_logging()
     connection = await aio_pika.connect_robust(get_settings().amqp_url)
     async with connection:
         channel = await connection.channel(publisher_confirms=True)

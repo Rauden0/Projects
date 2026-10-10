@@ -6,7 +6,7 @@ from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
 from pydantic import ValidationError
 
 from jobmatcher import messaging
-from jobmatcher.config import get_settings
+from jobmatcher.config import configure_logging, get_settings
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.ingest.extraction import Extractor, HeuristicExtractor, LLMExtractor
 from jobmatcher.ingest.indexer import Indexer
@@ -67,7 +67,7 @@ def build_extractor() -> Extractor:
 
 
 async def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    configure_logging()
     settings = get_settings()
     connection = await aio_pika.connect_robust(settings.amqp_url)
     async with connection:

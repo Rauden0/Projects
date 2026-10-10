@@ -5,7 +5,7 @@ import aio_pika
 import httpx
 
 from jobmatcher import messaging
-from jobmatcher.config import get_settings
+from jobmatcher.config import configure_logging, get_settings
 from jobmatcher.db import repository
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.sources import ADAPTERS, SourceConfig
@@ -47,7 +47,7 @@ async def crawl_once(exchange: aio_pika.abc.AbstractExchange) -> None:
 
 
 async def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    configure_logging()
     settings = get_settings()
     connection = await aio_pika.connect_robust(settings.amqp_url)
     async with connection:
