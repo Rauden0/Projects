@@ -47,3 +47,23 @@ def test_compare_remote_fits_anywhere() -> None:
     result = compare(CvProfile(), [], "", "", None, "remote_region", "Berlin")
     assert result.location_fit == "remote"
     assert result.years_gap == 0
+
+
+def test_compare_prefers_extracted_skills_and_reads_cv_text() -> None:
+    profile = CvProfile(skills=["python"], years_experience=2, city="Brno")
+    result = compare(
+        profile,
+        job_stack=["python"],
+        requirements_text="",
+        nice_to_have_text="",
+        years_required=None,
+        remote_policy="hybrid",
+        office_city="Brno, Czech Republic",
+        required_skills=["Python", "Linux", "distributed systems"],
+        nice_to_have_skills=["Go"],
+        cv_text="Built distributed systems on Linux servers.",
+    )
+    assert result.matched_skills == ["distributed systems", "linux", "python"]
+    assert result.missing_required == []
+    assert result.missing_nice_to_have == ["go"]
+    assert result.location_fit == "same_city"

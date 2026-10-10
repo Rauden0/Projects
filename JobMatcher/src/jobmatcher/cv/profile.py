@@ -52,6 +52,10 @@ class Comparison(BaseModel):
     location_fit: str
 
 
+def _mentions(text: str, term: str) -> bool:
+    return bool(re.search(rf"(?<!\w){re.escape(term)}(?!\w)", text, re.I))
+
+
 def compare(
     profile: CvProfile,
     job_stack: list[str],
@@ -60,18 +64,32 @@ def compare(
     years_required: int | None,
     remote_policy: str | None,
     office_city: str | None,
+    required_skills: list[str] | None = None,
+    nice_to_have_skills: list[str] | None = None,
+    cv_text: str = "",
 ) -> Comparison:
-    skills = set(profile.skills)
-    required = {t for t in job_stack if re.search(rf"(?<!\w){re.escape(t)}(?!\w)",
-                                                  requirements_text, re.I)}
-    nice = {t for t in job_stack if t not in required and re.search(
-        rf"(?<!\w){re.escape(t)}(?!\w)", nice_to_have_text, re.I)}
-    # Stack items not attributable to a section count as required: safer to over-report gaps.
-    required |= set(job_stack) - required - nice
+    """Deterministic CV-to-job comparison.
+
+    Uses the skills extracted per section at ingest when available; otherwise attributes the
+    job's tech stack to sections by searching the section texts. A skill counts as covered
+    when it is in the CV profile or mentioned anywhere in the CV text.
+    """
+
+    def covered(skill: str) -> bool:
+        return skill.lower() in profile.skills or _mentions(cv_text, skill)
+
+    if required_skills or nice_to_have_skills:
+        required = {s.lower() for s in required_skills or []}
+        nice = {s.lower() for s in nice_to_have_skills or []} - required
+    else:
+        required = {t for t in job_stack if _mentions(requirements_text, t)}
+        nice = {t for t in job_stack if t not in required and _mentions(nice_to_have_text, t)}
+        # Stack items not attributable to a section count as required: safer to over-report.
+        required |= set(job_stack) - required - nice
 
     if remote_policy and remote_policy.startswith("remote"):
         location_fit = "remote"
-    elif office_city and profile.city and office_city.lower() == profile.city.lower():
+    elif office_city and profile.city and profile.city.lower() in office_city.lower():
         location_fit = "same_city"
     elif office_city:
         location_fit = "relocation_or_commute"
@@ -80,9 +98,9 @@ def compare(
 
     gap = max(0.0, (years_required or 0) - profile.years_experience)
     return Comparison(
-        matched_skills=sorted(skills & set(job_stack)),
-        missing_required=sorted(required - skills),
-        missing_nice_to_have=sorted(nice - skills),
+        matched_skills=sorted(s for s in required | nice if covered(s)),
+        missing_required=sorted(s for s in required if not covered(s)),
+        missing_nice_to_have=sorted(s for s in nice if not covered(s)),
         years_required=years_required,
         years_gap=round(gap, 1),
         location_fit=location_fit,

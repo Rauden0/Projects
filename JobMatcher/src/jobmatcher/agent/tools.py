@@ -104,6 +104,8 @@ class Toolbox:
             "remote_policy": job.remote_policy,
             "salary": [job.salary_min, job.salary_max, job.currency],
             "tech_stack": job.tech_stack,
+            "required_skills": job.required_skills,
+            "nice_to_have_skills": job.nice_to_have_skills,
             "description": job.description[:3000],
         }
 
@@ -129,5 +131,8 @@ class Toolbox:
             job.years_required_min,
             job.remote_policy,
             job.office_city,
+            required_skills=job.required_skills,
+            nice_to_have_skills=job.nice_to_have_skills,
+            cv_text=cv.raw_text,
         )
         return {"job_id": job.id, "title": job.title, "url": job.url, **result.model_dump()}
