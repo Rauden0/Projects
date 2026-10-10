@@ -13,6 +13,7 @@ from jobmatcher.search.embeddings import Embedder
 from jobmatcher.search.hybrid import SearchFilters, search_jobs
 
 MAX_K = 6
+REMOTE_POLICIES = ["remote_country", "remote_region", "remote_global"]
 
 
 class SearchJobsInput(SearchFilters):
@@ -76,12 +77,44 @@ class Toolbox:
     async def search_jobs(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
         args = SearchJobsInput.model_validate(raw)
         filters = SearchFilters.model_validate(args.model_dump(exclude={"query", "k"}))
-        hits = await search_jobs(
-            self.session, self.embedder, args.query, filters, k=min(args.k, MAX_K)
+        k = min(args.k, MAX_K)
+        wants_remote = not filters.remote_policy or any(
+            p.startswith("remote") for p in filters.remote_policy
         )
-        self.seen_urls.update(h.url for h in hits)
+        if filters.city and wants_remote:
+            # "In <city> or remote": rank the two groups separately. Mixed together, remote
+            # postings from large companies (long, keyword-rich descriptions) push local ones
+            # out of the top results, and the user never sees the jobs in their own city.
+            local_filters = filters.model_copy(update={"remote_policy": None})
+            remote_filters = filters.model_copy(
+                update={
+                    "city": None,
+                    "remote_policy": [
+                        p for p in (filters.remote_policy or REMOTE_POLICIES)
+                        if p.startswith("remote")
+                    ],
+                }
+            )
+            half = max(1, k // 2)
+            local = await search_jobs(
+                self.session, self.embedder, args.query, local_filters, k=half, strict_city=True
+            )
+            remote = await search_jobs(
+                self.session, self.embedder, args.query, remote_filters, k=k - len(local)
+            )
+            tagged = [(h, "local") for h in local] + [
+                (h, "remote") for h in remote if h.job_id not in {x.job_id for x in local}
+            ]
+        else:
+            hits = await search_jobs(self.session, self.embedder, args.query, filters, k=k)
+            tagged = [(h, None) for h in hits]
+
+        self.seen_urls.update(h.url for h, _ in tagged)
         # Snippets are for the model to judge relevance; keep them short to save tokens.
-        return [{**h.model_dump(), "snippet": h.snippet[:200]} for h in hits]
+        return [
+            {**h.model_dump(), "snippet": h.snippet[:200], **({"group": g} if g else {})}
+            for h, g in tagged
+        ]
 
     async def _job(self, job_id: int) -> Job:
         job = await self.session.get(Job, job_id)

@@ -55,3 +55,34 @@ async def test_search_then_compare(sessionmaker: async_sessionmaker[AsyncSession
     assert comparison["missing_nice_to_have"] == ["terraform"]
     assert comparison["years_gap"] == 1.0
     assert comparison["location_fit"] == "same_city"
+
+
+async def test_city_or_remote_returns_local_and_remote_groups(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    indexer = Indexer(sessionmaker, HeuristicExtractor(), EMBEDDER)
+    long_remote = "<p>Fully remote. " + "Python backend FastAPI PostgreSQL. " * 40 + "</p>"
+    for external_id, location, body in [
+        ("brno", "Brno", "<p>Hybrid in Brno. Python developer.</p>"),
+        ("remote", "Remote, Europe", long_remote),
+        ("prague", "Prague", "<p>Hybrid in Prague. Python backend.</p>"),
+    ]:
+        await indexer.index(
+            RawPosting(
+                kind="greenhouse",
+                company="acme",
+                external_id=external_id,
+                url=f"https://example.com/{external_id}",
+                title="Python Developer",
+                location=location,
+                description_html=body,
+            )
+        )
+
+    async with sessionmaker() as session:
+        hits = await Toolbox(session, EMBEDDER, None).call(
+            "search_jobs", {"query": "python backend", "city": "Brno"}
+        )
+
+    groups = {h["url"].rsplit("/", 1)[1]: h["group"] for h in hits}
+    assert groups == {"brno": "local", "remote": "remote"}  # Prague is neither

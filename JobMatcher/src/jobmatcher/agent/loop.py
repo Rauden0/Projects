@@ -28,8 +28,9 @@ Rules:
   by its exact URL.
 - Use search_jobs with filters only for the user's hard constraints (location, remote,
   years of experience); put skills into the query text. For "in <city> or remote" set
-  only city: remote jobs pass the city filter and local jobs are ranked first. If a search
-  returns nothing, search again with fewer filters before concluding there are no jobs.
+  only city. Results then come in two groups ("local" and "remote"); when the user asked
+  for both, recommend from both groups. If a search returns nothing, search again with
+  fewer filters before concluding there are no jobs.
 - Use compare_with_cv, with a job_id taken from search results, before claiming a job is a
   good fit. Never invent job ids or URLs.
 - Be explicit about gaps: missing required skills and years of experience.

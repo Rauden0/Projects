@@ -53,7 +53,9 @@ class SearchHit(BaseModel):
     score: float
 
 
-def _filter_sql(filters: SearchFilters, params: dict[str, object]) -> str:
+def _filter_sql(
+    filters: SearchFilters, params: dict[str, object], strict_city: bool = False
+) -> str:
     clauses = ["j.status = 'open'"]
     if filters.remote_policy:
         # Unknown policy is kept, as for the other filters: many postings never state it.
@@ -62,9 +64,10 @@ def _filter_sql(filters: SearchFilters, params: dict[str, object]) -> str:
     if filters.city:
         # A remote job is acceptable whatever its office city.
         # Extracted cities vary ("Brno", "Brno, Czech Republic"), so match by substring.
+        remote_ok = "" if strict_city else " OR j.remote_policy LIKE 'remote%'"
         clauses.append(
             "(j.office_city ILIKE '%' || :city || '%' OR j.location_raw ILIKE '%' || :city || '%'"
-            " OR j.remote_policy LIKE 'remote%')"
+            f"{remote_ok})"
         )
         params["city"] = filters.city
     if filters.max_years_required is not None:
@@ -95,9 +98,11 @@ async def search_jobs(
     filters: SearchFilters | None = None,
     k: int = 10,
     mode: Mode = "hybrid",
+    strict_city: bool = False,
 ) -> list[SearchHit]:
+    """``strict_city`` drops the "remote jobs pass any city" rule, for local-only listings."""
     params: dict[str, object] = {"k": k, "candidates": CANDIDATES, "rrf_k": RRF_K}
-    where = _filter_sql(filters or SearchFilters(), params)
+    where = _filter_sql(filters or SearchFilters(), params, strict_city)
 
     ranked: list[str] = []
     if mode in ("hybrid", "vector"):
