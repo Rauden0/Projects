@@ -56,6 +56,31 @@ def _mentions(text: str, term: str) -> bool:
     return bool(re.search(rf"(?<!\w){re.escape(term)}(?!\w)", text, re.I))
 
 
+# Extracted skills are free-form ("async programming", "rest apis", "testing"), CVs name the
+# tools ("asyncio", "FastAPI", "pytest"). Matching word stems bridges most of that gap.
+_STOPWORDS = {"and", "or", "of", "the", "with", "in", "for", "experience", "knowledge",
+              "skills", "development", "programming", "design", "systems", "system"}
+_ALIASES = {
+    "postgres": "postgresql", "k8s": "kubernetes", "js": "javascript", "ts": "typescript",
+    "rest": "api", "apis": "api", "unit": "test", "testing": "test", "ci/cd": "ci",
+    "message": "rabbitmq", "queues": "rabbitmq", "queue": "rabbitmq",
+}
+
+
+def _skill_words(skill: str) -> list[str]:
+    words = [w for w in re.findall(r"[a-z0-9+#/]+", skill.lower()) if w not in _STOPWORDS]
+    return [_ALIASES.get(w, w) for w in words]
+
+
+def _covers(cv_haystack: str, skill: str) -> bool:
+    """True when the CV mentions the skill or every meaningful word of it (by 4-letter stem,
+    so "async" matches "asyncio" and "test" matches "pytest")."""
+    if _mentions(cv_haystack, skill):
+        return True
+    words = _skill_words(skill)
+    return bool(words) and all(w[:4] in cv_haystack for w in words)
+
+
 def compare(
     profile: CvProfile,
     job_stack: list[str],
@@ -75,8 +100,10 @@ def compare(
     when it is in the CV profile or mentioned anywhere in the CV text.
     """
 
+    haystack = " ".join([cv_text.lower(), *profile.skills])
+
     def covered(skill: str) -> bool:
-        return skill.lower() in profile.skills or _mentions(cv_text, skill)
+        return skill.lower() in profile.skills or _covers(haystack, skill)
 
     if required_skills or nice_to_have_skills:
         required = {s.lower() for s in required_skills or []}

@@ -67,3 +67,14 @@ def test_compare_prefers_extracted_skills_and_reads_cv_text() -> None:
     assert result.missing_required == []
     assert result.missing_nice_to_have == ["go"]
     assert result.location_fit == "same_city"
+
+
+def test_free_form_skills_match_cv_tools() -> None:
+    profile = CvProfile(skills=["python", "asyncio", "fastapi", "pytest", "postgresql"])
+    cv = "Built REST APIs with FastAPI, async workers, pytest, PostgreSQL partitioning."
+    result = compare(
+        profile, [], "", "", None, None, None,
+        required_skills=["async programming", "rest apis", "testing", "postgres", "graphql"],
+        cv_text=cv,
+    )
+    assert result.missing_required == ["graphql"]
