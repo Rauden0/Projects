@@ -15,7 +15,7 @@ pytest · Docker Compose · GitHub Actions
 
 ## What's inside
 
-- **Ingestion** — Greenhouse, Lever and Ashby adapters → RabbitMQ → worker that normalizes,
+- **Ingestion** — Greenhouse, Lever, Ashby, Workday and Jobs.cz adapters → RabbitMQ → worker that normalizes,
   deduplicates by content hash, extracts structured facts (seniority, years required,
   remote policy, salary, stack) with an LLM validated by Pydantic, chunks by section and
   embeds. Retries via per-delay TTL queues, then a dead-letter queue.
@@ -43,6 +43,7 @@ Any OpenAI-compatible endpoint works (`LLM_BASE_URL`, e.g. Groq or Gemini), and 
 via `LLM_PROVIDER=anthropic` — see [`.env.example`](.env.example). Without a reachable LLM,
 ingestion falls back to heuristic extraction; only `/chat` needs the model.
 
+- Chat UI: http://localhost:8000 (paste a CV, then ask)
 - API docs: http://localhost:8000/docs
 - RabbitMQ UI: http://localhost:15672 (guest / guest)
 
@@ -82,6 +83,5 @@ over [`eval/golden.yaml`](eval/golden.yaml).
 
 ## Roadmap
 
-- Workday adapter
-- Minimal web UI for the chat stream
 - Terraform deployment to GCP (Cloud Run, Cloud SQL) with plan/apply in CI
+- Descriptions for jobs.cz ads that redirect to JavaScript-only employer sites
