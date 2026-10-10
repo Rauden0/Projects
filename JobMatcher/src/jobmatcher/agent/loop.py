@@ -54,9 +54,18 @@ async def run_agent(
     for round_no in range(MAX_ROUNDS + 1):
         # On the last round tool use is disabled, so the model must answer with what it has.
         tool_choice = {"type": "auto"} if round_no < MAX_ROUNDS else {"type": "none"}
-        response = await llm.create_message(
-            system=system, messages=messages, tools=toolbox.definitions(), tool_choice=tool_choice
-        )
+        try:
+            response = await llm.create_message(
+                system=system,
+                messages=messages,
+                tools=toolbox.definitions(),
+                tool_choice=tool_choice,
+            )
+        except Exception as exc:
+            # Surface provider failures to the client instead of cutting the stream.
+            log.exception("LLM call failed")
+            yield AgentEvent("error", {"message": f"LLM request failed: {exc}"[:500]})
+            return
         content = list(_block(response, "content"))
         tool_uses = [b for b in content if _block(b, "type") == "tool_use"]
 

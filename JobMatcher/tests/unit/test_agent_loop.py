@@ -98,3 +98,14 @@ async def test_last_round_disables_tools(monkeypatch: pytest.MonkeyPatch) -> Non
     )
     await collect(model, FakeToolbox())
     assert [c["tool_choice"] for c in model.calls] == [{"type": "auto"}, {"type": "none"}]
+
+
+@pytest.mark.asyncio
+async def test_llm_failure_becomes_error_event() -> None:
+    class FailingModel(ScriptedModel):
+        async def create_message(self, **kwargs: Any) -> dict[str, Any]:
+            raise RuntimeError("400 from LLM")
+
+    events = await collect(FailingModel(), FakeToolbox())
+    assert [e.type for e in events] == ["error"]
+    assert "400 from LLM" in events[0].data["message"]
