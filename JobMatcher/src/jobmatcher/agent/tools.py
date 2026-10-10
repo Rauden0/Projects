@@ -14,6 +14,7 @@ from jobmatcher.search.hybrid import SearchFilters, search_jobs
 
 MAX_K = 6
 REMOTE_POLICIES = ["remote_country", "remote_region", "remote_global"]
+THIN_DESCRIPTION_CHARS = 300
 
 
 class SearchJobsInput(SearchFilters):
@@ -168,4 +169,17 @@ class Toolbox:
             nice_to_have_skills=job.nice_to_have_skills,
             cv_text=cv.raw_text,
         )
-        return {"job_id": job.id, "title": job.title, "url": job.url, **result.model_dump()}
+        out = {
+            "job_id": job.id,
+            "title": job.title,
+            "url": job.url,
+            "remote_policy": job.remote_policy,
+            **result.model_dump(),
+        }
+        if len(job.description) < THIN_DESCRIPTION_CHARS:
+            # Ads that redirect to an employer's JavaScript site arrive without their text.
+            out["note"] = (
+                "The full posting text is not available, so requirements are unknown, "
+                "not absent. Tell the user to check the posting."
+            )
+        return out
