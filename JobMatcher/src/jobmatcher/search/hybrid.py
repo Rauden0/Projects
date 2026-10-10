@@ -28,7 +28,9 @@ class SearchFilters(BaseModel):
     max_years_required: int | None = Field(default=None, ge=0)
     seniority: list[str] | None = Field(default=None, description="junior, medior, senior, staff")
     contract_type: list[str] | None = None
-    tech: list[str] | None = Field(default=None, description="All of these technologies")
+    tech: list[str] | None = Field(
+        default=None, description="At least one of these technologies (lowercase)"
+    )
 
 
 class SearchHit(BaseModel):
@@ -66,7 +68,7 @@ def _filter_sql(filters: SearchFilters, params: dict[str, object]) -> str:
         clauses.append("(j.contract_type IS NULL OR j.contract_type = ANY(:contract_type))")
         params["contract_type"] = filters.contract_type
     if filters.tech:
-        clauses.append("j.tech_stack @> :tech")
+        clauses.append("j.tech_stack && :tech")
         params["tech"] = [t.lower() for t in filters.tech]
     return " AND ".join(clauses)
 
