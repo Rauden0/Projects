@@ -94,3 +94,12 @@ def test_czech_padded_skills_are_matched() -> None:
         cv_text=cv,
     )
     assert result.missing_required == ["aws služby"]
+
+
+def test_soft_skills_are_never_reported_missing() -> None:
+    result = compare(
+        CvProfile(skills=["python"]), [], "", "", None, None, None,
+        required_skills=["Python", "Accountability", "problem solving", "C++"],
+        cv_text="Python",
+    )
+    assert result.missing_required == ["c++"]

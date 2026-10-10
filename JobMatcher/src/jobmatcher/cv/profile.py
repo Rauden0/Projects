@@ -74,6 +74,14 @@ _ALIASES = {
 }
 
 
+# Extraction sometimes returns soft skills despite the prompt; a CV cannot "lack" these.
+_SOFT_SKILLS = {
+    "accountability", "communication", "problem solving", "problem-solving", "teamwork",
+    "team player", "ownership", "proactivity", "curiosity", "english", "software development",
+    "komunikace", "samostatnost", "týmová spolupráce", "angličtina",
+}
+
+
 def _skill_words(skill: str) -> list[str]:
     words = re.findall(r"[\w+#/]+", skill.lower())
     return [_ALIASES.get(w, w) for w in words if len(w) >= 2 and w not in _STOPWORDS]
@@ -116,8 +124,8 @@ def compare(
         return skill.lower() in profile.skills or _covers(haystack, skill)
 
     if required_skills or nice_to_have_skills:
-        required = {s.lower() for s in required_skills or []}
-        nice = {s.lower() for s in nice_to_have_skills or []} - required
+        required = {s.lower() for s in required_skills or []} - _SOFT_SKILLS
+        nice = {s.lower() for s in nice_to_have_skills or []} - required - _SOFT_SKILLS
     else:
         required = {t for t in job_stack if _mentions(requirements_text, t)}
         nice = {t for t in job_stack if t not in required and _mentions(nice_to_have_text, t)}
