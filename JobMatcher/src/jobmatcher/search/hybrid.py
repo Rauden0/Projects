@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from jobmatcher.ingest.extraction import ContractType, RemotePolicy, Seniority
 from jobmatcher.search.embeddings import Embedder
 
 RRF_K = 60
@@ -20,14 +21,15 @@ Mode = Literal["hybrid", "vector", "fulltext"]
 
 
 class SearchFilters(BaseModel):
-    remote_policy: list[str] | None = Field(
-        default=None,
-        description="Any of: onsite, hybrid, remote_country, remote_region, remote_global",
+    # Enumerated values end up in the tool's JSON schema, so the model sees exactly what is
+    # allowed instead of guessing (small local models otherwise invent values).
+    remote_policy: list[RemotePolicy] | None = Field(
+        default=None, description="Accept jobs with any of these remote policies"
     )
     city: str | None = Field(default=None, description="Office city, e.g. Brno")
     max_years_required: int | None = Field(default=None, ge=0)
-    seniority: list[str] | None = Field(default=None, description="junior, medior, senior, staff")
-    contract_type: list[str] | None = None
+    seniority: list[Seniority] | None = None
+    contract_type: list[ContractType] | None = None
     tech: list[str] | None = Field(
         default=None, description="At least one of these technologies (lowercase)"
     )

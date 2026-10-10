@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 from jobmatcher.api.deps import EmbedderDep, SessionDep
 from jobmatcher.api.schemas import JobDetail
 from jobmatcher.db.models import Job
+from jobmatcher.ingest.extraction import RemotePolicy, Seniority
 from jobmatcher.search.hybrid import Mode, SearchFilters, SearchHit, search_jobs
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -15,10 +16,10 @@ async def search(
     session: SessionDep,
     embedder: EmbedderDep,
     q: Annotated[str, Query(min_length=2, max_length=500)],
-    remote_policy: Annotated[list[str] | None, Query()] = None,
+    remote_policy: Annotated[list[RemotePolicy] | None, Query()] = None,
     city: str | None = None,
     max_years_required: Annotated[int | None, Query(ge=0, le=30)] = None,
-    seniority: Annotated[list[str] | None, Query()] = None,
+    seniority: Annotated[list[Seniority] | None, Query()] = None,
     tech: Annotated[list[str] | None, Query()] = None,
     k: Annotated[int, Query(ge=1, le=50)] = 10,
     mode: Mode = "hybrid",
