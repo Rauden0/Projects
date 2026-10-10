@@ -1,9 +1,44 @@
 # Companies to crawl. kind: greenhouse | lever | ashby | workday
 # location_filter is a case-insensitive regex applied to the posting location.
+# Workday sources also need host + site, and search_text to narrow very large listings.
 sources:
-  - { kind: greenhouse, company: canonical, location_filter: "emea|europe" }
+  # Brno / Czech offices
   - { kind: greenhouse, company: jamf, location_filter: "brno|czech" }
   - { kind: greenhouse, company: bloomreach, location_filter: "czech|slovakia|remote" }
+  - { kind: greenhouse, company: shipmonk, location_filter: "czech|prague|remote" }
+  - { kind: greenhouse, company: jetbrains, location_filter: "prague|czech|remote" }
+  - { kind: ashby, company: kiwi, location_filter: "brno|prague|czech|remote" }
+  - { kind: ashby, company: apify, location_filter: "brno|prague|czech|remote" }
+  - { kind: ashby, company: gooddata, location_filter: "brno|prague|czech|remote" }
+  - { kind: ashby, company: satoshilabs, location_filter: "prague|czech|remote" }
+  - kind: workday
+    company: nxp
+    host: nxp.wd3.myworkdayjobs.com
+    site: careers
+    search_text: software
+    location_filter: brno
+  - kind: workday
+    company: thermofisher
+    host: thermofisher.wd5.myworkdayjobs.com
+    site: ThermoFisherCareers
+    search_text: Brno software
+    location_filter: brno
+  - kind: workday
+    company: redhat
+    host: redhat.wd5.myworkdayjobs.com
+    site: Jobs
+    search_text: Brno
+    location_filter: brno
+
+  # Remote within Europe / EMEA
+  - { kind: greenhouse, company: canonical, location_filter: "emea|europe" }
+  - { kind: greenhouse, company: gitlab, location_filter: "emea|europe|remote" }
   - { kind: lever, company: oxylabs }
   - { kind: ashby, company: resend, location_filter: "europe" }
   - { kind: ashby, company: supabase }
+  - { kind: ashby, company: sentry, location_filter: "europe|emea|remote" }
+  - { kind: ashby, company: clickhouse, location_filter: "europe|emea|remote" }
+  - { kind: ashby, company: surfshark, location_filter: "europe|remote" }
+  - { kind: ashby, company: pleo, location_filter: "europe|remote" }
+  - { kind: ashby, company: elevenlabs, location_filter: "europe|remote" }
+  - { kind: ashby, company: temporal, location_filter: "europe|emea|remote" }
