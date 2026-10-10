@@ -75,14 +75,23 @@ async def test_create_message_sends_tools_and_choice() -> None:
         system="sys",
         messages=[{"role": "user", "content": "q"}],
         tools=[{"name": "search_jobs", "description": "d", "input_schema": {"type": "object"}}],
-        tool_choice={"type": "none"},
+        tool_choice={"type": "auto"},
     )
 
     assert result == {"content": [{"type": "text", "text": "hi"}]}
     assert sent["model"] == "qwen2.5:7b"
     assert sent["messages"][0] == {"role": "system", "content": "sys"}
     assert sent["tools"][0]["function"]["parameters"] == {"type": "object"}
-    assert sent["tool_choice"] == "none"
+    assert sent["tool_choice"] == "auto"
+
+    sent.clear()
+    await client.create_message(
+        system="sys",
+        messages=[{"role": "user", "content": "q"}],
+        tools=[{"name": "search_jobs", "description": "d", "input_schema": {}}],
+        tool_choice={"type": "none"},
+    )
+    assert "tools" not in sent and "tool_choice" not in sent
 
 
 def test_chat_overrides_only_the_chat_client(monkeypatch: pytest.MonkeyPatch) -> None:

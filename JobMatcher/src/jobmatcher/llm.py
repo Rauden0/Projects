@@ -125,7 +125,10 @@ class OpenAICompatClient:
             "max_tokens": max_tokens,
             "messages": [{"role": "system", "content": system}, *to_openai_messages(messages)],
         }
-        if tools:
+        # Some providers (Groq) reject a response that still calls a tool when tool_choice is
+        # "none", so on the final round the tools are not offered at all.
+        choice = (tool_choice or {"type": "auto"})["type"]
+        if tools and choice != "none":
             payload["tools"] = [
                 {
                     "type": "function",
@@ -137,7 +140,7 @@ class OpenAICompatClient:
                 }
                 for t in tools
             ]
-            payload["tool_choice"] = (tool_choice or {"type": "auto"})["type"]
+            payload["tool_choice"] = choice
         return from_openai_message(await self._chat(payload))
 
 
@@ -156,6 +159,8 @@ def to_openai_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 {"role": "tool", "tool_call_id": r["tool_use_id"], "content": r["content"]}
                 for r in tool_results
             )
+            if texts:
+                out.append({"role": "user", "content": "\n".join(texts)})
             continue
         entry: dict[str, Any] = {"role": msg["role"], "content": "\n".join(texts) or None}
         if tool_uses:

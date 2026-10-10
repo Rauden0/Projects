@@ -16,6 +16,9 @@ log = logging.getLogger(__name__)
 MAX_ROUNDS = 4
 MAX_PARALLEL_CALLS = 3
 COMPACT_CHARS = 600
+FINAL_ROUND_NOTE = (
+    "No more tool calls are available. Answer now using only the results above."
+)
 
 SYSTEM = """You help a software developer find jobs that fit their CV.
 CV profile: {profile}
@@ -98,6 +101,8 @@ async def run_agent(
                 "content": output if isinstance(output, str) else json.dumps(output, default=str),
                 "is_error": is_error,
             })
+        if round_no == MAX_ROUNDS - 1:
+            results.append({"type": "text", "text": FINAL_ROUND_NOTE})
         messages.append({"role": "user", "content": results})
 
     yield AgentEvent("error", {"message": "agent did not finish"})  # pragma: no cover
