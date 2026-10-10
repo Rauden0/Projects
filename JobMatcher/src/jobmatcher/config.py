@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "qwen2.5:7b"
     llm_timeout_s: float = 180.0
-    embedding_model: str = "intfloat/multilingual-e5-large"
-    embedding_dim: int = 1024
+    embedding_model: str = "intfloat/multilingual-e5-small"
+    embedding_dim: int = 384
 
     sources_file: str = "sources.yaml"
     crawl_interval_s: int = 6 * 3600

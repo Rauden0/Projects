@@ -187,7 +187,7 @@ CREATE TABLE job_chunk (
     ord         smallint NOT NULL,
     section     text,
     content     text NOT NULL,
-    embedding   vector(1024) NOT NULL,
+    embedding   vector(384) NOT NULL,
     tsv         tsvector GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED
 );
 CREATE INDEX job_chunk_embedding ON job_chunk USING hnsw (embedding vector_cosine_ops);
@@ -197,7 +197,7 @@ CREATE TABLE cv (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     raw_text    text NOT NULL,
     profile     jsonb NOT NULL,             -- extracted: years, skills, languages, location prefs
-    embedding   vector(1024) NOT NULL,
+    embedding   vector(384) NOT NULL,
     created_at  timestamptz NOT NULL DEFAULT now()
 );
 
@@ -230,9 +230,11 @@ revision. `'simple'` text-search config is used because postings mix Czech and E
 Why hybrid: embeddings catch synonyms ("backend developer" ≈ "Python vývojář"), full-text
 catches exact tokens embeddings blur (`RabbitMQ`, `TimescaleDB`, `Databricks`).
 
-**Embedding model:** `multilingual-e5-large` (1024 dims) running locally in the worker
+**Embedding model:** `multilingual-e5-small` (384 dims) running locally in the worker
 container — free, handles Czech and English, no data leaves the machine. The embedding
-provider is behind an interface, so a hosted model can be swapped in.
+provider is behind an interface, so a hosted model can be swapped in. The large variant (1024 dims) was
+tried first, but two copies of it (api + worker) next to a local 7B LLM exhausted 16 GB of
+RAM; the small model keeps the whole stack runnable on a laptop (migration `0002`).
 
 ---
 
