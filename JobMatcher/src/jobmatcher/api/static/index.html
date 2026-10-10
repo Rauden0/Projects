@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Matcher</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<style>
+  :root { --bg: #f7f7f5; --fg: #1d1d1b; --muted: #6b6b66; --card: #fff; --line: #e3e2dd;
+          --accent: #2f6f4f; --tool: #eef3f0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --fg: #ecebe6; --muted: #9b9a94; --card: #1f1f1d; --line: #33332f;
+            --accent: #6fbf94; --tool: #1f2a24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 120px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  details, .msg { background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  details { padding: 12px 14px; margin-bottom: 20px; }
+  summary { cursor: pointer; font-weight: 600; }
+  textarea { width: 100%; font: inherit; color: inherit; background: transparent;
+             border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  button { font: inherit; border: 0; border-radius: 8px; padding: 9px 16px; cursor: pointer;
+           background: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .profile { color: var(--muted); font-size: 13px; }
+  #log { display: flex; flex-direction: column; gap: 12px; }
+  .msg { padding: 12px 14px; overflow-x: auto; }
+  .msg.user { align-self: flex-end; max-width: 80%; background: var(--tool); }
+  .tool { font-size: 13px; color: var(--muted); padding-left: 4px; }
+  .error { color: #c0392b; }
+  .msg table { border-collapse: collapse; font-size: 14px; }
+  .msg th, .msg td { border: 1px solid var(--line); padding: 4px 8px; vertical-align: top; }
+  form#ask { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg);
+             border-top: 1px solid var(--line); padding: 12px 16px; }
+  form#ask > div { max-width: 860px; margin: 0 auto; display: flex; gap: 8px; }
+  form#ask textarea { min-height: 44px; height: 44px; resize: vertical; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Job Matcher</h1>
+  <p class="sub">Najde nabídky, které sedí na tvoje CV, a řekne, co ti chybí.</p>
+
+  <details id="cvbox">
+    <summary>CV <span id="cvstate" class="profile"></span></summary>
+    <p class="profile">Vlož text životopisu (stačí zkopírovat z PDF).</p>
+    <textarea id="cvtext" rows="8"></textarea>
+    <div class="row">
+      <button id="cvsave" type="button">Uložit CV</button>
+      <span id="profile" class="profile"></span>
+    </div>
+  </details>
+
+  <div id="log"></div>
+</main>
+
+<form id="ask">
+  <div>
+    <textarea id="q" placeholder="Např.: Najdi Python backend pozice v Brně nebo remote a napiš, co mi chybí."></textarea>
+    <button id="send">Poslat</button>
+  </div>
+</form>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+let cvId = store.get("cv_id");
+const history = [];
+
+function showProfile(p) {
+  $("profile").textContent = p
+    ? `${p.skills.join(", ")} · ${p.years_experience} let praxe · ${p.city ?? "město neznámé"}`
+    : "";
+}
+$("cvstate").textContent = cvId ? "· uloženo" : "· zatím chybí";
+if (!cvId) $("cvbox").open = true;
+showProfile(JSON.parse(store.get("cv_profile") || "null"));
+
+$("cvsave").onclick = async () => {
+  $("cvsave").disabled = true;
+  try {
+    const r = await fetch("/cv", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: $("cvtext").value }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail?.[0]?.msg ?? r.statusText);
+    const data = await r.json();
+    cvId = data.cv_id;
+    store.set("cv_id", cvId);
+    store.set("cv_profile", JSON.stringify(data.profile));
+    showProfile(data.profile);
+    $("cvstate").textContent = "· uloženo";
+  } catch (e) {
+    $("profile").textContent = "Chyba: " + e.message;
+  } finally {
+    $("cvsave").disabled = false;
+  }
+};
+
+function add(cls, html) {
+  const el = document.createElement("div");
+  el.className = cls;
+  el.innerHTML = html;
+  $("log").appendChild(el);
+  el.scrollIntoView({ block: "end", behavior: "smooth" });
+  return el;
+}
+
+const TOOL_LABELS = {
+  search_jobs: (i) => `🔎 hledám: „${i.query}“${i.city ? " · " + i.city : ""}`,
+  get_job: (i) => `📄 čtu detail nabídky ${i.job_id}`,
+  compare_with_cv: (i) => `⚖️ porovnávám nabídku ${i.job_id} s CV`,
+};
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+}
+
+$("ask").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const message = $("q").value.trim();
+  if (!message) return;
+  $("q").value = "";
+  $("send").disabled = true;
+  add("msg user", escapeHtml(message));
+
+  try {
+    const r = await fetch("/chat", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message, cv_id: cvId, history }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText);
+
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let cut;
+      while ((cut = buffer.indexOf("\n\n")) >= 0) {
+        const raw = buffer.slice(0, cut);
+        buffer = buffer.slice(cut + 2);
+        const event = raw.match(/^event: (.*)$/m)?.[1];
+        const data = JSON.parse(raw.match(/^data: (.*)$/m)?.[1] ?? "{}");
+        if (event === "tool_call") {
+          const label = TOOL_LABELS[data.name]?.(data.input) ?? data.name;
+          add("tool", escapeHtml(label));
+        } else if (event === "answer") {
+          add("msg", marked.parse(data.text));
+          if (data.unverified_urls?.length) {
+            add("tool error", "⚠️ Odkazy, které nepřišly z vyhledávání: " +
+                escapeHtml(data.unverified_urls.join(", ")));
+          }
+          history.push({ role: "user", content: message }, { role: "assistant", content: data.text });
+        } else if (event === "error") {
+          add("tool error", "⚠️ " + escapeHtml(data.message));
+        }
+      }
+    }
+  } catch (e) {
+    add("tool error", "⚠️ " + escapeHtml(e.message));
+  } finally {
+    $("send").disabled = false;
+    $("q").focus();
+  }
+};
+
+$("q").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("ask").requestSubmit(); }
+});
+</script>
+</body>
+</html>
