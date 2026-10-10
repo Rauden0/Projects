@@ -56,7 +56,8 @@ class SearchHit(BaseModel):
 # Job boards often carry only a stub of an ad that links to the employer's own career site
 # (jobs.cz -> a JavaScript page). When the same job was also crawled from the employer's ATS
 # with its full text, show that copy and hide the stub. Same job = same title, and company
-# names agreeing on their first letters ("Thermo Fisher Scientific" vs. "thermofisher").
+# names agreeing on their first letters ("Thermo Fisher Scientific" vs. "thermofisher"),
+# same location prefix ("Brno – Černovice" vs. "Brno, Czechia").
 THIN_DESCRIPTION_CHARS = 300
 _NOT_A_THIN_DUPLICATE = f"""NOT (
     length(j.description) < {THIN_DESCRIPTION_CHARS}
@@ -67,6 +68,9 @@ _NOT_A_THIN_DUPLICATE = f"""NOT (
           AND length(d.description) >= {THIN_DESCRIPTION_CHARS}
           AND left(regexp_replace(lower(d.company), '[^a-z0-9]', '', 'g'), 6)
             = left(regexp_replace(lower(j.company), '[^a-z0-9]', '', 'g'), 6)
+          -- and the same place: generic titles repeat across a company's offices
+          AND left(lower(coalesce(d.location_raw, '')), 4)
+            = left(lower(coalesce(j.location_raw, '')), 4)
     )
 )"""
 
