@@ -21,7 +21,7 @@ sources:
     company: thermofisher
     host: thermofisher.wd5.myworkdayjobs.com
     site: ThermoFisherCareers
-    search_text: Brno software
+    search_text: Brno
     location_filter: brno
   - kind: workday
     company: redhat
