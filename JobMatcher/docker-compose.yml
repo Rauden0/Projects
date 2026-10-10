@@ -16,7 +16,7 @@ services:
     image: rabbitmq:3.13-management
     ports: ["5672:5672", "15672:15672"]
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
       interval: 10s
       retries: 10
 
@@ -42,6 +42,7 @@ services:
 
   api:
     build: .
+    restart: unless-stopped
     env_file: .env
     ports: ["8000:8000"]
     depends_on:
@@ -50,6 +51,7 @@ services:
 
   worker:
     build: .
+    restart: unless-stopped
     env_file: .env
     command: ["python", "-m", "jobmatcher.ingest.worker"]
     depends_on:
@@ -58,6 +60,7 @@ services:
 
   scheduler:
     build: .
+    restart: unless-stopped
     env_file: .env
     command: ["python", "-m", "jobmatcher.ingest.scheduler"]
     depends_on:
@@ -66,6 +69,7 @@ services:
 
   outbox-relay:
     build: .
+    restart: unless-stopped
     env_file: .env
     command: ["python", "-m", "jobmatcher.outbox.relay"]
     depends_on:
