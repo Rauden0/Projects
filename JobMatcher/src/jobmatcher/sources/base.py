@@ -12,6 +12,10 @@ class SourceConfig(BaseModel):
     kind: str
     company: str
     location_filter: str | None = None
+    # Workday only: career site host and path, and a search text to narrow huge listings.
+    host: str | None = None
+    site: str | None = None
+    search_text: str | None = None
 
 
 class PostingRef(BaseModel):

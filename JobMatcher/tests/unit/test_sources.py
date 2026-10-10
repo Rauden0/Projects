@@ -1,7 +1,13 @@
 import httpx
 import pytest
 
-from jobmatcher.sources import AshbyAdapter, GreenhouseAdapter, LeverAdapter, SourceConfig
+from jobmatcher.sources import (
+    AshbyAdapter,
+    GreenhouseAdapter,
+    LeverAdapter,
+    SourceConfig,
+    WorkdayAdapter,
+)
 
 
 def client_returning(payload: object) -> httpx.AsyncClient:
@@ -79,3 +85,50 @@ async def test_ashby_without_filter_returns_all() -> None:
         postings = await collect(AshbyAdapter(SourceConfig(kind="ashby", company="acme"), client))
 
     assert [p.location for p in postings] == ["Berlin", "(remote)"]
+
+
+@pytest.mark.asyncio
+async def test_workday_filters_location_before_fetching_detail() -> None:
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested.append(f"{request.method} {request.url.path}")
+        if request.method == "POST":
+            return httpx.Response(
+                200,
+                json={
+                    "jobPostings": [
+                        {"externalPath": "/job/Brno/Python-Dev_R-1", "locationsText": "Brno"},
+                        {"externalPath": "/job/Austin/Go-Dev_R-2", "locationsText": "Austin"},
+                    ]
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "jobPostingInfo": {
+                    "title": "Python Developer",
+                    "jobReqId": "R-1",
+                    "location": "Brno",
+                    "jobDescription": "<p>Python</p>",
+                    "externalUrl": "https://acme.wd3.myworkdayjobs.com/careers/job/R-1",
+                }
+            },
+        )
+
+    config = SourceConfig(
+        kind="workday",
+        company="acme",
+        host="acme.wd3.myworkdayjobs.com",
+        site="careers",
+        search_text="Python",
+        location_filter="brno",
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        [posting] = await collect(WorkdayAdapter(config, client))
+
+    assert posting.external_id == "R-1" and posting.location == "Brno"
+    assert requested == [
+        "POST /wday/cxs/acme/careers/jobs",
+        "GET /wday/cxs/acme/careers/job/Brno/Python-Dev_R-1",
+    ]
