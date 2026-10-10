@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "qwen2.5:7b"
     llm_timeout_s: float = 180.0
+    # Optional overrides for the chat agent, which needs stronger tool use than extraction
+    # (e.g. extraction on a local model, chat on a hosted one). Empty = same as above.
+    chat_llm_provider: str = ""
+    chat_llm_base_url: str = ""
+    chat_llm_api_key: str = ""
+    chat_llm_model: str = ""
     embedding_model: str = "intfloat/multilingual-e5-small"
     embedding_dim: int = 384
 

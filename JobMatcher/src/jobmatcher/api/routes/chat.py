@@ -52,7 +52,7 @@ def _sse(event: str, data: dict[str, Any]) -> str:
 
 @router.post("/chat")
 async def chat(body: ChatIn, session: SessionDep, embedder: EmbedderDep) -> StreamingResponse:
-    llm = get_llm()
+    llm = get_llm("chat")
     if llm is None:
         raise HTTPException(status_code=503, detail="LLM_API_KEY is not configured")
 

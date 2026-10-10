@@ -83,3 +83,26 @@ async def test_create_message_sends_tools_and_choice() -> None:
     assert sent["messages"][0] == {"role": "system", "content": "sys"}
     assert sent["tools"][0]["function"]["parameters"] == {"type": "object"}
     assert sent["tool_choice"] == "none"
+
+
+def test_chat_overrides_only_the_chat_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    from jobmatcher import llm as llm_module
+    from jobmatcher.config import Settings
+
+    settings = Settings(
+        llm_base_url="http://ollama:11434/v1",
+        llm_model="qwen2.5:7b",
+        chat_llm_base_url="https://api.groq.com/openai/v1",
+        chat_llm_model="llama-3.3-70b-versatile",
+        chat_llm_api_key="gsk_test",
+    )
+    monkeypatch.setattr(llm_module, "get_settings", lambda: settings)
+
+    extraction = llm_module.get_llm("extraction")
+    chat = llm_module.get_llm("chat")
+    assert isinstance(extraction, OpenAICompatClient) and isinstance(chat, OpenAICompatClient)
+    assert (extraction.model, str(extraction._http.base_url)) == (
+        "qwen2.5:7b", "http://ollama:11434/v1/"
+    )
+    assert chat.model == "llama-3.3-70b-versatile"
+    assert chat._http.headers["Authorization"] == "Bearer gsk_test"

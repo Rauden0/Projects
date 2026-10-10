@@ -1,7 +1,7 @@
 """Thin wrapper over the LLM provider so the rest of the code (and tests) never import the SDK."""
 
 import json
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 import httpx
 
@@ -168,12 +168,17 @@ def from_openai_message(message: dict[str, Any]) -> dict[str, Any]:
     return {"content": blocks}
 
 
-def get_llm() -> LLMClient | None:
-    settings = get_settings()
-    if settings.llm_provider == "openai_compat":
-        return OpenAICompatClient(
-            settings.llm_base_url, settings.llm_model, settings.llm_api_key, settings.llm_timeout_s
-        )
-    if not settings.llm_api_key:
+def get_llm(purpose: Literal["extraction", "chat"] = "extraction") -> LLMClient | None:
+    s = get_settings()
+    provider, base_url, api_key, model = s.llm_provider, s.llm_base_url, s.llm_api_key, s.llm_model
+    if purpose == "chat":
+        provider = s.chat_llm_provider or provider
+        base_url = s.chat_llm_base_url or base_url
+        api_key = s.chat_llm_api_key or api_key
+        model = s.chat_llm_model or model
+
+    if provider == "openai_compat":
+        return OpenAICompatClient(base_url, model, api_key, s.llm_timeout_s)
+    if not api_key:
         return None
-    return AnthropicClient(settings.llm_api_key, settings.llm_model)
+    return AnthropicClient(api_key, model)
