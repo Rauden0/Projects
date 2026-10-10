@@ -13,7 +13,7 @@ from jobmatcher.llm import LLMClient
 
 log = logging.getLogger(__name__)
 
-MAX_ROUNDS = 6
+MAX_ROUNDS = 4
 MAX_PARALLEL_CALLS = 3
 COMPACT_CHARS = 600
 
