@@ -69,9 +69,27 @@ class OpenAICompatClient:
         self._http = httpx.AsyncClient(base_url=base_url, headers=headers, timeout=timeout)
         self.model = model
 
-    async def _chat(self, payload: dict[str, Any]) -> dict[str, Any]:
-        response = await self._http.post("/chat/completions", json={"model": self.model, **payload})
-        response.raise_for_status()
+    async def _chat(self, payload: dict[str, Any], attempts: int = 3) -> dict[str, Any]:
+        for attempt in range(attempts):
+            response = await self._http.post(
+                "/chat/completions", json={"model": self.model, **payload}
+            )
+            # Groq validates generated tool arguments against the schema and answers 400
+            # "tool_use_failed" when the model produced invalid ones; sampling again usually
+            # succeeds.
+            if (
+                response.status_code == 400
+                and "tool_use_failed" in response.text
+                and attempt < attempts - 1
+            ):
+                continue
+            if response.is_error:
+                raise httpx.HTTPStatusError(
+                    f"{response.status_code} from LLM: {response.text[:500]}",
+                    request=response.request,
+                    response=response,
+                )
+            break
         message: dict[str, Any] = response.json()["choices"][0]["message"]
         return message
 
