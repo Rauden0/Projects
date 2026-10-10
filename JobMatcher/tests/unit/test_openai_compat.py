@@ -127,3 +127,12 @@ async def test_rate_limit_and_tool_use_failed_are_retried(monkeypatch: pytest.Mo
     )
     assert await client.complete(system="s", user="u") == "ok"
     assert responses == []
+
+
+def test_retry_delay_reads_body_hint() -> None:
+    from jobmatcher.llm import _retry_delay
+
+    body = {"error": {"message": "Rate limit reached. Please try again in 19.79s. Upgrade"}}
+    assert _retry_delay(httpx.Response(429, json=body)) == 19.79
+    assert _retry_delay(httpx.Response(429, headers={"retry-after": "3"})) == 3.0
+    assert _retry_delay(httpx.Response(429, json={})) == 10.0

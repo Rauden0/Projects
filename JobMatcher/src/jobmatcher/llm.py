@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 from typing import Any, Literal, Protocol
 
 import httpx
@@ -85,7 +86,7 @@ class OpenAICompatClient:
                 continue
             # Free tiers have tight per-minute token limits; waiting is better than failing.
             if response.status_code == 429 and retryable:
-                delay = float(response.headers.get("retry-after", "10"))
+                delay = _retry_delay(response)
                 if delay <= MAX_RATE_LIMIT_WAIT_S:
                     await asyncio.sleep(delay + 0.5)
                     continue
@@ -206,3 +207,13 @@ def get_llm(purpose: Literal["extraction", "chat"] = "extraction") -> LLMClient 
     if not api_key:
         return None
     return AnthropicClient(api_key, model)
+
+
+def _retry_delay(response: httpx.Response) -> float:
+    """Seconds to wait after a 429: the Retry-After header, else the 'try again in 19.8s'
+    hint some providers only put in the message body, else 10."""
+    header = response.headers.get("retry-after")
+    if header:
+        return float(header)
+    match = re.search(r"try again in ([\d.]+)s", response.text)
+    return float(match.group(1)) if match else 10.0
