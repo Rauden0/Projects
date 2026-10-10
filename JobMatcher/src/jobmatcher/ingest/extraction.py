@@ -84,7 +84,10 @@ Return only a JSON object matching this schema, using null when the posting does
 Rules:
 - years_required_min: the minimum years of experience explicitly required, as an integer.
 - remote_policy: onsite | hybrid | remote_country (remote only within one country) |
-  remote_region (e.g. EU/EMEA/CET) | remote_global.
+  remote_region (remote within a region such as EU, EMEA or a time zone) |
+  remote_global (explicitly anywhere in the world).
+- office_city: city name only, e.g. "Brno", not "Brno, Czech Republic".
+- seniority: from the title or required experience; "II"/"III" levels are not "senior".
 - tech_stack: lowercase technology names that the posting asks for or uses.
 - salary: monthly or yearly as written, in the stated currency (ISO code)."""
 
