@@ -35,5 +35,29 @@ services:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
 
+  worker:
+    build: .
+    env_file: .env
+    command: ["python", "-m", "jobmatcher.ingest.worker"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      rabbitmq: { condition: service_healthy }
+
+  scheduler:
+    build: .
+    env_file: .env
+    command: ["python", "-m", "jobmatcher.ingest.scheduler"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      rabbitmq: { condition: service_healthy }
+
+  outbox-relay:
+    build: .
+    env_file: .env
+    command: ["python", "-m", "jobmatcher.outbox.relay"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      rabbitmq: { condition: service_healthy }
+
 volumes:
   pgdata:
