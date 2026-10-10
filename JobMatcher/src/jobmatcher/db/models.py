@@ -68,6 +68,10 @@ class Job(Base):
     currency: Mapped[str | None] = mapped_column(String(3))
     contract_type: Mapped[str | None] = mapped_column(Text)
     tech_stack: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
+    required_skills: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
+    nice_to_have_skills: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), server_default=text("'{}'")
+    )
     extraction_status: Mapped[str] = mapped_column(Text, server_default="pending")
 
     status: Mapped[str] = mapped_column(Text, server_default="open")

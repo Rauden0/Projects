@@ -116,7 +116,8 @@ Key decisions:
   harmless.
 - **Structured extraction.** The LLM fills a Pydantic model
   (`seniority`, `years_required_min`, `remote_policy`, `office_city`, `salary_min/max`,
-  `currency`, `contract_type`, `tech_stack[]`, `languages_required[]`). Output is validated;
+  `currency`, `contract_type`, `tech_stack[]`, `required_skills[]`, `nice_to_have_skills[]`,
+  `languages_required[]`). Output is validated;
   on validation failure the extractor retries once with the error message, then falls back
   to a heuristic extractor (also used when no API key is configured) instead of blocking
   the pipeline.
@@ -172,6 +173,8 @@ CREATE TABLE job (
     currency            char(3),
     contract_type       text,               -- employment | contract | freelance
     tech_stack          text[] NOT NULL DEFAULT '{}',
+    required_skills     text[] NOT NULL DEFAULT '{}',   -- migration 0003
+    nice_to_have_skills text[] NOT NULL DEFAULT '{}',
     extraction_status   text NOT NULL DEFAULT 'pending',
     status              text NOT NULL DEFAULT 'open',   -- open | closed
     first_seen_at       timestamptz NOT NULL DEFAULT now(),

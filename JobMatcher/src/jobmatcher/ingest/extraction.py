@@ -27,6 +27,8 @@ class JobFacts(BaseModel):
     currency: str | None = Field(default=None, min_length=3, max_length=3)
     contract_type: ContractType | None = None
     tech_stack: list[str] = Field(default_factory=list)
+    required_skills: list[str] = Field(default_factory=list)
+    nice_to_have_skills: list[str] = Field(default_factory=list)
     languages_required: list[str] = Field(default_factory=list)
 
 
@@ -89,6 +91,9 @@ Rules:
 - office_city: city name only, e.g. "Brno", not "Brno, Czech Republic".
 - seniority: from the title or required experience; "II"/"III" levels are not "senior".
 - tech_stack: lowercase technology names that the posting asks for or uses.
+- required_skills / nice_to_have_skills: short lowercase skills split by how the posting
+  states them (must have vs. plus / bonus / preferred), e.g. "python", "kubernetes",
+  "distributed systems", "linux". Technologies and hard skills only, no soft skills.
 - salary: monthly or yearly as written, in the stated currency (ISO code)."""
 
 

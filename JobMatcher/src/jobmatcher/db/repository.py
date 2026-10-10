@@ -73,6 +73,8 @@ async def upsert_job(
         "currency": facts.currency,
         "contract_type": facts.contract_type,
         "tech_stack": facts.tech_stack,
+        "required_skills": facts.required_skills,
+        "nice_to_have_skills": facts.nice_to_have_skills,
         "extraction_status": extraction_status,
         "status": "open",
         "last_seen_at": func.now(),
