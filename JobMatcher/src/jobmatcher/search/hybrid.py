@@ -93,6 +93,8 @@ def _filter_sql(
         params["max_years"] = filters.max_years_required
     if filters.seniority:
         clauses.append("(j.seniority IS NULL OR j.seniority = ANY(:seniority))")
+        # Internships rarely state a seniority, so they would slip through the NULL case.
+        clauses.append(r"j.title !~* '\m(intern|internship|trainee|stáž|stážista|graduate)\M'")
         params["seniority"] = filters.seniority
     if filters.contract_type:
         clauses.append("(j.contract_type IS NULL OR j.contract_type = ANY(:contract_type))")
