@@ -1,0 +1,34 @@
+# Questions with the postings a human judged relevant (ids from fixtures/postings.yaml).
+# Filters mirror what the agent would pass to search_jobs.
+- query: python backend fastapi postgresql
+  relevant: [brno-py-backend, remote-contract-py]
+- query: remote python job, no office
+  filters: { remote_policy: [remote_region, remote_global, remote_country] }
+  relevant: [remote-eu-py-platform, remote-global-scraping, remote-contract-py, remote-cz-ai]
+- query: data pipelines airflow dbt
+  relevant: [brno-data-eng]
+- query: time series telemetry ingestion
+  relevant: [brno-data-eng]
+- query: LLM RAG agents
+  relevant: [remote-cz-ai]
+- query: django celery
+  relevant: [prague-django]
+- query: python developer at most 3 years experience in Brno
+  filters: { city: Brno, max_years_required: 3 }
+  relevant: [brno-py-backend, brno-data-eng, remote-cz-ai, brno-integration, remote-contract-py]
+- query: rabbitmq async workers
+  relevant: [brno-py-backend, remote-contract-py]
+- query: databricks spark terraform
+  relevant: [remote-eu-data-platform]
+- query: test automation pytest selenium
+  relevant: [brno-qa]
+- query: B2B contract python
+  relevant: [remote-contract-py]
+- query: kubernetes terraform python platform
+  relevant: [remote-eu-py-platform]
+- query: web scraping
+  relevant: [remote-global-scraping]
+- query: integrations webhooks oauth
+  relevant: [brno-integration]
+- query: senior python team lead mentoring
+  relevant: [brno-senior-py]

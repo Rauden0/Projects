@@ -1,0 +1,156 @@
+# Synthetic postings modelled on real Czech/EU listings (companies are fictional).
+# Frozen so retrieval metrics are reproducible and CI never depends on live job boards.
+- id: brno-py-backend
+  title: Python Backend Developer
+  company: Moravia Data
+  location: Brno, Czechia
+  description: |
+    Hybrid, 2 days a week in our Brno office.
+    ## What you'll do
+    - Build REST APIs in FastAPI and async workers consuming RabbitMQ
+    - Design PostgreSQL schemas and migrations with Alembic
+    ## Requirements
+    - 2+ years of commercial Python experience
+    - SQLAlchemy, Docker, pytest
+- id: brno-data-eng
+  title: Data Engineer
+  company: Spilberk Analytics
+  location: Brno, Czechia
+  description: |
+    Hybrid. We build pipelines that ingest telemetry from machines.
+    ## Requirements
+    - 3+ years in data engineering
+    - Python, SQL, Airflow, dbt
+    - Time-series databases such as TimescaleDB are a plus
+- id: remote-eu-py-platform
+  title: Python Platform Engineer
+  company: Northwind Cloud
+  location: Remote, Europe
+  description: |
+    Fully remote within CET +/- 2 hours.
+    ## Requirements
+    - Production Python, asyncio, distributed processing
+    - Kubernetes, Terraform, CI/CD
+    - 3+ years of backend engineering
+- id: prague-django
+  title: Django Developer
+  company: Vltava Media
+  location: Prague, Czechia
+  description: |
+    Hybrid, 3 days a week in Prague office.
+    ## Requirements
+    - Python, Django, Django REST Framework, Celery
+    - 2+ years of experience
+- id: remote-cz-ai
+  title: AI Developer
+  company: Granite Industrial
+  location: Brno, Czechia
+  description: |
+    The role can be fully remote within the Czech Republic.
+    ## Requirements
+    - Python is essential, SQL
+    - Built at least one production LLM system: RAG, agents, LangGraph
+    - Vector databases and embedding models
+- id: brno-senior-py
+  title: Senior Python Engineer
+  company: Moravia Data
+  location: Brno, Czechia
+  description: |
+    Hybrid. Lead the backend team.
+    ## Requirements
+    - 6+ years of Python
+    - Mentoring and technical leadership
+    - Kafka, PostgreSQL
+- id: brno-go
+  title: Golang Developer
+  company: Svratka Security
+  location: Brno, Czechia
+  description: |
+    On-site in Brno.
+    ## Requirements
+    - Go, gRPC, DNS security
+    - 3+ years of experience
+- id: remote-global-scraping
+  title: Web Scraping Engineer
+  company: Crawlr
+  location: Remote
+  description: |
+    Fully remote, work from anywhere.
+    ## Requirements
+    - Python, Playwright, proxies, parsing HTML at scale
+    - Redis, PostgreSQL
+- id: brno-qa
+  title: QA Automation Engineer
+  company: Ponava Systems
+  location: Brno, Czechia
+  description: |
+    Hybrid.
+    ## Requirements
+    - Python, pytest, Robot Framework, Selenium
+    - 2+ years of test automation
+- id: prague-java
+  title: Java Backend Developer
+  company: Bank Karlin
+  location: Prague, Czechia
+  description: |
+    Hybrid, Prague.
+    ## Requirements
+    - Java 21, Spring Boot, Oracle
+    - 4+ years of experience
+- id: brno-fullstack-ts
+  title: Full-stack Developer (TypeScript)
+  company: Lesna Labs
+  location: Brno, Czechia
+  description: |
+    Hybrid.
+    ## Requirements
+    - TypeScript, React, Node.js, PostgreSQL
+    - 2+ years of experience
+- id: remote-eu-data-platform
+  title: Data Platform Engineer
+  company: Danube Fintech
+  location: Remote, EMEA
+  description: |
+    Fully remote within EMEA.
+    ## Requirements
+    - Python, Databricks, Spark, Delta Lake
+    - Infrastructure as code with Terraform
+    - 4+ years of experience
+- id: brno-embedded
+  title: Embedded Software Developer
+  company: Turany Instruments
+  location: Brno, Czechia
+  description: |
+    On-site in Brno.
+    ## Requirements
+    - C++, Python scripting, embedded Linux
+    - Experience with scientific instruments
+- id: ostrava-py
+  title: Python Developer
+  company: Ostrava Steelworks IT
+  location: Ostrava, Czechia
+  description: |
+    On-site in Ostrava.
+    ## Requirements
+    - Python, Flask, MSSQL
+    - 1+ year of experience
+- id: brno-integration
+  title: Integration Engineer
+  company: Jobs Partner
+  location: Brno, Czechia
+  description: |
+    Mostly remote.
+    ## Requirements
+    - REST, webhooks, OAuth, JSON transformations
+    - Python or another scripting language
+    - 2+ years in integrations
+- id: remote-contract-py
+  title: Python Engineer (B2B contract)
+  company: Atlas Staffing
+  location: Remote, European Union
+  description: |
+    100% remote, 12 months B2B contract.
+    ## Requirements
+    - Python, FastAPI, async programming, RabbitMQ
+    - PostgreSQL, Docker
+    - 3+ years of experience
