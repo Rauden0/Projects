@@ -51,7 +51,10 @@ def _filter_sql(filters: SearchFilters, params: dict[str, object]) -> str:
         params["remote_policy"] = filters.remote_policy
     if filters.city:
         # A remote job is acceptable whatever its office city.
-        clauses.append("(lower(j.office_city) = lower(:city) OR j.remote_policy LIKE 'remote%')")
+        # Extracted cities vary ("Brno", "Brno, Czech Republic"), so match by substring.
+        clauses.append(
+            "(j.office_city ILIKE '%' || :city || '%' OR j.remote_policy LIKE 'remote%')"
+        )
         params["city"] = filters.city
     if filters.max_years_required is not None:
         clauses.append("(j.years_required_min IS NULL OR j.years_required_min <= :max_years)")
