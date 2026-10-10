@@ -27,7 +27,11 @@ class SearchFilters(BaseModel):
     remote_policy: list[RemotePolicy] | None = Field(
         default=None, description="Accept jobs with any of these remote policies"
     )
-    city: str | None = Field(default=None, description="Office city, e.g. Brno")
+    city: str | None = Field(
+        default=None,
+        description="Office city, e.g. Brno. Remote jobs always pass this filter, so for "
+        "'in Brno or remote' set only city and leave remote_policy empty.",
+    )
     max_years_required: int | None = Field(default=None, ge=0)
     seniority: list[Seniority] | None = None
     contract_type: list[ContractType] | None = None
