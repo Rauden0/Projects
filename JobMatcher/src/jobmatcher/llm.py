@@ -1,6 +1,9 @@
 """Thin wrapper over the LLM provider so the rest of the code (and tests) never import the SDK."""
 
+import json
 from typing import Any, Protocol
+
+import httpx
 
 from jobmatcher.config import get_settings
 
@@ -54,8 +57,123 @@ class AnthropicClient:
         )
 
 
+class OpenAICompatClient:
+    """Chat Completions client (Ollama, Groq, Gemini, ...).
+
+    The rest of the code speaks Anthropic-style messages and content blocks; this class
+    translates them to the OpenAI wire format and back, so the agent loop stays unchanged.
+    """
+
+    def __init__(self, base_url: str, model: str, api_key: str = "", timeout: float = 180) -> None:
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        self._http = httpx.AsyncClient(base_url=base_url, headers=headers, timeout=timeout)
+        self.model = model
+
+    async def _chat(self, payload: dict[str, Any]) -> dict[str, Any]:
+        response = await self._http.post("/chat/completions", json={"model": self.model, **payload})
+        response.raise_for_status()
+        message: dict[str, Any] = response.json()["choices"][0]["message"]
+        return message
+
+    async def complete(self, *, system: str, user: str, max_tokens: int = 1024) -> str:
+        message = await self._chat(
+            {
+                "max_tokens": max_tokens,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            }
+        )
+        return str(message.get("content") or "")
+
+    async def create_message(
+        self,
+        *,
+        system: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        tool_choice: dict[str, str] | None = None,
+        max_tokens: int = 2048,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "max_tokens": max_tokens,
+            "messages": [{"role": "system", "content": system}, *to_openai_messages(messages)],
+        }
+        if tools:
+            payload["tools"] = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t["name"],
+                        "description": t["description"],
+                        "parameters": t["input_schema"],
+                    },
+                }
+                for t in tools
+            ]
+            payload["tool_choice"] = (tool_choice or {"type": "auto"})["type"]
+        return from_openai_message(await self._chat(payload))
+
+
+def to_openai_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for msg in messages:
+        content = msg["content"]
+        if isinstance(content, str):
+            out.append({"role": msg["role"], "content": content})
+            continue
+        texts = [b["text"] for b in content if b["type"] == "text"]
+        tool_uses = [b for b in content if b["type"] == "tool_use"]
+        tool_results = [b for b in content if b["type"] == "tool_result"]
+        if tool_results:
+            out.extend(
+                {"role": "tool", "tool_call_id": r["tool_use_id"], "content": r["content"]}
+                for r in tool_results
+            )
+            continue
+        entry: dict[str, Any] = {"role": msg["role"], "content": "\n".join(texts) or None}
+        if tool_uses:
+            entry["tool_calls"] = [
+                {
+                    "id": u["id"],
+                    "type": "function",
+                    "function": {"name": u["name"], "arguments": json.dumps(u["input"])},
+                }
+                for u in tool_uses
+            ]
+        out.append(entry)
+    return out
+
+
+def from_openai_message(message: dict[str, Any]) -> dict[str, Any]:
+    blocks: list[dict[str, Any]] = []
+    if message.get("content"):
+        blocks.append({"type": "text", "text": message["content"]})
+    for i, call in enumerate(message.get("tool_calls") or []):
+        arguments = call["function"].get("arguments") or "{}"
+        try:
+            parsed = json.loads(arguments) if isinstance(arguments, str) else arguments
+        except json.JSONDecodeError:
+            parsed = {}
+        blocks.append(
+            {
+                "type": "tool_use",
+                # Some local servers omit ids; the loop needs one to pair results with calls.
+                "id": call.get("id") or f"call_{i}",
+                "name": call["function"]["name"],
+                "input": parsed,
+            }
+        )
+    return {"content": blocks}
+
+
 def get_llm() -> LLMClient | None:
     settings = get_settings()
+    if settings.llm_provider == "openai_compat":
+        return OpenAICompatClient(
+            settings.llm_base_url, settings.llm_model, settings.llm_api_key, settings.llm_timeout_s
+        )
     if not settings.llm_api_key:
         return None
     return AnthropicClient(settings.llm_api_key, settings.llm_model)

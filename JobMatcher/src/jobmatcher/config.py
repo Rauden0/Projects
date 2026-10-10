@@ -9,8 +9,12 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher"
     amqp_url: str = "amqp://guest:guest@localhost:5672/"
 
+    # "anthropic" or "openai_compat" (Ollama, Groq, Gemini and other OpenAI-style APIs).
+    llm_provider: str = "openai_compat"
+    llm_base_url: str = "http://localhost:11434/v1"
     llm_api_key: str = ""
-    llm_model: str = "claude-sonnet-5-5"
+    llm_model: str = "qwen2.5:7b"
+    llm_timeout_s: float = 180.0
     embedding_model: str = "intfloat/multilingual-e5-large"
     embedding_dim: int = 1024
 
