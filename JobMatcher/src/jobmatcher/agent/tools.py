@@ -12,10 +12,14 @@ from jobmatcher.db.models import Cv, Job, JobChunk
 from jobmatcher.search.embeddings import Embedder
 from jobmatcher.search.hybrid import SearchFilters, search_jobs
 
+MAX_K = 6
+
 
 class SearchJobsInput(SearchFilters):
     query: str = Field(description="What to look for, in natural language or keywords")
-    k: int = Field(default=5, ge=1, le=8)
+    # No schema maximum: models like to ask for 10 and providers reject schema violations.
+    # The value is clamped instead.
+    k: int = Field(default=5, ge=1)
 
 
 class GetJobInput(BaseModel):
@@ -72,7 +76,9 @@ class Toolbox:
     async def search_jobs(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
         args = SearchJobsInput.model_validate(raw)
         filters = SearchFilters.model_validate(args.model_dump(exclude={"query", "k"}))
-        hits = await search_jobs(self.session, self.embedder, args.query, filters, k=args.k)
+        hits = await search_jobs(
+            self.session, self.embedder, args.query, filters, k=min(args.k, MAX_K)
+        )
         self.seen_urls.update(h.url for h in hits)
         # Snippets are for the model to judge relevance; keep them short to save tokens.
         return [{**h.model_dump(), "snippet": h.snippet[:200]} for h in hits]
