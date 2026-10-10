@@ -343,7 +343,9 @@ JobMatcher/
 ## 11. Configuration and secrets
 
 All configuration via environment variables loaded by `pydantic-settings`
-(`DATABASE_URL`, `AMQP_URL`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_MODEL`, crawl intervals).
+(`DATABASE_URL`, `AMQP_URL`, `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`,
+`EMBEDDING_MODEL`, crawl intervals). The default LLM is a local Ollama model, so the project
+runs without any paid API.
 `.env.example` is committed; `.env` is git-ignored. No keys in code or in the image.
 
 ---

@@ -10,7 +10,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the design and the trade-offs behind 
 ## Stack
 
 Python 3.12 · FastAPI · SQLAlchemy 2 (async) · PostgreSQL 16 + pgvector · Alembic ·
-RabbitMQ (aio-pika) · Pydantic v2 · multilingual-e5 embeddings · Claude (tool use) ·
+RabbitMQ (aio-pika) · Pydantic v2 · multilingual-e5 embeddings · Ollama or Claude (tool use) ·
 pytest · Docker Compose · GitHub Actions
 
 ## What's inside
@@ -31,10 +31,17 @@ pytest · Docker Compose · GitHub Actions
 
 ## Run it
 
+Runs fully locally by default — the LLM is [Ollama](https://ollama.com), no API key needed.
+
 ```bash
-cp .env.example .env            # add LLM_API_KEY to enable extraction and chat
+cp .env.example .env
 docker compose up --build
+docker compose exec ollama ollama pull qwen2.5:7b   # once, ~4.7 GB
 ```
+
+Any OpenAI-compatible endpoint works (`LLM_BASE_URL`, e.g. Groq or Gemini), and Anthropic
+via `LLM_PROVIDER=anthropic` — see [`.env.example`](.env.example). Without a reachable LLM,
+ingestion falls back to heuristic extraction; only `/chat` needs the model.
 
 - API docs: http://localhost:8000/docs
 - RabbitMQ UI: http://localhost:15672 (guest / guest)
