@@ -20,6 +20,19 @@ services:
       interval: 10s
       retries: 10
 
+  # Local LLM. First run: docker compose exec ollama ollama pull qwen2.5:7b
+  ollama:
+    image: ollama/ollama:latest
+    ports: ["11434:11434"]
+    volumes: [ollama:/root/.ollama]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   migrate:
     build: .
     env_file: .env
