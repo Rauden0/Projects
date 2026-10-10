@@ -109,7 +109,7 @@ async def search_jobs(
         params["qvec"] = str(await embedder.embed_query(query))
         ranked.append(
             f"""
-            (SELECT c.id AS chunk_id, c.job_id,
+            (SELECT 'vector' AS list, c.id AS chunk_id, c.job_id,
                     row_number() OVER (ORDER BY c.embedding <=> CAST(:qvec AS vector)) AS rank
              FROM job_chunk c JOIN job j ON j.id = c.job_id
              WHERE {where}
@@ -121,7 +121,7 @@ async def search_jobs(
         params["tsq"] = _or_tsquery(query)
         ranked.append(
             f"""
-            (SELECT c.id AS chunk_id, c.job_id,
+            (SELECT 'fulltext' AS list, c.id AS chunk_id, c.job_id,
                     row_number() OVER (ORDER BY ts_rank_cd(c.tsv, q) DESC) AS rank
              FROM job_chunk c JOIN job j ON j.id = c.job_id,
                   to_tsquery('simple', :tsq) q
@@ -141,15 +141,40 @@ async def search_jobs(
         )
         params["local_boost"] = LOCAL_BOOST
 
+    if mode == "hybrid":
+        # Titles are the most precise signal ("Python Developer" vs. a TypeScript job that
+        # mentions Python once), so title matches form a third ranked list in the fusion.
+        ranked.append(
+            f"""
+            (SELECT 'title' AS list, c.id AS chunk_id, j.id AS job_id,
+                    row_number() OVER (
+                        ORDER BY ts_rank_cd(to_tsvector('simple', j.title), q) DESC
+                    ) AS rank
+             FROM job j JOIN job_chunk c ON c.job_id = j.id AND c.ord = 0,
+                  to_tsquery('simple', :tsq) q
+             WHERE {where} AND to_tsvector('simple', j.title) @@ q
+             ORDER BY ts_rank_cd(to_tsvector('simple', j.title), q) DESC
+             LIMIT :candidates)
+            """
+        )
+
     sql = f"""
         WITH candidates AS ({" UNION ALL ".join(ranked)}),
+        -- RRF per job: each list contributes its best rank for that job.
+        per_list AS (
+            SELECT list, job_id, min(rank) AS rank FROM candidates GROUP BY list, job_id
+        ),
         fused AS (
-            SELECT chunk_id, job_id, sum(1.0 / (:rrf_k + rank)) AS score
-            FROM candidates GROUP BY chunk_id, job_id
+            SELECT job_id, sum(1.0 / (:rrf_k + rank)) AS score FROM per_list GROUP BY job_id
+        ),
+        -- The snippet is the job's best-ranked chunk.
+        snippet AS (
+            SELECT DISTINCT ON (job_id) job_id, chunk_id
+            FROM candidates ORDER BY job_id, rank, list
         ),
         best AS (
-            SELECT DISTINCT ON (job_id) job_id, chunk_id, score
-            FROM fused ORDER BY job_id, score DESC
+            SELECT f.job_id, s.chunk_id, f.score
+            FROM fused f JOIN snippet s USING (job_id)
         )
         SELECT j.id AS job_id, j.title, j.company, j.location_raw AS location, j.url,
                j.seniority, j.years_required_min, j.remote_policy,
