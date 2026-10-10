@@ -1,6 +1,11 @@
 import pytest
 
-from jobmatcher.ingest.extraction import HeuristicExtractor, JobFacts, LLMExtractor
+from jobmatcher.ingest.extraction import (
+    ExtractionError,
+    HeuristicExtractor,
+    JobFacts,
+    LLMExtractor,
+)
 
 TEXT = """We are a hybrid team in Brno.
 ## Requirements
@@ -45,8 +50,14 @@ async def test_llm_extractor_retries_with_validation_error() -> None:
 
 
 @pytest.mark.asyncio
-async def test_llm_extractor_falls_back_to_heuristics() -> None:
+async def test_llm_extractor_raises_after_two_invalid_outputs() -> None:
     llm = ScriptedLLM("not json", "still not json")
-    facts = await LLMExtractor(llm).extract("Junior Dev", "Prague", "1 year of Go")
+    with pytest.raises(ExtractionError):
+        await LLMExtractor(llm).extract("Junior Dev", "Prague", "1 year of Go")
+
+
+@pytest.mark.asyncio
+async def test_heuristic_reads_singular_year() -> None:
+    facts = await HeuristicExtractor().extract("Junior Dev", "Prague", "1 year of Go")
     assert facts.seniority == "junior"
     assert facts.years_required_min == 1

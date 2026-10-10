@@ -1,7 +1,8 @@
 """Structured fields extracted from free-text postings.
 
-The LLM extractor is the primary path; the heuristic extractor is the fallback used when no
-API key is configured (local dev, tests) and when the LLM output fails validation twice.
+The LLM extractor is the primary path; the heuristic extractor is used when no LLM is
+configured, and by the indexer as a recorded fallback when the LLM call fails or its output
+fails validation twice (``extraction_status = 'fallback'``, retried by ``reextract``).
 """
 
 import json
@@ -97,10 +98,13 @@ Rules:
 - salary: monthly or yearly as written, in the stated currency (ISO code)."""
 
 
+class ExtractionError(Exception):
+    """The LLM did not produce valid facts; callers fall back and record it."""
+
+
 class LLMExtractor:
-    def __init__(self, llm: LLMClient, fallback: Extractor | None = None) -> None:
+    def __init__(self, llm: LLMClient) -> None:
         self.llm = llm
-        self.fallback = fallback or HeuristicExtractor()
 
     async def extract(self, title: str, location: str | None, text: str) -> JobFacts:
         system = _SYSTEM.format(schema=json.dumps(JobFacts.model_json_schema()))
@@ -113,7 +117,7 @@ class LLMExtractor:
                 return JobFacts.model_validate_json(_strip_fences(raw))
             except ValidationError as exc:
                 error = str(exc)[:500]
-        return await self.fallback.extract(title, location, text)
+        raise ExtractionError(f"invalid LLM output after retry: {error}")
 
 
 def _strip_fences(raw: str) -> str:
