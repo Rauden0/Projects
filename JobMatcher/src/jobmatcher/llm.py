@@ -72,7 +72,7 @@ class OpenAICompatClient:
         self._http = httpx.AsyncClient(base_url=base_url, headers=headers, timeout=timeout)
         self.model = model
 
-    async def _chat(self, payload: dict[str, Any], attempts: int = 3) -> dict[str, Any]:
+    async def _chat(self, payload: dict[str, Any], attempts: int = 5) -> dict[str, Any]:
         for attempt in range(attempts):
             response = await self._http.post(
                 "/chat/completions", json={"model": self.model, **payload}

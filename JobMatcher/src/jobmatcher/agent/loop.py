@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 
 MAX_ROUNDS = 6
 MAX_PARALLEL_CALLS = 3
+COMPACT_CHARS = 600
 
 SYSTEM = """You help a software developer find jobs that fit their CV.
 CV profile: {profile}
@@ -75,6 +76,7 @@ async def run_agent(
                 answer, toolbox.seen_urls)})
             return
 
+        _compact_old_results(messages)
         messages.append({"role": "assistant", "content": [_as_dict(b) for b in content]})
         results = []
         for i, use in enumerate(tool_uses):
@@ -99,6 +101,19 @@ async def run_agent(
         messages.append({"role": "user", "content": results})
 
     yield AgentEvent("error", {"message": "agent did not finish"})  # pragma: no cover
+
+
+def _compact_old_results(messages: list[dict[str, Any]]) -> None:
+    """Shorten tool results from earlier rounds. The model has already read them; keeping them
+    whole makes every request re-send the full history, which quickly exceeds the per-minute
+    token limits of free API tiers. Job ids, titles and URLs come first in each result, so a
+    prefix keeps what later reasoning refers to."""
+    for message in messages:
+        if message["role"] != "user" or isinstance(message["content"], str):
+            continue
+        for block in message["content"]:
+            if block.get("type") == "tool_result" and len(block["content"]) > COMPACT_CHARS:
+                block["content"] = block["content"][:COMPACT_CHARS] + " ...(truncated)"
 
 
 def _as_dict(block: Any) -> dict[str, Any]:

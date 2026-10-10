@@ -109,3 +109,15 @@ async def test_llm_failure_becomes_error_event() -> None:
     events = await collect(FailingModel(), FakeToolbox())
     assert [e.type for e in events] == ["error"]
     assert "400 from LLM" in events[0].data["message"]
+
+
+def test_old_tool_results_are_compacted() -> None:
+    long = "x" * 5000
+    messages: list[dict[str, Any]] = [
+        {"role": "user", "content": "q"},
+        {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t", "content": long}]},
+    ]
+    loop._compact_old_results(messages)
+    content = messages[1]["content"][0]["content"]
+    assert content.startswith("x" * loop.COMPACT_CHARS) and content.endswith("(truncated)")
+    assert messages[0]["content"] == "q"

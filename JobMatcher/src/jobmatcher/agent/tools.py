@@ -15,7 +15,7 @@ from jobmatcher.search.hybrid import SearchFilters, search_jobs
 
 class SearchJobsInput(SearchFilters):
     query: str = Field(description="What to look for, in natural language or keywords")
-    k: int = Field(default=5, ge=1, le=10)
+    k: int = Field(default=5, ge=1, le=8)
 
 
 class GetJobInput(BaseModel):
