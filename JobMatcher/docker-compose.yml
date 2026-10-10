@@ -44,6 +44,7 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
+    volumes: [models:/models]
     ports: ["8000:8000"]
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -53,6 +54,7 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
+    volumes: [models:/models]
     command: ["python", "-m", "jobmatcher.ingest.worker"]
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -79,3 +81,4 @@ services:
 volumes:
   pgdata:
   ollama:
+  models:

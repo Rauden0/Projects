@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import logging
 import math
 import re
 from functools import lru_cache
@@ -67,4 +68,7 @@ def get_embedder() -> Embedder:
     try:
         return E5Embedder(settings.embedding_model, settings.embedding_dim)
     except ImportError:
+        logging.getLogger(__name__).warning(
+            "sentence-transformers not installed, using HashingEmbedder (no semantic search)"
+        )
         return HashingEmbedder(settings.embedding_dim)
