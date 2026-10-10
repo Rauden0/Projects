@@ -19,6 +19,9 @@ class SourceConfig(BaseModel):
     # Jobs.cz only: locality path segment (e.g. "brno") and how many result pages to read.
     locality: str | None = None
     max_pages: int | None = None
+    # Stored source name when several entries crawl the same board (default: company).
+    # Their postings are deduplicated and closed together.
+    source_key: str | None = None
 
 
 class PostingRef(BaseModel):

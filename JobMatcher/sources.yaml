@@ -31,9 +31,9 @@ sources:
     location_filter: brno
 
   # Jobs.cz (Czech job board, many Brno employers without a public ATS API)
-  - { kind: jobscz, company: python-brno, search_text: python, locality: brno, max_pages: 3 }
-  - { kind: jobscz, company: backend-brno, search_text: backend, locality: brno, max_pages: 2 }
-  - { kind: jobscz, company: data-brno, search_text: data engineer, locality: brno, max_pages: 1 }
+  - { kind: jobscz, company: python-brno, source_key: jobs.cz, search_text: python, locality: brno, max_pages: 3 }
+  - { kind: jobscz, company: backend-brno, source_key: jobs.cz, search_text: backend, locality: brno, max_pages: 2 }
+  - { kind: jobscz, company: data-brno, source_key: jobs.cz, search_text: data engineer, locality: brno, max_pages: 1 }
 
   # Remote within Europe / EMEA
   - { kind: greenhouse, company: canonical, location_filter: "emea|europe" }

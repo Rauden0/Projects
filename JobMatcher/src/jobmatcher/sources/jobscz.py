@@ -138,7 +138,7 @@ class JobsCzAdapter(SourceAdapter):
         return RawPosting(
             kind=self.kind,
             company=card["company"] or "unknown",
-            source=self.config.company,
+            source=self.config.source_key or self.config.company,
             external_id=card["id"],
             url=url,
             title=card["title"],

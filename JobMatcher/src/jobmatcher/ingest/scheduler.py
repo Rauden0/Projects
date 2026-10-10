@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections import defaultdict
 
 import aio_pika
 import httpx
@@ -13,10 +14,13 @@ from jobmatcher.sources.base import load_sources
 
 log = logging.getLogger(__name__)
 
+USER_AGENT = "JobMatcher/0.1 (personal job search; +https://github.com/Rauden0/Projects)"
+
 
 async def crawl_source(
     config: SourceConfig, client: httpx.AsyncClient, exchange: aio_pika.abc.AbstractExchange
-) -> None:
+) -> set[str]:
+    """Publish every posting of one configured source; return the external ids seen."""
     adapter = ADAPTERS[config.kind](config, client)
     seen: set[str] = set()
     async for posting in adapter.list_postings():
@@ -25,26 +29,37 @@ async def crawl_source(
             messaging.message(posting.model_dump_json().encode()),
             routing_key=messaging.DISCOVERED,
         )
+    log.info("%s/%s: %d postings", config.kind, config.company, len(seen))
+    return seen
 
-    # Only a complete, successful listing may close jobs; a failed request raises before this.
+
+async def close_unseen(key: tuple[str, str], seen: set[str]) -> None:
     async with get_sessionmaker()() as session, session.begin():
-        source_id = await repository.get_or_create_source(session, config.kind, config.company)
+        source_id = await repository.get_or_create_source(session, *key)
         closed = await repository.close_unseen_jobs(session, source_id, seen)
-    log.info("%s/%s: %d postings, %d closed", config.kind, config.company, len(seen), closed)
+    log.info("%s/%s: %d closed", *key, closed)
 
 
-async def crawl_once(exchange: aio_pika.abc.AbstractExchange) -> None:
+async def crawl_once(exchange: aio_pika.abc.AbstractExchange, kind: str | None = None) -> None:
     settings = get_settings()
-    sources = load_sources(settings.sources_file)
+    sources = [s for s in load_sources(settings.sources_file) if kind in (None, s.kind)]
     limits = httpx.Limits(max_connections=settings.http_concurrency_per_host)
-    headers = {"User-Agent": "JobMatcher/0.1 (personal job search; +https://github.com/Rauden0/Projects)"}
+    headers = {"User-Agent": USER_AGENT}
     async with httpx.AsyncClient(timeout=30, limits=limits, headers=headers) as client:
         results = await asyncio.gather(
             *(crawl_source(s, client, exchange) for s in sources), return_exceptions=True
         )
+
+    # Several searches can feed one stored source (e.g. jobs.cz queries). Jobs may only be
+    # closed when every search of that source listed successfully, against their union.
+    groups: dict[tuple[str, str], list[set[str] | BaseException]] = defaultdict(list)
     for source, result in zip(sources, results, strict=True):
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
             log.error("crawl of %s/%s failed: %r", source.kind, source.company, result)
+        groups[(source.kind, source.source_key or source.company)].append(result)
+    for key, outcomes in groups.items():
+        if all(isinstance(o, set) for o in outcomes):
+            await close_unseen(key, set().union(*outcomes))  # type: ignore[arg-type]
 
 
 async def main() -> None:
