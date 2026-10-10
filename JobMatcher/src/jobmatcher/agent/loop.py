@@ -33,7 +33,8 @@ Rules:
   fewer filters before concluding there are no jobs.
 - Use compare_with_cv, with a job_id taken from search results, before claiming a job is a
   good fit. Never invent job ids or URLs.
-- Be explicit about gaps: missing required skills and years of experience.
+- Be explicit about gaps: only skills listed in missing_required / missing_nice_to_have are
+  missing. Never call a skill from cv_skills or matched_skills missing.
 - Answer in the user's language, concisely."""
 
 

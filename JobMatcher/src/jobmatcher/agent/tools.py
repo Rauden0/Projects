@@ -174,6 +174,8 @@ class Toolbox:
             "url": job.url,
             "remote_policy": job.remote_policy,
             **result.model_dump(),
+            # Stated explicitly so the model does not claim the CV lacks skills it has.
+            "cv_skills": CvProfile.model_validate(cv.profile).skills,
         }
         if len(job.description) < THIN_DESCRIPTION_CHARS:
             # Ads that redirect to an employer's JavaScript site arrive without their text.
