@@ -50,6 +50,8 @@ async def test_search_then_compare(sessionmaker: async_sessionmaker[AsyncSession
             await toolbox.call("get_job", {"job_id": 999})
 
     assert hits[0]["job_id"] == result.job_id
+    assert hits[0]["fit"]["missing_required"] == ["kubernetes"]
+    assert hits[0]["fit"]["years_gap"] == 1.0
     assert "https://example.com/1" in toolbox.seen_urls
     assert comparison["missing_required"] == ["kubernetes"]
     assert comparison["missing_nice_to_have"] == ["terraform"]

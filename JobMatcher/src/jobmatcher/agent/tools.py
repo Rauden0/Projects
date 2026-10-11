@@ -41,6 +41,7 @@ class Toolbox:
         self.embedder = embedder
         self.cv_id = cv_id
         self.seen_urls: set[str] = set()
+        self._cv_cache: Cv | None = None
 
     @staticmethod
     def definitions() -> list[dict[str, Any]]:
@@ -110,6 +111,7 @@ class Toolbox:
             tagged = [(h, None) for h in hits]
 
         self.seen_urls.update(h.url for h, _ in tagged)
+        fits = await self._fit_summaries([h.job_id for h, _ in tagged])
         # Snippets are for the model to judge relevance; keep them short to save tokens.
         return [
             {
@@ -119,9 +121,71 @@ class Toolbox:
                 "where": _where(h.location, h.remote_policy),
                 "snippet": h.snippet[:200],
                 **({"group": g} if g else {}),
+                **({"fit": fits[h.job_id]} if h.job_id in fits else {}),
             }
             for h, g in tagged
         ]
+
+    async def _fit_summaries(self, job_ids: list[int]) -> dict[int, dict[str, Any]]:
+        """Short CV fit per search hit, so the model can rank and explain gaps for every job
+        without a compare_with_cv round trip each (rounds are the scarce resource)."""
+        cv = await self._cv()
+        if cv is None or not job_ids:
+            return {}
+        jobs = (await self.session.execute(select(Job).where(Job.id.in_(job_ids)))).scalars()
+        chunks = (
+            await self.session.execute(
+                select(JobChunk.job_id, JobChunk.section, JobChunk.content).where(
+                    JobChunk.job_id.in_(job_ids),
+                    JobChunk.section.in_(["requirements", "nice_to_have"]),
+                )
+            )
+        ).all()
+        sections: dict[tuple[int, str], list[str]] = {}
+        for job_id, section, content in chunks:
+            sections.setdefault((job_id, section), []).append(content)
+
+        summaries = {}
+        for job in jobs:
+            requirements = "\n".join(sections.get((job.id, "requirements"), []))
+            nice = "\n".join(sections.get((job.id, "nice_to_have"), []))
+            full = self._compare(cv, job, requirements, nice)
+            summaries[job.id] = {
+                "missing_required": full["missing_required"][:6],
+                "years_gap": full["years_gap"],
+                **({"note": "requirements unknown"} if "note" in full else {}),
+            }
+        return summaries
+
+    async def _cv(self) -> Cv | None:
+        if self.cv_id is None:
+            return None
+        if self._cv_cache is None:
+            self._cv_cache = await self.session.get(Cv, self.cv_id)
+        return self._cv_cache
+
+    @staticmethod
+    def _compare(cv: Cv, job: Job, requirements: str, nice: str) -> dict[str, Any]:
+        result = compare(
+            CvProfile.model_validate(cv.profile),
+            job.tech_stack,
+            requirements or job.description,
+            nice,
+            job.years_required_min,
+            job.remote_policy,
+            job.office_city,
+            required_skills=job.required_skills,
+            nice_to_have_skills=job.nice_to_have_skills,
+            cv_text=cv.raw_text,
+        )
+        out = result.model_dump()
+        if len(job.description) < THIN_DESCRIPTION_CHARS:
+            # Ads that redirect to an employer's JavaScript site arrive without their text.
+            out["note"] = (
+                "The full posting text is not available, so requirements are unknown, "
+                "not absent. Tell the user to check the posting."
+            )
+        return out
 
     async def _job(self, job_id: int) -> Job:
         job = await self.session.get(Job, job_id)
@@ -150,11 +214,9 @@ class Toolbox:
         }
 
     async def compare_with_cv(self, raw: dict[str, Any]) -> dict[str, Any]:
-        if self.cv_id is None:
-            raise ToolError("no CV uploaded in this conversation")
-        cv = await self.session.get(Cv, self.cv_id)
+        cv = await self._cv()
         if cv is None:
-            raise ToolError("CV not found")
+            raise ToolError("no CV uploaded in this conversation")
         job = await self._job(CompareInput.model_validate(raw).job_id)
 
         chunks = (
@@ -162,35 +224,15 @@ class Toolbox:
         ).scalars().all()
         requirements = "\n".join(c.content for c in chunks if c.section == "requirements")
         nice = "\n".join(c.content for c in chunks if c.section == "nice_to_have")
-
-        result = compare(
-            CvProfile.model_validate(cv.profile),
-            job.tech_stack,
-            requirements or job.description,
-            nice,
-            job.years_required_min,
-            job.remote_policy,
-            job.office_city,
-            required_skills=job.required_skills,
-            nice_to_have_skills=job.nice_to_have_skills,
-            cv_text=cv.raw_text,
-        )
-        out = {
+        return {
             "job_id": job.id,
             "title": job.title,
             "url": job.url,
-            "remote_policy": job.remote_policy,
-            **result.model_dump(),
+            "where": _where(job.location_raw, job.remote_policy),
+            **self._compare(cv, job, requirements, nice),
             # Stated explicitly so the model does not claim the CV lacks skills it has.
             "cv_skills": CvProfile.model_validate(cv.profile).skills,
         }
-        if len(job.description) < THIN_DESCRIPTION_CHARS:
-            # Ads that redirect to an employer's JavaScript site arrive without their text.
-            out["note"] = (
-                "The full posting text is not available, so requirements are unknown, "
-                "not absent. Tell the user to check the posting."
-            )
-        return out
 
 
 _WORK_MODE = {
