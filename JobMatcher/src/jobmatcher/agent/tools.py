@@ -112,7 +112,14 @@ class Toolbox:
         self.seen_urls.update(h.url for h, _ in tagged)
         # Snippets are for the model to judge relevance; keep them short to save tokens.
         return [
-            {**h.model_dump(), "snippet": h.snippet[:200], **({"group": g} if g else {})}
+            {
+                **h.model_dump(exclude={"location", "remote_policy", "score"}),
+                # One ready-made label, so the model cannot pair a location with the wrong
+                # work mode (it labelled a Brno hybrid job "remote" when given both fields).
+                "where": _where(h.location, h.remote_policy),
+                "snippet": h.snippet[:200],
+                **({"group": g} if g else {}),
+            }
             for h, g in tagged
         ]
 
@@ -184,3 +191,17 @@ class Toolbox:
                 "not absent. Tell the user to check the posting."
             )
         return out
+
+
+_WORK_MODE = {
+    "onsite": "on-site",
+    "hybrid": "hybrid",
+    "remote_country": "remote within one country",
+    "remote_region": "remote within a region",
+    "remote_global": "remote from anywhere",
+}
+
+
+def _where(location: str | None, remote_policy: str | None) -> str:
+    mode = _WORK_MODE.get(remote_policy or "", "work mode not stated")
+    return f"{location or 'location not stated'} · {mode}"
