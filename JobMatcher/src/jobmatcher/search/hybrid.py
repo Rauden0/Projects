@@ -16,7 +16,13 @@ from jobmatcher.search.embeddings import Embedder
 
 RRF_K = 60
 CANDIDATES = 50
+# Keyword lists only contribute their strongest matches: their long tails (any posting that
+# shares one common word) mostly add noise to the fusion.
+KEYWORD_CANDIDATES = 10
 LOCAL_BOOST = 1.0 / (RRF_K + 1)
+# Per-list RRF weights, kept as a tuning knob for eval/run_retrieval.py. On the current golden
+# set equal weights score best (see README), so they are all 1.
+WEIGHTS = {"vector": 1.0, "fulltext": 1.0, "title": 1.0}
 
 Mode = Literal["hybrid", "vector", "fulltext"]
 
@@ -109,9 +115,20 @@ def _filter_sql(
     return " AND ".join(clauses)
 
 
+# The 'simple' text-search config keeps every word, so stop words would match almost every
+# posting and turn the keyword lists into noise (Czech "a", "z", "na", English "and", "with").
+_QUERY_STOPWORDS = {
+    "and", "the", "with", "for", "from", "that", "this", "jobs", "job", "work", "role",
+    "pro", "nebo", "jako", "které", "který", "která", "práce", "práci", "pozice", "chci",
+    "hledám", "najdi", "mám", "jsem", "být", "jen", "jak", "aby", "při", "přes", "pod",
+}
+
+
 def _or_tsquery(query: str) -> str:
     """Any-term match: 'python remote backend' -> 'python | remote | backend'."""
-    tokens = re.findall(r"\w+", query.lower())
+    tokens = [
+        t for t in re.findall(r"\w+", query.lower()) if len(t) >= 3 and t not in _QUERY_STOPWORDS
+    ]
     return " | ".join(dict.fromkeys(tokens)) or "''"
 
 
@@ -125,7 +142,13 @@ async def search_jobs(
     strict_city: bool = False,
 ) -> list[SearchHit]:
     """``strict_city`` drops the "remote jobs pass any city" rule, for local-only listings."""
-    params: dict[str, object] = {"k": k, "candidates": CANDIDATES, "rrf_k": RRF_K}
+    params: dict[str, object] = {
+        "k": k,
+        "candidates": CANDIDATES,
+        "keyword_candidates": KEYWORD_CANDIDATES,
+        "rrf_k": RRF_K,
+    }
+    params.update({f"w_{name}": weight for name, weight in WEIGHTS.items()})
     where = _filter_sql(filters or SearchFilters(), params, strict_city)
 
     ranked: list[str] = []
@@ -151,7 +174,7 @@ async def search_jobs(
                   to_tsquery('simple', :tsq) q
              WHERE {where} AND c.tsv @@ q
              ORDER BY ts_rank_cd(c.tsv, q) DESC
-             LIMIT :candidates)
+             LIMIT :keyword_candidates)
             """
         )
 
@@ -178,7 +201,7 @@ async def search_jobs(
                   to_tsquery('simple', :tsq) q
              WHERE {where} AND to_tsvector('simple', j.title) @@ q
              ORDER BY ts_rank_cd(to_tsvector('simple', j.title), q) DESC
-             LIMIT :candidates)
+             LIMIT :keyword_candidates)
             """
         )
 
@@ -189,7 +212,11 @@ async def search_jobs(
             SELECT list, job_id, min(rank) AS rank FROM candidates GROUP BY list, job_id
         ),
         fused AS (
-            SELECT job_id, sum(1.0 / (:rrf_k + rank)) AS score FROM per_list GROUP BY job_id
+            SELECT job_id,
+                   sum(CASE list WHEN 'vector' THEN CAST(:w_vector AS float8)
+                                 WHEN 'fulltext' THEN CAST(:w_fulltext AS float8)
+                                 ELSE CAST(:w_title AS float8) END / (:rrf_k + rank)) AS score
+            FROM per_list GROUP BY job_id
         ),
         -- The snippet is the job's best-ranked chunk.
         snippet AS (
