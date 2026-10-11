@@ -32,3 +32,25 @@
   relevant: [brno-integration]
 - query: senior python team lead mentoring
   relevant: [brno-senior-py]
+# Paraphrased and Czech questions with little keyword overlap with the postings: these are
+# where semantic (vector) retrieval has to carry the result.
+- query: vývoj serverové části aplikací v Pythonu s frontami zpráv
+  relevant: [brno-py-backend, remote-contract-py]
+- query: chci psát crawlery a stahovat data z webu
+  relevant: [remote-global-scraping]
+- query: stavba datových pipeline a transformací v datovém skladu
+  relevant: [brno-data-eng, remote-eu-data-platform]
+- query: building apps on top of large language models with retrieval
+  relevant: [remote-cz-ai]
+- query: infrastruktura jako kód a kontejnerová orchestrace
+  relevant: [remote-eu-py-platform, remote-eu-data-platform]
+- query: automatizované testování webových aplikací
+  relevant: [brno-qa]
+- query: propojování systémů přes API a webhooky
+  relevant: [brno-integration]
+- query: serverový vývoj v jazyce od Googlu
+  relevant: [brno-go]
+- query: freelance kontrakt na rok, plně na dálku, Python
+  relevant: [remote-contract-py]
+- query: vývoj firmware a softwaru pro vědecké přístroje
+  relevant: [brno-embedded]

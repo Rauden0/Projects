@@ -154,3 +154,37 @@
     - Python, FastAPI, async programming, RabbitMQ
     - PostgreSQL, Docker
     - 3+ years of experience
+# Distractors: share vocabulary with the relevant postings but are about something else.
+- id: brno-pm-data
+  title: Data Product Manager
+  company: Moravia Data
+  location: Brno, Czechia
+  description: |
+    Hybrid. Own the roadmap of our data platform.
+    ## Requirements
+    - Experience managing data products, talking to Python and data engineers
+    - SQL basics, stakeholder management
+- id: prague-sales-ai
+  title: Account Executive, AI Solutions
+  company: Granite Industrial
+  location: Prague, Czechia
+  description: |
+    On-site. Sell our LLM and RAG platform to enterprise customers.
+    ## Requirements
+    - 3+ years of B2B sales
+- id: brno-support-py
+  title: Technical Support Specialist
+  company: Ponava Systems
+  location: Brno, Czechia
+  description: |
+    Hybrid. Help customers with our Python SDK and REST API, write runbooks.
+    ## Requirements
+    - Customer support experience, basic scripting
+- id: remote-recruiter
+  title: Technical Recruiter (Engineering)
+  company: Northwind Cloud
+  location: Remote, Europe
+  description: |
+    Fully remote. Hire backend, Kubernetes and Python engineers across Europe.
+    ## Requirements
+    - 2+ years of technical recruiting
