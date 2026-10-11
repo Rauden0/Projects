@@ -79,7 +79,25 @@ python eval/run_retrieval.py --hashing  # dependency-free baseline
 ```
 
 Prints a markdown table of hit@5, recall@10 and MRR for vector, full-text and hybrid search
-over [`eval/golden.yaml`](eval/golden.yaml).
+over [`eval/golden.yaml`](eval/golden.yaml): 25 questions (15 keyword-style, 10 paraphrased
+or in Czech) against 20 fixture postings, 4 of them deliberate distractors.
+
+Current results with `multilingual-e5-small`:
+
+| mode | hit@5 | recall@10 | MRR |
+|---|---|---|---|
+| vector | 1.00 | 0.98 | 0.90 |
+| full-text | 0.68 | 0.66 | 0.64 |
+| hybrid | 0.96 | 0.98 | 0.87 |
+
+What the numbers changed:
+- The first version of the set (keyword questions only) scored 1.00 everywhere and could not
+  tell the modes apart, so paraphrased and Czech questions and distractors were added.
+- Stop words ("a", "z", "and") in the full-text query matched every posting and pushed hybrid
+  MRR down to 0.77; dropping them brought it to 0.87.
+- Vector search alone is best on this set; hybrid is kept because the title and full-text
+  lists fix real cases the set does not cover yet, e.g. a "TypeScript Developer" ad that
+  mentions Python once outranking "Python Developer" in pure vector search.
 
 ## Roadmap
 
