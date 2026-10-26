@@ -20,12 +20,16 @@ dependencies = [
 [project.optional-dependencies]
 embeddings = ["sentence-transformers>=3.0"]
 llm = ["anthropic>=0.40"]
+mcp = ["mcp>=2.0,<3"]
 dev = [
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
     "ruff>=0.5",
     "mypy>=1.10",
 ]
+
+[project.scripts]
+jobmatcher-mcp = "jobmatcher.mcp_server:main"
 
 [build-system]
 requires = ["hatchling"]

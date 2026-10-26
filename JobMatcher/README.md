@@ -26,6 +26,8 @@ pytest · Docker Compose · GitHub Actions
 - **Agent** — a plain tool-calling loop (no framework) with `search_jobs`, `get_job` and
   `compare_with_cv`; round and parallelism limits; tool errors fed back to the model;
   answer URLs checked against tool results; events streamed over SSE.
+- **MCP server** — the same tools served over the Model Context Protocol, for Claude
+  Desktop, Claude Code or any MCP client.
 - **Evaluation** — a frozen fixture set and golden questions; hit@5, recall@10 and MRR per
   search mode.
 
@@ -59,10 +61,30 @@ curl -N -X POST localhost:8000/chat -H "content-type: application/json" \
      -d '{"cv_id": "<id>", "message": "Remote Python roles that fit me?"}'
 ```
 
+## Use it from Claude (MCP)
+
+The agent's tools (`search_jobs`, `get_job`, `compare_with_cv`) are also an MCP server, so
+an MCP client can search the index itself. With the stack running:
+
+```bash
+pip install -e ".[mcp]"
+claude mcp add jobmatcher -- jobmatcher-mcp     # Claude Code, stdio
+jobmatcher-mcp --http                           # or streamable HTTP on :8001/mcp
+```
+
+For Claude Desktop, add to `claude_desktop_config.json`:
+
+```json
+{"mcpServers": {"jobmatcher": {"command": "jobmatcher-mcp"}}}
+```
+
+It connects to `DATABASE_URL` (default: the Compose Postgres on localhost). To compare jobs
+with your CV, upload it once with `POST /cv` and pass the returned `cv_id`.
+
 ## Develop
 
 ```bash
-pip install -e ".[dev]"          # add ,embeddings for the real e5 model
+pip install -e ".[dev,mcp]"      # add ,embeddings for the real e5 model
 ruff check src tests eval alembic
 pytest -q                        # integration tests skip without Postgres
 ```

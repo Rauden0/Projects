@@ -52,7 +52,7 @@ jobs:
           cache-dependency-path: JobMatcher/pyproject.toml
 
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,mcp]"
 
       - name: Lint
         run: ruff check src tests eval alembic

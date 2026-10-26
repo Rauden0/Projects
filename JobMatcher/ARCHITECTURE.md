@@ -270,6 +270,11 @@ is visible and testable.
 location rules), and only asks the LLM to phrase the explanation — so the important part
 is unit-testable.
 
+The same three tools are also served over **MCP** (`jobmatcher-mcp`, stdio or streamable
+HTTP), so Claude Desktop, Claude Code or any other MCP client can use the index directly.
+The MCP server is a thin adapter over the same `Toolbox`, with one DB session per call;
+the tools are marked read-only, and tool errors become `is_error` results there too.
+
 ---
 
 ## 7. API
