@@ -63,7 +63,9 @@ services:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
 
+  # Crawling runs in JobIngestor; this standalone scheduler is kept for running JobMatcher alone.
   scheduler:
+    profiles: ["legacy-scheduler"]
     build: .
     image: jobmatcher:latest
     restart: unless-stopped
