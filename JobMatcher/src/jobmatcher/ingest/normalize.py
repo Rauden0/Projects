@@ -40,3 +40,49 @@ def content_hash(title: str, location: str | None, text: str) -> bytes:
     """Stable hash of what matters for re-indexing; whitespace and case insensitive."""
     normalized = " ".join(f"{title}\n{location or ''}\n{text}".lower().split())
     return hashlib.sha256(normalized.encode()).digest()
+
+
+LLM_TEXT_LIMIT = 6000
+_HEADING_RE = re.compile(r"^(?:## .+|[^.!?]{3,60}:)$")
+_BOILERPLATE_HEADING_RE = re.compile(
+    r"benefit|what we offer|we offer|perks|about us|who we are|our company|o nás|nabízíme|"
+    r"co nabízíme|výhody|equal opportunit|diversity|how to apply|application process|"
+    r"jak se přihlásit|gdpr|privacy|osobních údajů",
+    re.I,
+)
+_BOILERPLATE_LINE_RE = re.compile(
+    r"equal opportunity|regardless of (?:race|gender)|personal data|osobních údajů|gdpr|"
+    r"we look forward to|těšíme se",
+    re.I,
+)
+_MONEY_RE = re.compile(r"\d[\d\s.,]*\s*(?:kč|czk|eur|€|\$|usd|k\b)", re.I)
+
+
+def compact_for_llm(text: str, limit: int = LLM_TEXT_LIMIT) -> str:
+    kept: list[str] = []
+    seen: set[str] = set()
+    skipping = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if _HEADING_RE.match(stripped):
+            skipping = bool(_BOILERPLATE_HEADING_RE.search(stripped))
+        if _dropped(stripped, skipping) or stripped.lower() in seen:
+            continue
+        seen.add(stripped.lower())
+        kept.append(stripped)
+    return _truncate("\n".join(kept), limit)
+
+
+def _dropped(line: str, skipping: bool) -> bool:
+    if not line:
+        return True
+    if _MONEY_RE.search(line):
+        return False
+    return skipping or bool(_BOILERPLATE_LINE_RE.search(line))
+
+
+def _truncate(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+    cut = text.rfind("\n", 0, limit)
+    return text[:cut] if cut > 0 else text[:limit]
