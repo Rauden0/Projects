@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     LargeBinary,
+    Numeric,
     SmallInteger,
     String,
     Text,
@@ -132,3 +133,23 @@ class Outbox(Base):
     payload: Mapped[dict] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     published_at: Mapped[datetime | None]
+
+
+class LlmUsage(Base):
+    __tablename__ = "llm_usage"
+    __table_args__ = (
+        Index("llm_usage_created", "created_at"),
+        Index("llm_usage_client_created", "client_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    purpose: Mapped[str] = mapped_column(Text)
+    client_id: Mapped[str | None] = mapped_column(Text)
+    model: Mapped[str] = mapped_column(Text)
+    batch: Mapped[bool] = mapped_column(server_default=text("false"))
+    input_tokens: Mapped[int]
+    output_tokens: Mapped[int]
+    cache_read_tokens: Mapped[int] = mapped_column(server_default=text("0"))
+    cache_write_tokens: Mapped[int] = mapped_column(server_default=text("0"))
+    cost_usd: Mapped[float] = mapped_column(Numeric(12, 6))
