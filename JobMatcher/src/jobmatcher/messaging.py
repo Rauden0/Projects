@@ -9,6 +9,8 @@
                                    jobs / job.discovered
     after the last attempt --> [job.discovered.dlq]
 
+    jobs (topic) --source.crawled--> [job.source_crawled] --> worker (listing sync)
+
 One retry queue per delay keeps TTLs uniform within a queue, which avoids the head-of-line
 blocking you get with per-message expiration.
 """
@@ -20,6 +22,8 @@ EXCHANGE = "jobs"
 RETRY_EXCHANGE = "jobs.retry"
 DISCOVERED = "job.discovered"
 DLQ = "job.discovered.dlq"
+SOURCE_CRAWLED = "source.crawled"
+SOURCE_CRAWLED_QUEUE = "job.source_crawled"
 RETRY_DELAYS_S = (30, 300, 1800)
 
 
@@ -47,6 +51,9 @@ async def declare_topology(channel: AbstractChannel) -> AbstractExchange:
         await retry_queue.bind(retry_exchange, routing_key=str(attempt))
 
     await channel.declare_queue(DLQ, durable=True)
+
+    listings = await channel.declare_queue(SOURCE_CRAWLED_QUEUE, durable=True)
+    await listings.bind(exchange, routing_key=SOURCE_CRAWLED)
     return exchange
 
 
