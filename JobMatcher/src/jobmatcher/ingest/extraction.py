@@ -5,12 +5,12 @@ configured, and by the indexer as a recorded fallback when the LLM call fails or
 fails validation twice (``extraction_status = 'fallback'``, retried by ``reextract``).
 """
 
-import json
 import re
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol, get_args
 
 from pydantic import BaseModel, Field, ValidationError
 
+from jobmatcher.ingest.normalize import compact_for_llm
 from jobmatcher.llm import LLMClient
 
 Seniority = Literal["junior", "medior", "senior", "staff"]
@@ -81,25 +81,93 @@ class HeuristicExtractor:
         )
 
 
-_SYSTEM = """You extract structured facts from job postings.
-Return only a JSON object matching this schema, using null when the posting does not say:
-{schema}
-Rules:
-- years_required_min: the minimum years of experience explicitly required, as an integer.
-- remote_policy: onsite | hybrid | remote_country (remote only within one country) |
-  remote_region (remote within a region such as EU, EMEA or a time zone) |
-  remote_global (explicitly anywhere in the world).
-- office_city: city name only, e.g. "Brno", not "Brno, Czech Republic".
-- seniority: from the title or required experience; "II"/"III" levels are not "senior".
-- tech_stack: lowercase technology names that the posting asks for or uses.
-- required_skills / nice_to_have_skills: short lowercase skills split by how the posting
-  states them (must have vs. plus / bonus / preferred), e.g. "python", "kubernetes",
-  "distributed systems", "linux". Technologies and hard skills only, no soft skills.
-- salary: monthly or yearly as written, in the stated currency (ISO code)."""
+def _nullable(schema: dict[str, Any]) -> dict[str, Any]:
+    return {"anyOf": [schema, {"type": "null"}]}
+
+
+def _enum(values: tuple[str, ...]) -> dict[str, Any]:
+    return _nullable({"type": "string", "enum": list(values)})
+
+
+_STRINGS = {"type": "array", "items": {"type": "string"}}
+
+COMPACT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "sen": _enum(get_args(Seniority)),
+        "yrs": _nullable({"type": "integer"}),
+        "rem": _enum(get_args(RemotePolicy)),
+        "city": _nullable({"type": "string"}),
+        "smin": _nullable({"type": "integer"}),
+        "smax": _nullable({"type": "integer"}),
+        "cur": _nullable({"type": "string"}),
+        "ct": _enum(get_args(ContractType)),
+        "tech": _STRINGS,
+        "req": _STRINGS,
+        "nice": _STRINGS,
+        "lang": _STRINGS,
+    },
+    "required": [
+        "sen", "yrs", "rem", "city", "smin", "smax", "cur", "ct", "tech", "req", "nice", "lang",
+    ],
+    "additionalProperties": False,
+}
+
+_SYSTEM = """Extract facts from a job posting as JSON. Keys:
+sen: seniority from title or experience; "II"/"III" levels are not senior
+yrs: minimum years of experience explicitly required
+rem: onsite | hybrid | remote_country (one country) | remote_region (EU, EMEA, time zone) |
+  remote_global (anywhere)
+city: office city only, e.g. "Brno"
+smin, smax, cur: salary as written, ISO currency
+ct: contract type
+tech: lowercase technologies asked for or used
+req, nice: short lowercase hard skills, must-have vs. plus/bonus/preferred
+lang: spoken languages required
+Use null or [] when the posting does not say."""
+
+
+class CompactFacts(BaseModel):
+    sen: Seniority | None = None
+    yrs: int | None = None
+    rem: RemotePolicy | None = None
+    city: str | None = None
+    smin: int | None = None
+    smax: int | None = None
+    cur: str | None = None
+    ct: ContractType | None = None
+    tech: list[str] = Field(default_factory=list)
+    req: list[str] = Field(default_factory=list)
+    nice: list[str] = Field(default_factory=list)
+    lang: list[str] = Field(default_factory=list)
+
+    def to_facts(self) -> JobFacts:
+        return JobFacts(
+            seniority=self.sen,
+            years_required_min=self.yrs,
+            remote_policy=self.rem,
+            office_city=self.city,
+            salary_min=self.smin,
+            salary_max=self.smax,
+            currency=self.cur,
+            contract_type=self.ct,
+            tech_stack=self.tech,
+            required_skills=self.req,
+            nice_to_have_skills=self.nice,
+            languages_required=self.lang,
+        )
+
+
+def parse_compact(raw: str) -> JobFacts:
+    return CompactFacts.model_validate_json(_strip_fences(raw)).to_facts()
 
 
 class ExtractionError(Exception):
     """The LLM did not produce valid facts; callers fall back and record it."""
+
+
+def extraction_prompt(title: str, location: str | None, text: str) -> str:
+    return f"Title: {title}\nLocation: {location or 'n/a'}\n\n{compact_for_llm(text)}"
 
 
 class LLMExtractor:
@@ -107,14 +175,15 @@ class LLMExtractor:
         self.llm = llm
 
     async def extract(self, title: str, location: str | None, text: str) -> JobFacts:
-        system = _SYSTEM.format(schema=json.dumps(JobFacts.model_json_schema()))
-        user = f"Title: {title}\nLocation: {location or 'n/a'}\n\n{text[:12000]}"
+        user = extraction_prompt(title, location, text)
         error: str | None = None
         for _ in range(2):
             prompt = user if error is None else f"{user}\n\nPrevious output was invalid: {error}"
-            raw = await self.llm.complete(system=system, user=prompt, max_tokens=800)
+            raw = await self.llm.complete_json(
+                system=_SYSTEM, user=prompt, schema=COMPACT_SCHEMA, max_tokens=400
+            )
             try:
-                return JobFacts.model_validate_json(_strip_fences(raw))
+                return parse_compact(raw)
             except ValidationError as exc:
                 error = str(exc)[:500]
         raise ExtractionError(f"invalid LLM output after retry: {error}")
