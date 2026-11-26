@@ -15,6 +15,9 @@ One retry queue per delay keeps TTLs uniform within a queue, which avoids the he
 blocking you get with per-message expiration.
 """
 
+import gzip
+import zlib
+
 import aio_pika
 from aio_pika.abc import AbstractChannel, AbstractExchange
 
@@ -64,3 +67,18 @@ def message(body: bytes, attempt: int = 0) -> aio_pika.Message:
         delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
         headers={"x-attempt": attempt},
     )
+
+
+class UndecodableBody(ValueError):
+    pass
+
+
+def decode_body(body: bytes, encoding: str | None) -> bytes:
+    if encoding in (None, "", "identity"):
+        return body
+    if encoding != "gzip":
+        raise UndecodableBody(f"unsupported content encoding {encoding}")
+    try:
+        return gzip.decompress(body)
+    except (OSError, EOFError, zlib.error) as exc:
+        raise UndecodableBody(str(exc)) from exc

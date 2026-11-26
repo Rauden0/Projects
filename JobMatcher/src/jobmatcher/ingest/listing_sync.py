@@ -4,6 +4,7 @@ from aio_pika.abc import AbstractIncomingMessage
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from jobmatcher import messaging
 from jobmatcher.db import repository
 
 log = logging.getLogger(__name__)
@@ -22,12 +23,14 @@ class ListingSyncConsumer:
 
     async def handle(self, msg: AbstractIncomingMessage) -> None:
         async with msg.process(requeue=True):
-            await self.sync(msg.body)
+            await self.sync(msg.body, msg.content_encoding)
 
-    async def sync(self, body: bytes) -> repository.ListingSync | None:
+    async def sync(
+        self, body: bytes, encoding: str | None = None
+    ) -> repository.ListingSync | None:
         try:
-            event = SourceCrawled.model_validate_json(body)
-        except ValidationError:
+            event = SourceCrawled.model_validate_json(messaging.decode_body(body, encoding))
+        except (ValidationError, messaging.UndecodableBody):
             log.error("dropping malformed source.crawled event")
             return None
         async with self.sessionmaker() as session, session.begin():

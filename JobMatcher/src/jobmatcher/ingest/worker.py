@@ -26,8 +26,9 @@ class Worker:
     async def handle(self, msg: AbstractIncomingMessage) -> None:
         attempt = int((msg.headers or {}).get("x-attempt", 0))
         try:
-            posting = RawPosting.model_validate_json(msg.body)
-        except ValidationError:
+            body = messaging.decode_body(msg.body, msg.content_encoding)
+            posting = RawPosting.model_validate_json(body)
+        except (ValidationError, messaging.UndecodableBody):
             log.error("malformed message, sending to DLQ")
             await self._publish(messaging.DLQ, msg.body, attempt, default_exchange=True)
             await msg.ack()
@@ -43,10 +44,10 @@ class Worker:
             next_attempt = attempt + 1
             if next_attempt <= len(messaging.RETRY_DELAYS_S):
                 log.exception("indexing failed, retry %d scheduled", next_attempt)
-                await self._publish(str(next_attempt), msg.body, next_attempt)
+                await self._publish(str(next_attempt), body, next_attempt)
             else:
                 log.exception("indexing failed permanently, sending to DLQ")
-                await self._publish(messaging.DLQ, msg.body, attempt, default_exchange=True)
+                await self._publish(messaging.DLQ, body, attempt, default_exchange=True)
         # Ack only after the retry/DLQ publish succeeded; if that publish raises, the
         # message is redelivered instead of lost.
         await msg.ack()
