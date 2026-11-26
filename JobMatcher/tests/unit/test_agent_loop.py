@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -9,6 +10,8 @@ from jobmatcher.agent.tools import ToolError
 
 class ScriptedModel:
     """Returns predefined responses and records what it was sent."""
+
+    caches_prompts = False
 
     def __init__(self, *responses: list[dict[str, Any]]) -> None:
         self.responses = list(responses)
@@ -121,3 +124,32 @@ def test_old_tool_results_are_compacted() -> None:
     content = messages[1]["content"][0]["content"]
     assert content.startswith("x" * loop.COMPACT_CHARS) and content.endswith("(truncated)")
     assert messages[0]["content"] == "q"
+
+
+def test_sdk_thinking_blocks_are_passed_back_unchanged() -> None:
+    thinking = SimpleNamespace(type="thinking", thinking="", signature="sig")
+    redacted = SimpleNamespace(type="redacted_thinking", data="opaque")
+    assert loop._as_dict(thinking) == {"type": "thinking", "thinking": "", "signature": "sig"}
+    assert loop._as_dict(redacted) == {"type": "redacted_thinking", "data": "opaque"}
+
+
+@pytest.mark.asyncio
+async def test_history_is_not_compacted_when_prompts_are_cached() -> None:
+    long_result = [{"job_id": 1, "url": "https://jobs.example/1", "text": "x" * 2000}]
+
+    class CachingToolbox(FakeToolbox):
+        async def call(self, name: str, raw: dict[str, Any]) -> Any:
+            return long_result
+
+    model = ScriptedModel(
+        [tool_use("t1", "search_jobs", query="python")],
+        [tool_use("t2", "search_jobs", query="go")],
+        [{"type": "text", "text": "done"}],
+    )
+    model.caches_prompts = True
+    events = [
+        e async for e in run_agent(model, CachingToolbox(), "q", [], "")  # type: ignore[arg-type]
+    ]
+    assert events[-1].type == "answer"
+    first_result = model.calls[-1]["messages"][2]["content"][0]["content"]
+    assert "(truncated)" not in first_result

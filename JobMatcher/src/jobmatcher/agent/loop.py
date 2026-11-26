@@ -84,7 +84,8 @@ async def run_agent(
                 answer, toolbox.seen_urls)})
             return
 
-        _compact_old_results(messages)
+        if not llm.caches_prompts:
+            _compact_old_results(messages)
         messages.append({"role": "assistant", "content": [_as_dict(b) for b in content]})
         results = []
         for i, use in enumerate(tool_uses):
@@ -129,8 +130,13 @@ def _compact_old_results(messages: list[dict[str, Any]]) -> None:
 def _as_dict(block: Any) -> dict[str, Any]:
     if isinstance(block, dict):
         return block
-    if _block(block, "type") == "tool_use":
-        return {"type": "tool_use", "id": block.id, "name": block.name, "input": block.input}
+    match block.type:
+        case "tool_use":
+            return {"type": "tool_use", "id": block.id, "name": block.name, "input": block.input}
+        case "thinking":
+            return {"type": "thinking", "thinking": block.thinking, "signature": block.signature}
+        case "redacted_thinking":
+            return {"type": "redacted_thinking", "data": block.data}
     return {"type": "text", "text": block.text}
 
 
