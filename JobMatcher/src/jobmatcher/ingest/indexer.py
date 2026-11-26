@@ -27,10 +27,12 @@ class Indexer:
         sessionmaker: async_sessionmaker[AsyncSession],
         extractor: Extractor,
         embedder: Embedder,
+        defer_extraction: bool = False,
     ) -> None:
         self.sessionmaker = sessionmaker
         self.extractor = extractor
         self.embedder = embedder
+        self.defer_extraction = defer_extraction
 
     async def index(self, posting: RawPosting) -> IndexResult:
         text = html_to_text(posting.description_html)
@@ -48,7 +50,11 @@ class Indexer:
         # Slow work (LLM, embeddings) happens outside of any open transaction.
         status = "ok"
         try:
-            facts = await self.extractor.extract(posting.title, posting.location, text)
+            if self.defer_extraction:
+                status = "pending"
+                facts = await HeuristicExtractor().extract(posting.title, posting.location, text)
+            else:
+                facts = await self.extractor.extract(posting.title, posting.location, text)
         except Exception:
             log.exception("extraction failed for %s/%s", posting.company, posting.external_id)
             facts = await HeuristicExtractor().extract(posting.title, posting.location, text)
