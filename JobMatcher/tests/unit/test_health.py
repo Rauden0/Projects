@@ -14,3 +14,8 @@ def test_index_serves_the_chat_page() -> None:
     response = TestClient(create_app()).get("/")
     assert response.status_code == 200
     assert "Job Matcher" in response.text and "/chat" in response.text
+
+
+def test_large_responses_are_gzipped() -> None:
+    response = TestClient(create_app()).get("/", headers={"Accept-Encoding": "gzip"})
+    assert response.headers["content-encoding"] == "gzip"

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 
 from jobmatcher.api.routes import chat, health, jobs
@@ -10,6 +11,7 @@ STATIC = Path(__file__).parent / "static"
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Job Matcher", version="0.1.0")
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.include_router(health.router)
     app.include_router(jobs.router)
     app.include_router(chat.router)
