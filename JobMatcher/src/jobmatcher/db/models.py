@@ -5,6 +5,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Computed,
+    DateTime,
     ForeignKey,
     Index,
     LargeBinary,
@@ -143,7 +144,9 @@ class LlmUsage(Base):
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     purpose: Mapped[str] = mapped_column(Text)
     client_id: Mapped[str | None] = mapped_column(Text)
     model: Mapped[str] = mapped_column(Text)
