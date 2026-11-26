@@ -10,6 +10,7 @@ from jobmatcher.config import configure_logging, get_settings
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.ingest.extraction import Extractor, HeuristicExtractor, LLMExtractor
 from jobmatcher.ingest.indexer import Indexer
+from jobmatcher.ingest.listing_sync import ListingSyncConsumer
 from jobmatcher.llm import get_llm
 from jobmatcher.search.embeddings import get_embedder
 from jobmatcher.sources import RawPosting
@@ -79,6 +80,8 @@ async def main() -> None:
         worker = Worker(indexer, channel)
         queue = await channel.get_queue(messaging.DISCOVERED)
         await queue.consume(worker.handle)
+        listings = await channel.get_queue(messaging.SOURCE_CRAWLED_QUEUE)
+        await listings.consume(ListingSyncConsumer(get_sessionmaker()).handle)
         log.info("worker started")
         await asyncio.Future()
 

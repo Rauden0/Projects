@@ -119,3 +119,30 @@ async def close_unseen_jobs(session: AsyncSession, source_id: int, seen_ids: set
     closed = (await session.execute(stmt)).scalars().all()
     session.add_all(Outbox(topic="job.closed", payload={"job_id": job_id}) for job_id in closed)
     return len(closed)
+
+
+@dataclass(frozen=True)
+class ListingSync:
+    reopened: int
+    closed: int
+
+
+async def sync_listing(
+    session: AsyncSession, source_id: int, listed_ids: set[str], complete: bool
+) -> ListingSync:
+    reopened = await _touch_listed(session, source_id, listed_ids)
+    if not (complete and listed_ids):
+        return ListingSync(reopened, 0)
+    closed = await close_unseen_jobs(session, source_id, listed_ids)
+    return ListingSync(reopened, closed)
+
+
+async def _touch_listed(session: AsyncSession, source_id: int, listed_ids: set[str]) -> int:
+    if not listed_ids:
+        return 0
+    listed = (Job.source_id == source_id) & Job.external_id.in_(listed_ids)
+    reopened = await session.execute(
+        update(Job).where(listed, Job.status == "closed").values(status="open").returning(Job.id)
+    )
+    await session.execute(update(Job).where(listed).values(last_seen_at=func.now()))
+    return len(reopened.all())
