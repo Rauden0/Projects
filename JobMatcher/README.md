@@ -72,6 +72,29 @@ curl -N -X POST localhost:8000/chat -H "content-type: application/json" \
      -d '{"cv_id": "<id>", "message": "Remote Python roles that fit me?"}'
 ```
 
+## LLM costs
+
+Crawling never calls an LLM; the ingestor only fetches and publishes, and only postings whose
+fingerprint changed reach extraction. Embeddings run locally.
+
+With `LLM_PROVIDER=anthropic` and `claude-haiku-5-5` ($0.10 / $0.50 per million tokens):
+
+| Step | Tokens | Cost |
+|---|---|---|
+| Extraction, one posting | ~1.4k in (boilerplate dropped, capped at 6,000 chars), ~80 out (short-key JSON) | ~$0.00018, ~$0.00009 with `EXTRACTION_MODE=batch` |
+| Chat, one question | ~10k in, half from the prompt cache, ~1k out | ~$0.001-0.003 |
+
+Every call is written to `llm_usage` with its cost. `LLM_MONTHLY_BUDGET_USD` (default 40) is a
+hard cap: extraction stops at `LLM_EXTRACTION_BUDGET_SHARE` of it (jobs then keep heuristic
+facts and are retried later) and chat answers 503 at the full amount. Chat is also limited per
+client (`X-Client-Id` header, otherwise the IP): `CHAT_REQUESTS_PER_MINUTE` and
+`CHAT_DAILY_TOKENS_PER_CLIENT`. Set a spend limit on the workspace in the Claude Console as well.
+
+## Branches
+
+`dev` for development, `release/x.y` cut from it for staging, `main` for production (tagged on
+merge). Fixes on a release branch are merged back into `dev`.
+
 ## Develop
 
 ```bash
