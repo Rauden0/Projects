@@ -75,6 +75,18 @@ services:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
 
+  # With EXTRACTION_MODE=batch the worker stores heuristic facts and this service extracts
+  # the pending jobs once an hour through the Message Batches API (half the token price).
+  batch-extract:
+    profiles: ["batch"]
+    build: .
+    image: jobmatcher:latest
+    restart: unless-stopped
+    env_file: .env
+    command: ["python", "-m", "jobmatcher.ingest.batch_extract", "--every", "3600"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
   outbox-relay:
     build: .
     image: jobmatcher:latest
