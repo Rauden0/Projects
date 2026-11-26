@@ -2,7 +2,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from jobmatcher.budget.limits import ClientLimited, ClientLimiter
+from jobmatcher.budget.guard import BudgetExceeded
+from jobmatcher.budget.limits import ChatGate, ClientLimited, ClientLimiter
 
 START = datetime(2026, 11, 26, 23, 59, 0, tzinfo=UTC)
 
@@ -41,3 +42,14 @@ async def test_daily_token_limit_until_midnight() -> None:
     with pytest.raises(ClientLimited) as exc:
         await limiter.check("a")
     assert exc.value.retry_after_s == 60
+
+
+async def test_gate_checks_budget_before_counting_request() -> None:
+    class NoBudget:
+        async def check(self, purpose: str) -> None:
+            raise BudgetExceeded("chat", 40.0, 40.0)
+
+    limiter = ClientLimiter(Tokens(), requests_per_minute=1, daily_tokens=1000, now=lambda: START)
+    with pytest.raises(BudgetExceeded):
+        await ChatGate(limiter, NoBudget()).admit("a")
+    await limiter.check("a")

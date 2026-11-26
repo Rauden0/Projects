@@ -3,6 +3,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Protocol
 
+from jobmatcher.budget.guard import Purpose
 from jobmatcher.budget.ledger import day_start, utc_now
 
 WINDOW = timedelta(minutes=1)
@@ -49,3 +50,17 @@ class ClientLimiter:
         if len(recent) >= self.requests_per_minute:
             retry_after = WINDOW - (now - recent[0])
             raise ClientLimited("too many requests", max(1, int(retry_after.total_seconds())))
+
+
+class BudgetCheck(Protocol):
+    async def check(self, purpose: Purpose) -> None: ...
+
+
+class ChatGate:
+    def __init__(self, limiter: ClientLimiter, budget: BudgetCheck) -> None:
+        self.limiter = limiter
+        self.budget = budget
+
+    async def admit(self, client_id: str) -> None:
+        await self.budget.check("chat")
+        await self.limiter.check(client_id)
