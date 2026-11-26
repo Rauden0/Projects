@@ -113,7 +113,7 @@ COMPACT_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
 }
 
-_SYSTEM = """Extract facts from a job posting as JSON. Keys:
+EXTRACTION_SYSTEM = """Extract facts from a job posting as JSON. Keys:
 sen: seniority from title or experience; "II"/"III" levels are not senior
 yrs: minimum years of experience explicitly required
 rem: onsite | hybrid | remote_country (one country) | remote_region (EU, EMEA, time zone) |
@@ -180,7 +180,7 @@ class LLMExtractor:
         for _ in range(2):
             prompt = user if error is None else f"{user}\n\nPrevious output was invalid: {error}"
             raw = await self.llm.complete_json(
-                system=_SYSTEM, user=prompt, schema=COMPACT_SCHEMA, max_tokens=400
+                system=EXTRACTION_SYSTEM, user=prompt, schema=COMPACT_SCHEMA, max_tokens=400
             )
             try:
                 return parse_compact(raw)
