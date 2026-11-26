@@ -37,7 +37,8 @@ Rules:
   picture. Never invent job ids or URLs.
 - Be explicit about gaps: only skills listed in missing_required / missing_nice_to_have are
   missing. Never call a skill from cv_skills or matched_skills missing.
-- Answer in the user's language, concisely."""
+- Answer in the user's language and keep it short: at most 5 jobs, one line each with
+  the URL, why it fits and the main gap. No introduction, no closing summary."""
 
 
 @dataclass(frozen=True)
