@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     chat_llm_base_url: str = ""
     chat_llm_api_key: str = ""
     chat_llm_model: str = ""
+    llm_effort: str = "low"
+    llm_monthly_budget_usd: float = 40.0
+    llm_extraction_budget_share: float = 0.6
     embedding_model: str = "intfloat/multilingual-e5-small"
     embedding_dim: int = 384
 

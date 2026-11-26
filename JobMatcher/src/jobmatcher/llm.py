@@ -3,17 +3,27 @@
 import asyncio
 import json
 import re
-from typing import Any, Literal, Protocol
+from typing import Any, Protocol
 
 import httpx
 
+from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy, Purpose
+from jobmatcher.budget.ledger import UsageLedger
+from jobmatcher.budget.pricing import TokenUsage
 from jobmatcher.config import get_settings
+from jobmatcher.db.session import get_sessionmaker
 
 MAX_RATE_LIMIT_WAIT_S = 60.0
 
 
 class LLMClient(Protocol):
+    caches_prompts: bool
+
     async def complete(self, *, system: str, user: str, max_tokens: int = 1024) -> str: ...
+
+    async def complete_json(
+        self, *, system: str, user: str, schema: dict[str, Any], max_tokens: int = 512
+    ) -> str: ...
 
     async def create_message(
         self,
@@ -22,25 +32,64 @@ class LLMClient(Protocol):
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]],
         tool_choice: dict[str, str] | None = None,
-        max_tokens: int = 2048,
+        max_tokens: int = 4096,
     ) -> Any: ...
 
 
-class AnthropicClient:
-    def __init__(self, api_key: str, model: str) -> None:
-        from anthropic import AsyncAnthropic  # optional dependency
+EPHEMERAL = {"type": "ephemeral"}
 
-        self._client = AsyncAnthropic(api_key=api_key)
+
+class AnthropicClient:
+    caches_prompts = True
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        *,
+        purpose: Purpose = "extraction",
+        effort: str = "low",
+        ledger: UsageLedger | None = None,
+        guard: BudgetGuard | None = None,
+        client_id: str | None = None,
+        sdk: Any = None,
+    ) -> None:
+        if sdk is None:
+            from anthropic import AsyncAnthropic
+
+            sdk = AsyncAnthropic(api_key=api_key)
+        self._client = sdk
         self.model = model
+        self.purpose = purpose
+        self.effort = effort
+        self.ledger = ledger
+        self.guard = guard
+        self.client_id = client_id
 
     async def complete(self, *, system: str, user: str, max_tokens: int = 1024) -> str:
-        response = await self._client.messages.create(
-            model=self.model,
+        response = await self._send(
             max_tokens=max_tokens,
             system=system,
+            thinking={"type": "disabled"},
+            output_config={"effort": self.effort},
             messages=[{"role": "user", "content": user}],
         )
-        return "".join(block.text for block in response.content if block.type == "text")
+        return _text(response)
+
+    async def complete_json(
+        self, *, system: str, user: str, schema: dict[str, Any], max_tokens: int = 512
+    ) -> str:
+        response = await self._send(
+            max_tokens=max_tokens,
+            system=system,
+            thinking={"type": "disabled"},
+            output_config={
+                "effort": self.effort,
+                "format": {"type": "json_schema", "schema": schema},
+            },
+            messages=[{"role": "user", "content": user}],
+        )
+        return _text(response)
 
     async def create_message(
         self,
@@ -49,16 +98,50 @@ class AnthropicClient:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]],
         tool_choice: dict[str, str] | None = None,
-        max_tokens: int = 2048,
+        max_tokens: int = 4096,
     ) -> Any:
-        return await self._client.messages.create(
-            model=self.model,
+        return await self._send(
             max_tokens=max_tokens,
-            system=system,
+            system=[{"type": "text", "text": system, "cache_control": EPHEMERAL}],
             messages=messages,
-            tools=tools,
+            tools=_cached_tools(tools),
             tool_choice=tool_choice or {"type": "auto"},
+            output_config={"effort": self.effort},
+            cache_control=EPHEMERAL,
         )
+
+    async def _send(self, **params: Any) -> Any:
+        if self.guard is not None:
+            await self.guard.check(self.purpose)
+        response = await self._client.messages.create(model=self.model, **params)
+        if self.ledger is not None:
+            await self.ledger.record(
+                purpose=self.purpose,
+                model=self.model,
+                usage=usage_of(response),
+                client_id=self.client_id,
+            )
+        return response
+
+
+def usage_of(response: Any) -> TokenUsage:
+    usage = response.usage
+    return TokenUsage(
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        cache_read_tokens=getattr(usage, "cache_read_input_tokens", None) or 0,
+        cache_write_tokens=getattr(usage, "cache_creation_input_tokens", None) or 0,
+    )
+
+
+def _text(response: Any) -> str:
+    return "".join(block.text for block in response.content if block.type == "text")
+
+
+def _cached_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not tools:
+        return tools
+    return [*tools[:-1], {**tools[-1], "cache_control": EPHEMERAL}]
 
 
 class OpenAICompatClient:
@@ -67,6 +150,8 @@ class OpenAICompatClient:
     The rest of the code speaks Anthropic-style messages and content blocks; this class
     translates them to the OpenAI wire format and back, so the agent loop stays unchanged.
     """
+
+    caches_prompts = False
 
     def __init__(self, base_url: str, model: str, api_key: str = "", timeout: float = 180) -> None:
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
@@ -112,6 +197,12 @@ class OpenAICompatClient:
         )
         return str(message.get("content") or "")
 
+    async def complete_json(
+        self, *, system: str, user: str, schema: dict[str, Any], max_tokens: int = 512
+    ) -> str:
+        instructions = f"{system}\nReturn only JSON matching this schema:\n{json.dumps(schema)}"
+        return await self.complete(system=instructions, user=user, max_tokens=max_tokens)
+
     async def create_message(
         self,
         *,
@@ -119,7 +210,7 @@ class OpenAICompatClient:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]],
         tool_choice: dict[str, str] | None = None,
-        max_tokens: int = 2048,
+        max_tokens: int = 4096,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "max_tokens": max_tokens,
@@ -198,7 +289,9 @@ def from_openai_message(message: dict[str, Any]) -> dict[str, Any]:
     return {"content": blocks}
 
 
-def get_llm(purpose: Literal["extraction", "chat"] = "extraction") -> LLMClient | None:
+def get_llm(
+    purpose: Purpose = "extraction", client_id: str | None = None
+) -> LLMClient | None:
     s = get_settings()
     provider, base_url, api_key, model = s.llm_provider, s.llm_base_url, s.llm_api_key, s.llm_model
     if purpose == "chat":
@@ -211,7 +304,17 @@ def get_llm(purpose: Literal["extraction", "chat"] = "extraction") -> LLMClient 
         return OpenAICompatClient(base_url, model, api_key, s.llm_timeout_s)
     if not api_key:
         return None
-    return AnthropicClient(api_key, model)
+    ledger = UsageLedger(get_sessionmaker())
+    policy = BudgetPolicy(s.llm_monthly_budget_usd, s.llm_extraction_budget_share)
+    return AnthropicClient(
+        api_key,
+        model,
+        purpose=purpose,
+        effort=s.llm_effort,
+        ledger=ledger,
+        guard=BudgetGuard(ledger, policy),
+        client_id=client_id,
+    )
 
 
 def _retry_delay(response: httpx.Response) -> float:
