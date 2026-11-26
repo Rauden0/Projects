@@ -3,13 +3,15 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from jobmatcher.agent.loop import run_agent
 from jobmatcher.agent.tools import Toolbox
-from jobmatcher.api.deps import EmbedderDep, SessionDep
+from jobmatcher.api.deps import ChatGateDep, EmbedderDep, SessionDep
+from jobmatcher.budget.guard import BudgetExceeded
+from jobmatcher.budget.limits import ChatGate, ClientLimited
 from jobmatcher.cv.profile import CvProfile, build_profile
 from jobmatcher.db.models import Cv
 from jobmatcher.db.session import get_sessionmaker
@@ -50,9 +52,34 @@ def _sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
 
 
+def client_id_of(request: Request) -> str:
+    header = request.headers.get("x-client-id")
+    if header:
+        return header[:64]
+    return request.client.host if request.client else "anonymous"
+
+
+async def admit(gate: ChatGate, client_id: str) -> None:
+    try:
+        await gate.admit(client_id)
+    except ClientLimited as exc:
+        headers = {"Retry-After": str(exc.retry_after_s)}
+        raise HTTPException(status_code=429, detail=exc.reason, headers=headers) from exc
+    except BudgetExceeded as exc:
+        raise HTTPException(status_code=503, detail="monthly LLM budget exhausted") from exc
+
+
 @router.post("/chat")
-async def chat(body: ChatIn, session: SessionDep, embedder: EmbedderDep) -> StreamingResponse:
-    llm = get_llm("chat")
+async def chat(
+    body: ChatIn,
+    request: Request,
+    session: SessionDep,
+    embedder: EmbedderDep,
+    gate: ChatGateDep,
+) -> StreamingResponse:
+    client_id = client_id_of(request)
+    await admit(gate, client_id)
+    llm = get_llm("chat", client_id=client_id)
     if llm is None:
         raise HTTPException(status_code=503, detail="LLM_API_KEY is not configured")
 
