@@ -77,7 +77,12 @@ async def main() -> None:
         await channel.set_qos(prefetch_count=settings.worker_prefetch)
         await messaging.declare_topology(channel)
 
-        indexer = Indexer(get_sessionmaker(), build_extractor(), get_embedder())
+        indexer = Indexer(
+            get_sessionmaker(),
+            build_extractor(),
+            get_embedder(),
+            defer_extraction=settings.extraction_mode == "batch",
+        )
         worker = Worker(indexer, channel)
         queue = await channel.get_queue(messaging.DISCOVERED)
         await queue.consume(worker.handle)

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -24,6 +25,7 @@ class Settings(BaseSettings):
     llm_effort: str = "low"
     llm_monthly_budget_usd: float = 40.0
     llm_extraction_budget_share: float = 0.6
+    extraction_mode: Literal["sync", "batch"] = "sync"
     chat_requests_per_minute: int = 6
     chat_daily_tokens_per_client: int = 300_000
     embedding_model: str = "intfloat/multilingual-e5-small"
