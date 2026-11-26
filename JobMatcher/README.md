@@ -47,7 +47,20 @@ ingestion falls back to heuristic extraction; only `/chat` needs the model.
 - API docs: http://localhost:8000/docs
 - RabbitMQ UI: http://localhost:15672 (guest / guest)
 
-Companies to crawl live in [`sources.yaml`](sources.yaml).
+Crawling runs in [JobIngestor](../JobIngestor): a separate service with a source registry, a
+planner and horizontally scaled crawlers. It publishes `job.discovered` (only new or changed
+postings) to the same RabbitMQ, so the worker here indexes them unchanged, and `source.crawled`
+after each crawl, which the worker uses to reopen listed jobs and close missing ones when the
+listing was complete.
+
+```bash
+docker compose up --build                       # JobMatcher: api, worker, relay, RabbitMQ
+cd ../JobIngestor && docker compose up --build  # JobIngestor: registry api, planner, crawlers
+docker compose exec api job-ingestor seed sources.yaml
+```
+
+To run JobMatcher alone with its original scheduler and [`sources.yaml`](sources.yaml):
+`docker compose --profile legacy-scheduler up`.
 
 ```bash
 # search without the LLM

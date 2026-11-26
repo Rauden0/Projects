@@ -46,7 +46,8 @@ flowchart LR
 | Service | Responsibility |
 |---|---|
 | `api` | FastAPI app: CV upload, search endpoint, chat endpoint (SSE streaming), health. |
-| `scheduler` | Periodically lists postings from configured sources and publishes `job.discovered` messages. Cheap and stateless. |
+| `scheduler` | Legacy, behind the `legacy-scheduler` compose profile. Crawling moved to the separate JobIngestor service, which publishes `job.discovered` and `source.crawled`. |
+| `worker` (listing sync) | Consumes `source.crawled`: reopens listed jobs and closes missing ones only when the listing was complete. |
 | `worker` | Consumes `job.discovered`; fetches detail, normalizes, deduplicates, chunks, embeds, upserts. |
 | `outbox-relay` | Publishes `job.indexed` / `job.closed` events from the outbox table (same pattern as at work). |
 | `postgres` | System of record, vector index (pgvector) and full-text index (tsvector). |
