@@ -132,6 +132,24 @@ python eval/run_retrieval.py --hashing  # dependency-free baseline
   and recall unchanged and lower MRR (0.79 → 0.76), so equal weights stay. The gap is in the
   embeddings, not the fusion.
 
+### Retrieval changes of 2026-11-27, hashing baseline only
+
+Boilerplate left out of the chunks, a synthetic profile chunk per job (title, seniority,
+work mode, skills), an unaccented `title_tsv` for the title list and vector candidates ranked
+per job instead of per chunk. sentence-transformers was not installed where this ran, so
+only the hashing baseline was measured; the e5 table above predates these changes and needs
+a re-run. Run to run, the same code varies by about ±0.02 here.
+
+| all (41), hashing | hit@5 vector / full-text / hybrid | recall@10 | MRR |
+|---|---|---|---|
+| before | 0.59 / 0.61 / 0.63 | 0.65–0.67 / 0.57 / 0.65–0.67 | 0.54 / 0.56–0.59 / 0.59 |
+| after | 0.63 / 0.63 / **0.66** | 0.66 / 0.60 / **0.68** | 0.55 / 0.58 / 0.60 |
+
+- No fixture has a benefits or company section, so leaving boilerplate out changes nothing
+  here; it only removes noise matches from real postings.
+- The profile chunk lifts vector and full-text hit@5 (0.59 → 0.63, 0.61 → 0.63); its target,
+  English occupation queries for Czech postings, needs e5 to show.
+
 ## 3. Agent
 
 11 scripted questions ([`agent/cases.yaml`](agent/cases.yaml)) against the 32 fixtures seeded

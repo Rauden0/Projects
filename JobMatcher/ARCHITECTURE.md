@@ -23,7 +23,7 @@ flowchart LR
     W -.->|embeddings| EMB[Embedding model]
 
     REL[Outbox relay] -->|reads outbox| PG
-    REL -->|job.indexed| MQ
+    REL -->|job.created / updated / closed| MQ
 
     UI[Client / curl / simple web UI] -->|HTTP + SSE| API[FastAPI]
     API --> AG[Agent graph]
@@ -40,7 +40,7 @@ flowchart LR
 | `api` | FastAPI app: CV upload, search endpoint, chat endpoint (SSE streaming), health. |
 | `worker` (listing sync) | Consumes `source.crawled`: reopens listed jobs and closes missing ones only when the listing was complete. |
 | `worker` | Consumes `job.discovered`; fetches detail, normalizes, deduplicates, chunks, embeds, upserts. |
-| `outbox-relay` | Publishes `job.indexed` / `job.closed` events from the outbox table (same pattern as at work). |
+| `outbox-relay` | Publishes `job.created` / `job.updated` / `job.closed` events from the outbox table (same pattern as at work). |
 | `postgres` | System of record, vector index (pgvector) and full-text index (tsvector). |
 | `rabbitmq` | Work queue between JobIngestor and the worker, with retry + dead-letter queues. |
 
@@ -74,16 +74,18 @@ sequenceDiagram
     S->>Q: job.discovered {full posting}
     Q->>W: deliver (prefetch=N)
     W->>W: html → text, compute content_hash
-    alt hash unchanged
+    alt crawled before the stored version
+        W->>W: ignore (stale retry)
+    else hash unchanged
         W->>DB: touch last_seen_at
     else new or changed
         W->>W: extract structured fields (LLM, Pydantic schema)
-        W->>W: chunk + embed
-        W->>DB: BEGIN; upsert job, replace chunks, insert outbox row; COMMIT
+        W->>W: chunk + profile chunk + embed
+        W->>DB: BEGIN; upsert job (if not older), replace chunks, assign canonical_job_id, insert outbox row; COMMIT
     end
     W->>Q: ack
     R->>DB: SELECT ... FOR UPDATE SKIP LOCKED
-    R->>Q: job.indexed
+    R->>Q: job.created / job.updated / job.closed (envelope)
     R->>DB: mark published
 ```
 
@@ -92,6 +94,19 @@ Key decisions:
 - **Idempotency.** Jobs are keyed by `(source, external_id)`; a `content_hash` of the
   normalized description decides whether re-embedding is needed. Redelivered messages are
   harmless.
+- **Ordering.** When JobIngestor sends `crawled_at`, a `job.discovered` crawled before the
+  stored version (a retry delivered after a newer crawl) is ignored, also inside the upsert
+  (`ON CONFLICT ... WHERE`), and a complete listing closes only jobs crawled before it.
+  Contracts and compatibility rules: [docs/contracts.md](docs/contracts.md).
+- **Derived-data versions.** `job.extraction_version` (`EXTRACTION_VERSION` in
+  `ingest/extraction.py`, set only for LLM facts) and `job_chunk.embedding_model` record
+  what produced the facts and vectors; `reextract --outdated` redoes older extractions.
+- **Duplicates across sources.** Jobs share a `dedup_key` (first six letters of the company,
+  title, first four letters of the location). In each open group the posting with the
+  longest description is canonical; a thin stub (< 300 chars) of it, or a full copy from
+  another source whose first chunk has cosine similarity ≥ 0.9, gets `canonical_job_id`
+  pointing at it and is hidden from search. Groups are recomputed (under an advisory lock)
+  on every upsert, close and reopen, so a stub resurfaces when its full copy closes.
 - **Structured extraction.** The LLM fills a Pydantic model
   (`seniority`, `years_required_min`, `remote_policy`, `office_city`, `salary_min/max`,
   `currency`, `contract_type`, `tech_stack[]`, `required_skills[]`, `nice_to_have_skills[]`,
@@ -103,7 +118,10 @@ Key decisions:
   the exact filtering done by hand during the job search.
 - **Chunking.** Postings are split by section (about / responsibilities / requirements /
   benefits, nice to have), max ~350 words, with the title and company prepended to each
-  chunk. The section label is stored and used by `compare_with_cv`.
+  chunk. The section label is stored and used by `compare_with_cv`. Benefits, company blurbs
+  and GDPR text are not embedded (they match any query), except their pay and work-mode
+  lines. A last synthetic `profile` chunk holds title, seniority, work mode and skills. Re-
+  and batch extraction update facts only, so that chunk keeps the facts of the last index.
 - **Retries and DLQ.** On failure the worker republishes the message to
   `job.discovered.retry.{n}` — one queue per delay (30 s, 5 min, 30 min) with a queue-level
   TTL that dead-letters back to `job.discovered` — tracking the attempt in an `x-attempt`
@@ -116,7 +134,9 @@ Key decisions:
   evaluation sets stay stable.
 - **Outbox.** Downstream events are written in the same transaction as the job row and
   published by a relay (`FOR UPDATE SKIP LOCKED`, at-least-once). Same pattern used in
-  production at work; here it feeds a future "new matching job" notifier.
+  production at work; here it feeds a future "new matching job" notifier. Each event is an
+  envelope `{event_id, type, version, occurred_at, data}` whose `event_id` is the outbox id;
+  `job.created` and `job.updated` are told apart by whether the upsert inserted.
 
 ---
 
@@ -154,13 +174,22 @@ CREATE TABLE job (
     required_skills     text[] NOT NULL DEFAULT '{}',   -- migration 0003
     nice_to_have_skills text[] NOT NULL DEFAULT '{}',
     extraction_status   text NOT NULL DEFAULT 'pending',  -- ok | pending | fallback | batch_failed
+    extraction_version  smallint,           -- 0006; EXTRACTION_VERSION of LLM facts
     status              text NOT NULL DEFAULT 'open',   -- open | closed
     first_seen_at       timestamptz NOT NULL DEFAULT now(),
     last_seen_at        timestamptz NOT NULL DEFAULT now(),
+    crawled_at          timestamptz,        -- 0006; from job.discovered, orders redeliveries
+    dedup_key           text GENERATED ALWAYS AS (...) STORED,   -- 0007; company|title|location
+    canonical_job_id    bigint REFERENCES job(id) ON DELETE SET NULL,  -- 0007; set = duplicate
+    title_tsv           tsvector GENERATED ALWAYS AS
+                        (to_tsvector('simple', immutable_unaccent(title))) STORED,  -- 0007
     UNIQUE (source_id, external_id)
 );
 CREATE INDEX job_open_filters ON job (remote_policy, seniority, years_required_min) WHERE status = 'open';
 CREATE INDEX job_tech_stack ON job USING gin (tech_stack);
+CREATE INDEX job_dedup_key ON job (dedup_key) WHERE status = 'open';
+CREATE INDEX job_canonical ON job (canonical_job_id);
+CREATE INDEX job_title_tsv ON job USING gin (title_tsv);
 
 CREATE TABLE job_chunk (
     id          bigserial PRIMARY KEY,
@@ -169,6 +198,7 @@ CREATE TABLE job_chunk (
     section     text,
     content     text NOT NULL,
     embedding   vector(384) NOT NULL,
+    embedding_model text,                   -- 0006; e.g. intfloat/multilingual-e5-small
     tsv         tsvector GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED
 );
 CREATE INDEX job_chunk_embedding ON job_chunk USING hnsw (embedding vector_cosine_ops);
@@ -194,6 +224,8 @@ CREATE INDEX outbox_unpublished ON outbox (id) WHERE published_at IS NULL;
 
 Migrations are managed with **Alembic**; the schema above is the target of the first
 revision. `'simple'` text-search config is used because postings mix Czech and English.
+`immutable_unaccent` wraps the `unaccent` extension with its dictionary pinned, because
+generated columns accept only immutable functions.
 
 ---
 
@@ -203,15 +235,18 @@ revision. `'simple'` text-search config is used because postings mix Czech and E
 
 1. **Hard filters** first (from the structured fields): `status='open'`, remote policy,
    city (remote jobs pass any city unless `strict_city`), max years required, seniority,
-   contract type, tech stack; board stubs that have a full copy from the employer's ATS are
-   hidden. Unknown values (`NULL`) pass, since many postings never state them.
-2. **Vector search**: top `CANDIDATES` (50) chunks by cosine distance to the query embedding,
-   limited in a subquery so the HNSW index serves it.
+   contract type, tech stack; duplicates (`canonical_job_id IS NOT NULL`, resolved at ingest)
+   are hidden. Unknown values (`NULL`) pass, since many postings never state them.
+2. **Vector search**: the nearest `VECTOR_CHUNKS` (200) chunks by cosine distance to the
+   query embedding, limited in a subquery so the HNSW index serves it (`hnsw.ef_search` is
+   raised to match), then each job's nearest chunk; the top `CANDIDATES` (50) jobs form the
+   list, so a long posting takes one slot.
 3. **Full-text search**: top `KEYWORD_CANDIDATES` (10) chunks by `ts_rank_cd` against an
    any-term `to_tsquery('simple', 'a | b | c')` built from the query (short words and stop
    words dropped).
 4. **Title search** (hybrid mode only): top `KEYWORD_CANDIDATES` jobs whose title matches the
-   same query, ranked the same way; titles are the most precise signal.
+   same query, ranked the same way, over the GIN-indexed, unaccented `title_tsv` ("vyvojar"
+   finds "Vývojář"); titles are the most precise signal.
 5. **Fusion**: `score = Σ w_list / (60 + rank)` across the lists (`WEIGHTS`, all 1), with each
    list contributing its best rank per job; the best-ranked chunk is the citation snippet. With
    a city filter, jobs actually in that city get `LOCAL_BOOST` (one first place, 1/61) so
