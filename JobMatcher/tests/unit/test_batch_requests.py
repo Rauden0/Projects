@@ -13,6 +13,7 @@ from jobmatcher.ingest.batch_extract import (
     loop,
     outcome_of,
 )
+from jobmatcher.ingest.extraction import EXTRACTION_MAX_TOKENS
 
 
 def test_batch_request_uses_compact_prompt_and_schema() -> None:
@@ -21,6 +22,7 @@ def test_batch_request_uses_compact_prompt_and_schema() -> None:
     params = request["params"]
     assert request["custom_id"] == "job-7"
     assert params["thinking"] == {"type": "disabled"}
+    assert params["max_tokens"] == EXTRACTION_MAX_TOKENS
     assert "We are great" not in params["messages"][0]["content"]
     assert job_id_of(request["custom_id"]) == 7
 

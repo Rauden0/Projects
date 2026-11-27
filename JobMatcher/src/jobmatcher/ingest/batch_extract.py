@@ -24,6 +24,7 @@ from jobmatcher.domain import JobFacts
 from jobmatcher.errors import BudgetExceeded, LLMError
 from jobmatcher.ingest.extraction import (
     COMPACT_SCHEMA,
+    EXTRACTION_MAX_TOKENS,
     EXTRACTION_SYSTEM,
     extraction_prompt,
     parse_compact,
@@ -35,7 +36,6 @@ log = logging.getLogger(__name__)
 CUSTOM_ID_PREFIX = "job-"
 DEFAULT_LIMIT = 5000
 POLL_INTERVAL_S = 60.0
-MAX_OUTPUT_TOKENS = 400
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,7 +58,7 @@ def batch_request(job: PendingJob, model: str, effort: str) -> dict[str, Any]:
         "custom_id": f"{CUSTOM_ID_PREFIX}{job.id}",
         "params": {
             "model": model,
-            "max_tokens": MAX_OUTPUT_TOKENS,
+            "max_tokens": EXTRACTION_MAX_TOKENS,
             "system": EXTRACTION_SYSTEM,
             "thinking": {"type": "disabled"},
             "output_config": {
