@@ -99,12 +99,21 @@ async def start_consumers(
     indexer: Indexer,
     sessionmaker: async_sessionmaker[AsyncSession],
     prefetch: int,
+    *,
+    listing_channel: AbstractChannel | None = None,
+    listing_prefetch: int = 1,
 ) -> None:
     await channel.set_qos(prefetch_count=prefetch)
     await messaging.declare_topology(channel)
     queue = await channel.get_queue(messaging.DISCOVERED)
     await queue.consume(Worker(indexer, channel).handle)
-    listings = await channel.get_queue(messaging.SOURCE_CRAWLED_QUEUE)
+    # A listing sync can run for minutes: its own channel and QoS bound how many run at once
+    # independently of WORKER_PREFETCH, and a channel error there leaves job.discovered running.
+    if listing_channel is None:
+        listing_channel = channel
+    else:
+        await listing_channel.set_qos(prefetch_count=listing_prefetch)
+    listings = await listing_channel.get_queue(messaging.SOURCE_CRAWLED_QUEUE)
     await listings.consume(ListingSyncConsumer(sessionmaker).handle)
 
 
@@ -121,7 +130,14 @@ async def main() -> None:
     connection = await aio_pika.connect_robust(settings.amqp_url)
     async with connection:
         channel = await connection.channel(publisher_confirms=True)
-        await start_consumers(channel, indexer, get_sessionmaker(), settings.worker_prefetch)
+        await start_consumers(
+            channel,
+            indexer,
+            get_sessionmaker(),
+            settings.worker_prefetch,
+            listing_channel=await connection.channel(),
+            listing_prefetch=settings.listing_prefetch,
+        )
         log.info("worker started")
         await asyncio.Future()
 

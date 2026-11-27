@@ -1,8 +1,10 @@
 import asyncio
 import gzip
+import os
 
 import aio_pika
-from aio_pika.abc import AbstractChannel, AbstractQueue
+import pytest
+from aio_pika.abc import AbstractChannel, AbstractIncomingMessage, AbstractQueue
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -11,6 +13,7 @@ from jobmatcher.db.models import EMBEDDING_DIM, Job
 from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.extraction import HeuristicExtractor
 from jobmatcher.ingest.indexer import Indexer, IndexResult
+from jobmatcher.ingest.listing_sync import ListingSyncConsumer
 from jobmatcher.ingest.worker import start_consumers
 from jobmatcher.search.embeddings import HashingEmbedder
 
@@ -94,3 +97,46 @@ async def test_malformed_message_goes_to_the_dlq(
     dlq = await amqp_channel.get_queue(messaging.DLQ)
     message = await wait_for_message(dlq)
     assert message.body == b'{"not": "a posting"}'
+
+
+async def test_listing_syncs_get_their_own_prefetch_and_do_not_block_postings(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    amqp_channel: AbstractChannel,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release = asyncio.Event()
+
+    async def stuck(self: ListingSyncConsumer, msg: AbstractIncomingMessage) -> None:
+        await release.wait()
+
+    monkeypatch.setattr(ListingSyncConsumer, "handle", stuck)
+    indexer = Indexer(sessionmaker, HeuristicExtractor(), HashingEmbedder(EMBEDDING_DIM))
+    connection = await aio_pika.connect(
+        os.environ.get("TEST_AMQP_URL", "amqp://guest:guest@localhost:5672/jobmatcher_test"),
+        timeout=5,
+    )
+    async with connection:
+        listing_channel = await connection.channel()
+        await start_consumers(
+            amqp_channel, indexer, sessionmaker, prefetch=8, listing_channel=listing_channel
+        )
+        exchange = await amqp_channel.get_exchange(messaging.EXCHANGE)
+        for _ in range(3):
+            await exchange.publish(aio_pika.Message(b"{}"), routing_key=messaging.SOURCE_CRAWLED)
+        await publish(amqp_channel, POSTING.model_dump_json().encode())
+
+        try:
+            job = None
+            for _ in range(100):
+                async with sessionmaker() as session:
+                    job = (await session.execute(select(Job))).scalar_one_or_none()
+                if job is not None:
+                    break
+                await asyncio.sleep(0.1)
+            assert job is not None
+            listings = await amqp_channel.declare_queue(
+                messaging.SOURCE_CRAWLED_QUEUE, durable=True, passive=True
+            )
+            assert listings.declaration_result.message_count == 2
+        finally:
+            release.set()

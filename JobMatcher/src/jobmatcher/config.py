@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     embedding_dim: int = EMBEDDING_DIM
 
     worker_prefetch: int = Field(default=8, ge=1)
+    # source.crawled events in flight per worker, on a channel separate from job.discovered.
+    listing_prefetch: int = Field(default=1, ge=1)
 
     # Personal data: uploaded CVs are deleted this many days after upload, and the client
     # address on llm_usage rows (only needed for the daily per-client limit) after two days.
