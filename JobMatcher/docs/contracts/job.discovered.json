@@ -1,0 +1,96 @@
+{
+  "description": "Body of a `job.discovered` message, as published by JobIngestor.",
+  "properties": {
+    "schema_version": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "event_id": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event Id"
+    },
+    "crawled_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "When JobIngestor fetched the data; orders stale redeliveries",
+      "title": "Crawled At"
+    },
+    "kind": {
+      "title": "Kind",
+      "type": "string"
+    },
+    "company": {
+      "title": "Company",
+      "type": "string"
+    },
+    "source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source"
+    },
+    "external_id": {
+      "title": "External Id",
+      "type": "string"
+    },
+    "url": {
+      "title": "Url",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "location": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Location"
+    },
+    "description_html": {
+      "title": "Description Html",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "company",
+    "external_id",
+    "url",
+    "title",
+    "location",
+    "description_html"
+  ],
+  "title": "RawPosting",
+  "type": "object"
+}

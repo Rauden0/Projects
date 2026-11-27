@@ -1,20 +1,14 @@
 import logging
 
 from aio_pika.abc import AbstractIncomingMessage
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher import messaging
 from jobmatcher.db import repository
+from jobmatcher.domain import SourceCrawled
 
 log = logging.getLogger(__name__)
-
-
-class SourceCrawled(BaseModel):
-    kind: str
-    source: str
-    external_ids: list[str]
-    complete: bool
 
 
 class ListingSyncConsumer:

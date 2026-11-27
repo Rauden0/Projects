@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Seniority = Literal["junior", "medior", "senior", "staff"]
 RemotePolicy = Literal["onsite", "hybrid", "remote_country", "remote_region", "remote_global"]
@@ -9,9 +10,28 @@ ContractType = Literal["employment", "contract", "freelance"]
 ExtractionStatus = Literal["ok", "pending", "fallback", "batch_failed"]
 MAX_YEARS_REQUIRED = 30
 MAX_SALARY = 2_147_483_647
+CONTRACT_VERSION = 1
 
 
-class RawPosting(BaseModel):
+class InboundEvent(BaseModel):
+    """Fields every inbound event may carry. All optional, so producers that predate them
+    keep working; unknown fields are ignored so producers can add fields first."""
+
+    schema_version: int = Field(default=CONTRACT_VERSION, ge=1)
+    event_id: str | None = Field(default=None, max_length=200)
+    crawled_at: datetime | None = Field(
+        default=None, description="When JobIngestor fetched the data; orders stale redeliveries"
+    )
+
+    @field_validator("crawled_at")
+    @classmethod
+    def _assume_utc(cls, value: datetime | None) -> datetime | None:
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value
+
+
+class RawPosting(InboundEvent):
     """Body of a `job.discovered` message, as published by JobIngestor."""
 
     kind: str
@@ -24,6 +44,15 @@ class RawPosting(BaseModel):
     title: str
     location: str | None
     description_html: str
+
+
+class SourceCrawled(InboundEvent):
+    """Body of a `source.crawled` message: the external ids one crawl of a source listed."""
+
+    kind: str
+    source: str
+    external_ids: list[str]
+    complete: bool
 
 
 class JobFacts(BaseModel):
