@@ -9,6 +9,8 @@ import asyncio
 import json
 import logging
 import re
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from functools import lru_cache
 from typing import Any, Protocol
 
@@ -507,8 +509,25 @@ def get_llm(
 def _retry_delay(response: httpx.Response) -> float:
     """Seconds to wait after a 429: the Retry-After header, else the 'try again in 19.8s'
     hint some providers only put in the message body, else 10."""
-    header = response.headers.get("retry-after")
-    if header:
-        return float(header)
+    header = _retry_after_s(response.headers.get("retry-after", ""))
+    if header is not None:
+        return header
     match = re.search(r"try again in ([\d.]+)s", response.text)
     return float(match.group(1)) if match else 10.0
+
+
+def _retry_after_s(value: str) -> float | None:
+    """Retry-After is either delay-seconds or an HTTP date."""
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        pass
+    try:
+        when = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    return max(0.0, (when - datetime.now(UTC)).total_seconds())

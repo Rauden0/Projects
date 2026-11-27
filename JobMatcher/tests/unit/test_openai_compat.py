@@ -148,6 +148,21 @@ def test_retry_delay_reads_body_hint() -> None:
     assert _retry_delay(httpx.Response(429, json={})) == 10.0
 
 
+def test_retry_delay_accepts_http_date_and_ignores_garbage() -> None:
+    from datetime import UTC, datetime, timedelta
+    from email.utils import format_datetime
+
+    from jobmatcher.llm import _retry_delay
+
+    soon = format_datetime(datetime.now(UTC) + timedelta(seconds=30), usegmt=True)
+    assert 25 < _retry_delay(httpx.Response(429, headers={"retry-after": soon})) <= 30
+    past = "Wed, 21 Oct 2015 07:28:00 GMT"
+    assert _retry_delay(httpx.Response(429, headers={"retry-after": past})) == 0.0
+    body = {"error": {"message": "try again in 4.5s"}}
+    garbage = httpx.Response(429, headers={"retry-after": "soon"}, json=body)
+    assert _retry_delay(garbage) == 4.5
+
+
 def _client(handler: Any, **kwargs: Any) -> OpenAICompatClient:
     http = httpx.AsyncClient(base_url="http://ollama/v1", transport=httpx.MockTransport(handler))
     return OpenAICompatClient("http://ollama/v1", "qwen2.5:7b", http=http, **kwargs)
