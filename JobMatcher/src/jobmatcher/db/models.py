@@ -116,10 +116,12 @@ class JobChunk(Base):
 
 class Cv(Base):
     __tablename__ = "cv"
+    __table_args__ = (Index("cv_owner", "owner_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
     )
+    owner_id: Mapped[str | None] = mapped_column(Text)
     raw_text: Mapped[str] = mapped_column(Text)
     profile: Mapped[dict[str, Any]] = mapped_column(JSONB)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
