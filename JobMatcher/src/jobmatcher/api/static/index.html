@@ -78,6 +78,14 @@ const store = {
 };
 let cvId = store.get("cv_id");
 const history = [];
+// Server caps the history at 24,000 chars in total; 10 turns of 2,000 stay under it.
+const HISTORY_TURNS = 10;
+const TURN_CHARS = 2000;
+
+function remember(role, content) {
+  history.push({ role, content: content.slice(0, TURN_CHARS) });
+  history.splice(0, Math.max(0, history.length - HISTORY_TURNS));
+}
 
 function showProfile(p) {
   $("profile").textContent = p
@@ -176,7 +184,8 @@ $("ask").onsubmit = async (ev) => {
             add("tool error", "⚠️ Odkazy, které nepřišly z vyhledávání: " +
                 escapeHtml(data.unverified_urls.join(", ")));
           }
-          history.push({ role: "user", content: message }, { role: "assistant", content: data.text });
+          remember("user", message);
+          remember("assistant", data.text);
         } else if (event === "error") {
           add("tool error", "⚠️ " + escapeHtml(data.message));
         }
