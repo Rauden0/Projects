@@ -72,12 +72,12 @@ async def chat(
     gate: ChatGateDep,
 ) -> StreamingResponse:
     client_id = client_id_of(request)
-    await gate.admit(client_id)
     meter = UsageMeter()
     llm = get_llm("chat", client_id=client_id, meter=meter)
     if llm is None:
         raise LLMUnavailable("no API key configured for the chat model")
     summary = await profile_summary(session, body.cv_id)
+    await gate.admit(client_id)
     history = [turn.model_dump() for turn in body.history]
 
     async def stream() -> AsyncIterator[str]:
