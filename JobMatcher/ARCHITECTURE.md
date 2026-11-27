@@ -153,7 +153,7 @@ CREATE TABLE job (
     tech_stack          text[] NOT NULL DEFAULT '{}',
     required_skills     text[] NOT NULL DEFAULT '{}',   -- migration 0003
     nice_to_have_skills text[] NOT NULL DEFAULT '{}',
-    extraction_status   text NOT NULL DEFAULT 'pending',
+    extraction_status   text NOT NULL DEFAULT 'pending',  -- ok | pending | fallback | batch_failed
     status              text NOT NULL DEFAULT 'open',   -- open | closed
     first_seen_at       timestamptz NOT NULL DEFAULT now(),
     last_seen_at        timestamptz NOT NULL DEFAULT now(),
