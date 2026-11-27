@@ -289,9 +289,7 @@ def from_openai_message(message: dict[str, Any]) -> dict[str, Any]:
     return {"content": blocks}
 
 
-def get_llm(
-    purpose: Purpose = "extraction", client_id: str | None = None
-) -> LLMClient | None:
+def get_llm(purpose: Purpose = "extraction", client_id: str | None = None) -> LLMClient | None:
     s = get_settings()
     provider, base_url, api_key, model = s.llm_provider, s.llm_base_url, s.llm_api_key, s.llm_model
     if purpose == "chat":

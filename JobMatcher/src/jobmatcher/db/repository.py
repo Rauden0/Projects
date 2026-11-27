@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from sqlalchemy import func, select, true, update
+from sqlalchemy import delete, func, select, true, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -89,7 +89,7 @@ async def upsert_job(
     )
     job_id = (await session.execute(stmt)).scalar_one()
 
-    await session.execute(JobChunk.__table__.delete().where(JobChunk.job_id == job_id))
+    await session.execute(delete(JobChunk).where(JobChunk.job_id == job_id))
     session.add_all(
         JobChunk(job_id=job_id, ord=c.ord, section=c.section, content=c.content, embedding=e)
         for c, e in zip(chunks, embeddings, strict=True)

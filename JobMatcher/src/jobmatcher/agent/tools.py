@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobmatcher.cv.profile import CvProfile, compare
 from jobmatcher.db.models import Cv, Job, JobChunk
 from jobmatcher.search.embeddings import Embedder
-from jobmatcher.search.hybrid import THIN_DESCRIPTION_CHARS, SearchFilters, search_jobs
+from jobmatcher.search.hybrid import THIN_DESCRIPTION_CHARS, SearchFilters, SearchHit, search_jobs
 
 MAX_K = 6
 REMOTE_POLICIES = ["remote_country", "remote_region", "remote_global"]
@@ -104,9 +104,9 @@ class Toolbox:
             remote = await search_jobs(
                 self.session, self.embedder, args.query, remote_filters, k=k - len(local)
             )
-            tagged = [(h, "local") for h in local] + [
-                (h, "remote") for h in remote if h.job_id not in {x.job_id for x in local}
-            ]
+            local_ids = {h.job_id for h in local}
+            tagged: list[tuple[SearchHit, str | None]] = [(h, "local") for h in local]
+            tagged += [(h, "remote") for h in remote if h.job_id not in local_ids]
         else:
             hits = await search_jobs(self.session, self.embedder, args.query, filters, k=k)
             tagged = [(h, None) for h in hits]
@@ -142,7 +142,7 @@ class Toolbox:
                 )
             )
         ).all()
-        sections: dict[tuple[int, str], list[str]] = {}
+        sections: dict[tuple[int, str | None], list[str]] = {}
         for job_id, section, content in chunks:
             sections.setdefault((job_id, section), []).append(content)
 

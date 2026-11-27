@@ -24,7 +24,7 @@ class Worker:
         self.channel = channel
 
     async def handle(self, msg: AbstractIncomingMessage) -> None:
-        attempt = int((msg.headers or {}).get("x-attempt", 0))
+        attempt = messaging.attempt_of(msg.headers)
         try:
             body = messaging.decode_body(msg.body, msg.content_encoding)
             posting = RawPosting.model_validate_json(body)

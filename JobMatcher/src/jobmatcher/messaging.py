@@ -17,6 +17,7 @@ blocking you get with per-message expiration.
 
 import gzip
 import zlib
+from collections.abc import Mapping
 
 import aio_pika
 from aio_pika.abc import AbstractChannel, AbstractExchange
@@ -65,6 +66,11 @@ def message(body: bytes, attempt: int = 0) -> aio_pika.Message:
         delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
         headers={"x-attempt": attempt},
     )
+
+
+def attempt_of(headers: Mapping[str, object] | None) -> int:
+    value = (headers or {}).get("x-attempt", 0)
+    return value if isinstance(value, int) else int(str(value)) if str(value).isdigit() else 0
 
 
 class UndecodableBody(ValueError):

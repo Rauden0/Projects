@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -34,7 +35,7 @@ class Source(Base):
     id: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
     kind: Mapped[str] = mapped_column(Text)
     company: Mapped[str] = mapped_column(Text)
-    config: Mapped[dict] = mapped_column(JSONB, server_default=text("'{}'"))
+    config: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'"))
 
 
 class Job(Base):
@@ -116,7 +117,7 @@ class Cv(Base):
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
     )
     raw_text: Mapped[str] = mapped_column(Text)
-    profile: Mapped[dict] = mapped_column(JSONB)
+    profile: Mapped[dict[str, Any]] = mapped_column(JSONB)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
@@ -129,7 +130,7 @@ class Outbox(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     topic: Mapped[str] = mapped_column(Text)
-    payload: Mapped[dict] = mapped_column(JSONB)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     published_at: Mapped[datetime | None]
 

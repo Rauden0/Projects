@@ -72,9 +72,10 @@ class HeuristicExtractor:
 
         years = [int(m.group(1)) for m in _YEARS_RE.finditer(text)]
         seniority: Seniority | None = None
-        for level in ("staff", "senior", "medior", "junior"):
+        levels: tuple[Seniority, ...] = ("staff", "senior", "medior", "junior")
+        for level in levels:
             if level in title.lower() or (level == "medior" and "mid" in title.lower()):
-                seniority = level  # type: ignore[assignment]
+                seniority = level
                 break
 
         remote: RemotePolicy | None = None
