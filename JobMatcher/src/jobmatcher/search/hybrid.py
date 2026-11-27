@@ -183,14 +183,18 @@ async def search_jobs(
     ranked: list[str] = []
     if mode in ("hybrid", "vector"):
         params["qvec"] = str(await embedder.embed_query(query))
+        # ORDER BY distance LIMIT stays in its own subquery: a window function over the whole
+        # table would force a full sort and bypass the HNSW index.
         ranked.append(
             f"""
-            (SELECT 'vector' AS list, c.id AS chunk_id, c.job_id,
-                    row_number() OVER (ORDER BY c.embedding <=> CAST(:qvec AS vector)) AS rank
-             FROM job_chunk c JOIN job j ON j.id = c.job_id
-             WHERE {where}
-             ORDER BY c.embedding <=> CAST(:qvec AS vector)
-             LIMIT :candidates)
+            (SELECT 'vector' AS list, v.chunk_id, v.job_id,
+                    row_number() OVER (ORDER BY v.distance) AS rank
+             FROM (SELECT c.id AS chunk_id, c.job_id,
+                          c.embedding <=> CAST(:qvec AS vector) AS distance
+                   FROM job_chunk c JOIN job j ON j.id = c.job_id
+                   WHERE {where}
+                   ORDER BY c.embedding <=> CAST(:qvec AS vector)
+                   LIMIT :candidates) v)
             """
         )
     if mode in ("hybrid", "fulltext"):
