@@ -98,9 +98,14 @@ services:
     profiles: ["phoenix"]
     image: arizephoenix/phoenix:version-22
     restart: unless-stopped
-    ports: ["6006:6006"]
+    # Phoenix 22 turns auth on by default, which rejects OTLP without an API key. Without it
+    # the UI must stay on localhost; the api and worker reach it over the compose network.
+    ports: ["127.0.0.1:6006:6006"]
     environment:
       PHOENIX_WORKING_DIR: /mnt/data
+      PHOENIX_ENABLE_AUTH: "false"
+      PHOENIX_TELEMETRY_ENABLED: "false"
+      PHOENIX_DISABLE_AGENT_ASSISTANT: "true"
     volumes: [phoenix:/mnt/data]
 
 volumes:

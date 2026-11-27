@@ -116,15 +116,19 @@ docker compose --profile phoenix up -d phoenix
 docker compose up -d api worker                 # recreate them with the new setting
 ```
 
-The UI is at http://localhost:6006. Traces land in Phoenix's `default` project; the API reports
-as service `jobmatcher`, the worker as `jobmatcher-worker` (`OTEL_SERVICE_NAME`). The image
-installs the `otel` extra (SDK and OTLP exporter); a local install needs `.[otel]`, which `dev`
-includes, and refuses to start with the endpoint set but the extra missing.
+The UI is at http://localhost:6006, without a login: Phoenix 22 turns auth on by default, which
+rejects OTLP without an API key, so the profile turns it off (with Phoenix's own usage telemetry
+and its agent assistant) and publishes the port on localhost only. Traces land in Phoenix's
+`default` project; the API reports as service `jobmatcher`, the worker as `jobmatcher-worker`
+(`OTEL_SERVICE_NAME`). The image installs the `otel` extra (SDK and OTLP exporter); a local
+install needs `.[otel]`, which `dev` includes, and refuses to start with the endpoint set but
+the extra missing.
 
 Spans carry no prompt, completion, CV or posting text by default. `OTEL_CAPTURE_CONTENT=true`
 adds the system prompt, the messages, the model output and tool arguments and results, which
-is meant for local debugging only. Message Batches extraction (`EXTRACTION_MODE=batch`) is not
-traced.
+is meant for local debugging only. The messages are stored in the provider's own format, so
+Phoenix shows them as attributes rather than as a chat view. Message Batches extraction
+(`EXTRACTION_MODE=batch`) is not traced.
 
 ## Branches
 
