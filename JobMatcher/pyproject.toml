@@ -60,3 +60,7 @@ known-third-party = ["alembic"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["sentence_transformers"]
+ignore_missing_imports = true

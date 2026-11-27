@@ -65,7 +65,7 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: JobMatcher/pyproject.toml
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,llm]"
       - name: Lint and format
         run: |
           ruff check src tests eval alembic
