@@ -2,6 +2,7 @@
 
     python eval/run_retrieval.py            # uses the configured embedder (e5 if installed)
     python eval/run_retrieval.py --hashing  # dependency-free baseline embedder
+    python eval/run_retrieval.py --min-hit5 0.80 --min-recall10 0.85  # CI gate on hybrid, all
 
 The job tables are truncated first, so it runs against EVAL_DATABASE_URL (default:
 jobmatcher_eval on localhost, migrated with alembic) and refuses databases not named *_eval or
@@ -84,7 +85,14 @@ async def load_fixtures(
         )
 
 
-async def evaluate(embedder: Embedder) -> None:
+@dataclass(frozen=True, slots=True)
+class Scores:
+    hit5: float
+    recall10: float
+    mrr: float
+
+
+async def evaluate(embedder: Embedder) -> dict[tuple[str, str], Scores]:
     golden = yaml.safe_load((HERE / "golden.yaml").read_text(encoding="utf-8"))
     subsets = {
         "all": golden,
@@ -93,14 +101,16 @@ async def evaluate(embedder: Embedder) -> None:
     }
     print("| questions | mode | hit@5 | recall@10 | MRR |")
     print("|---|---|---|---|---|")
+    scores = {}
     for name, cases in subsets.items():
         for mode in ("vector", "fulltext", "hybrid"):
-            await _evaluate_mode(embedder, f"{name} ({len(cases)})", mode, cases)
+            s = scores[name, mode] = await _evaluate_mode(embedder, mode, cases)
+            label = f"{name} ({len(cases)})"
+            print(f"| {label} | {mode} | {s.hit5:.2f} | {s.recall10:.2f} | {s.mrr:.2f} |")
+    return scores
 
 
-async def _evaluate_mode(
-    embedder: Embedder, name: str, mode: str, golden: list[dict[str, Any]]
-) -> None:
+async def _evaluate_mode(embedder: Embedder, mode: str, golden: list[dict[str, Any]]) -> Scores:
     hits, recalls, rrs = [], [], []
     async with get_sessionmaker()() as session:
         for case in golden:
@@ -117,17 +127,37 @@ async def _evaluate_mode(
             hits.append(hit_at_k(ranked, relevant, 5))
             recalls.append(recall_at_k(ranked, relevant, 10))
             rrs.append(reciprocal_rank(ranked, relevant))
-    print(f"| {name} | {mode} | {mean(hits):.2f} | {mean(recalls):.2f} | {mean(rrs):.2f} |")
+    return Scores(mean(hits), mean(recalls), mean(rrs))
+
+
+def gate_failures(scores: Scores, min_hit5: float, min_recall10: float) -> list[str]:
+    failures = []
+    if scores.hit5 < min_hit5:
+        failures.append(f"hybrid hit@5 {scores.hit5:.3f} < {min_hit5}")
+    if scores.recall10 < min_recall10:
+        failures.append(f"hybrid recall@10 {scores.recall10:.3f} < {min_recall10}")
+    return failures
 
 
 async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--hashing", action="store_true", help="use the hashing baseline")
+    parser.add_argument("--min-hit5", type=float, default=0.0, help="fail below (hybrid, all)")
+    parser.add_argument("--min-recall10", type=float, default=0.0, help="fail below (hybrid, all)")
     args = parser.parse_args()
     use_eval_database()
     embedder = HashingEmbedder(EMBEDDING_DIM) if args.hashing else get_embedder()
+    if (
+        not args.hashing
+        and isinstance(embedder, HashingEmbedder)
+        and (args.min_hit5 or args.min_recall10)
+    ):
+        raise SystemExit("sentence-transformers is not installed; the gate needs the e5 model")
     await load_fixtures(embedder)
-    await evaluate(embedder)
+    scores = await evaluate(embedder)
+    failures = gate_failures(scores["all", "hybrid"], args.min_hit5, args.min_recall10)
+    if failures:
+        raise SystemExit("retrieval below threshold: " + "; ".join(failures))
 
 
 if __name__ == "__main__":
