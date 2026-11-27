@@ -51,7 +51,10 @@ Work on branch `chore/enterprise-hardening` (from `dev`). Tick items as they lan
   - [ ] Message Batches extraction is not traced (it bypasses `_send`); export from the API container inside compose not smoke-tested; captured content is stored in the provider format, not the semconv message format
 - [x] F4 extraction eval (`eval/run_extraction.py`)
 - [x] F5 agent eval (`eval/run_agent.py`)
-- [ ] F6 prompt-injection suite: postings with injected instructions, the agent must not follow them
+- [x] F6 prompt-injection suite: 13 postings with injected instructions (`eval/agent/injection.yaml`), deterministic checks, results in `eval/RESULTS.md` §4
+  - [x] hardening: tool results wrapped as untrusted data, chat-template control tokens removed, links in posting text replaced; qwen2.5:7b followed a payload in 9.0% → 2.6% of runs
+  - [x] citation check no longer reports a link in Markdown bold/italic as invented
+  - [ ] hosted run (gpt-oss-120b on Groq) with the hardening: 6 of 13 cases measured before the free-tier daily token limit; it still takes the false salary planted deep in a posting's text
 - [x] F7 MCP server exposing `search_jobs` / `get_job`: `jobmatcher-mcp` (stdio, or `--http` on 127.0.0.1), schemas taken from `Toolbox`, `mcp` extra; smoke-tested against `jobmatcher_eval`
 - [x] F8 budget parity for OpenAI-compatible providers
 - [ ] F9 DSPy / GEPA offline for the local extraction prompt — later, only if the extraction numbers call for it
