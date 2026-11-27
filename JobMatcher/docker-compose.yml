@@ -74,6 +74,7 @@ services:
     command: ["python", "-m", "jobmatcher.ingest.worker"]
     environment:
       OTEL_SERVICE_NAME: jobmatcher-worker
+      METRICS_PORT: "9100"
     depends_on:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
@@ -98,6 +99,8 @@ services:
     init: true
     env_file: .env
     command: ["python", "-m", "jobmatcher.outbox.relay"]
+    environment:
+      METRICS_PORT: "9100"
     depends_on:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
@@ -131,8 +134,21 @@ services:
       PHOENIX_DISABLE_AGENT_ASSISTANT: "true"
     volumes: [phoenix:/mnt/data]
 
+  # Metrics: `docker compose --profile metrics up -d`, UI on http://localhost:9090. Scrapes
+  # api:8000/metrics and the worker and relay on METRICS_PORT over the compose network
+  # (prometheus.yml); the image needs the `metrics` extra (docs/observability.md).
+  prometheus:
+    profiles: ["metrics"]
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    ports: ["127.0.0.1:9090:9090"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
+
 volumes:
   pgdata:
   ollama:
   models:
   phoenix:
+  prometheus:
