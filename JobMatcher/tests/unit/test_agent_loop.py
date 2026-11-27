@@ -1,8 +1,10 @@
+import asyncio
 import json
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from langgraph.graph import END, START
 from pydantic import ValidationError
 from sqlalchemy.exc import DBAPIError
 
@@ -297,3 +299,125 @@ def test_url_check_reports_invented_urls() -> None:
 def test_url_check_strips_emphasis_only_at_the_end() -> None:
     answer = "**https://jobs.example/data_eng** and **https://made.up/x_y**"
     assert graph._unverified(answer, {"https://jobs.example/data_eng"}) == ["https://made.up/x_y"]
+
+
+def assistant(*blocks: dict[str, Any]) -> graph.AgentState:
+    return {
+        "messages": [{"role": "assistant", "content": list(blocks)}],
+        "round": 0,
+        "seen_urls": [],
+    }
+
+
+def test_model_routes_to_tools_only_when_it_asked_for_them() -> None:
+    assert graph.route_after_model(assistant(tool_use("t1", "search_jobs"))) == "tools"
+    assert graph.route_after_model(assistant({"type": "text", "text": "hi"})) == END
+    answered: graph.AgentState = {
+        "messages": [{"role": "assistant", "content": "done"}],
+        "round": 1,
+        "seen_urls": [],
+        "answer": "done",
+    }
+    assert graph.route_after_model(answered) == END
+
+
+def test_tools_route_back_to_the_model_unless_they_failed() -> None:
+    state = assistant(tool_use("t1", "search_jobs"))
+    assert graph.route_after_tools(state) == "model"
+    assert graph.route_after_tools({**state, "error": loop.TOOL_FAILURE_MESSAGE}) == END
+
+
+def test_graph_wires_model_and_tools_in_a_loop() -> None:
+    edges = {(e.source, e.target) for e in graph.GRAPH.get_graph().edges}
+    assert edges == {
+        (START, "model"),
+        ("model", "tools"),
+        ("model", END),
+        ("tools", "model"),
+        ("tools", END),
+    }
+
+
+def endless_search(rounds: int) -> ScriptedModel:
+    return ScriptedModel(
+        *[[tool_use(f"t{i}", "search_jobs", query=str(i))] for i in range(rounds)],
+        [{"type": "text", "text": "best effort"}],
+    )
+
+
+@pytest.mark.asyncio
+async def test_all_rounds_fit_in_the_recursion_limit() -> None:
+    model = endless_search(loop.MAX_ROUNDS)
+    events = await collect(model, FakeToolbox())
+
+    assert events[-1].type == "answer" and events[-1].data["rounds"] == loop.MAX_ROUNDS + 1
+    assert [c["tool_choice"]["type"] for c in model.calls] == ["auto"] * loop.MAX_ROUNDS + ["none"]
+    last_results = model.calls[-1]["messages"][-1]["content"]
+    assert last_results[-1] == {"type": "text", "text": loop.FINAL_ROUND_NOTE}
+    assert all(
+        block["type"] == "tool_result"
+        for message in model.calls[-2]["messages"][2:]
+        if message["role"] == "user"
+        for block in message["content"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_tool_use_on_the_last_round_ends_the_turn_unfinished() -> None:
+    model = endless_search(loop.MAX_ROUNDS + 1)
+    toolbox = FakeToolbox()
+    events = await collect(model, toolbox)
+
+    assert events[-1] == loop.AgentEvent("error", {"message": loop.UNFINISHED_MESSAGE})
+    assert len(model.calls) == loop.MAX_ROUNDS + 1
+    assert len(toolbox.calls) == loop.MAX_ROUNDS
+
+
+@pytest.mark.asyncio
+async def test_hitting_the_recursion_limit_ends_the_turn_with_an_error_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(graph, "recursion_limit", lambda: 2)
+    events = await collect(endless_search(loop.MAX_ROUNDS), FakeToolbox())
+
+    assert [e.type for e in events] == ["tool_call", "tool_result", "error"]
+    assert events[-1].data == {"message": loop.UNFINISHED_MESSAGE}
+
+
+@pytest.mark.asyncio
+async def test_events_stream_while_the_graph_runs() -> None:
+    release = asyncio.Event()
+
+    class SlowToolbox(FakeToolbox):
+        async def call(self, name: str, raw: dict[str, Any]) -> Any:
+            await release.wait()
+            return await super().call(name, raw)
+
+    model = ScriptedModel(
+        [tool_use("t1", "search_jobs", query="python")],
+        [{"type": "text", "text": "done"}],
+    )
+    events = run_agent(model, SlowToolbox(), "q", [], "")  # type: ignore[arg-type]
+    first = await asyncio.wait_for(anext(events), timeout=2)
+    assert first.type == "tool_call"
+    release.set()
+    assert [e.type async for e in events] == ["tool_result", "answer"]
+
+
+@pytest.mark.asyncio
+async def test_earlier_tool_results_are_compacted_for_providers_without_caching() -> None:
+    class LongToolbox(FakeToolbox):
+        async def call(self, name: str, raw: dict[str, Any]) -> Any:
+            return [{"job_id": 1, "url": "https://jobs.example/1", "text": "x" * 2000}]
+
+    model = ScriptedModel(
+        [tool_use("t1", "search_jobs", query="python")],
+        [tool_use("t2", "search_jobs", query="go")],
+        [{"type": "text", "text": "done"}],
+    )
+    await collect(model, LongToolbox())
+
+    messages = model.calls[-1]["messages"]
+    assert messages[2]["content"][0]["content"].endswith("(truncated)\n</untrusted_data>")
+    assert "(truncated)" not in messages[4]["content"][0]["content"]
+    assert "(truncated)" not in model.calls[1]["messages"][2]["content"][0]["content"]
