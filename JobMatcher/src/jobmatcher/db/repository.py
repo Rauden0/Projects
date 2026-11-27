@@ -14,6 +14,7 @@ from sqlalchemy import (
     literal_column,
     or_,
     select,
+    text,
     true,
     update,
 )
@@ -26,6 +27,7 @@ from jobmatcher.domain import (
     JOB_CLOSED,
     JOB_CREATED,
     JOB_UPDATED,
+    THIN_DESCRIPTION_CHARS,
     Chunk,
     JobChanged,
     JobClosed,
@@ -184,7 +186,70 @@ async def upsert_job(
         Outbox(topic=JOB_CREATED if inserted else JOB_UPDATED, payload=changed.model_dump())
     )
     await session.flush()
+    await assign_canonical(session, await _keys_around(session, job_id))
     return job_id
+
+
+# Two full postings with the same blocking key from different sources are the same job only
+# when their first chunks also agree; a thin board stub needs the key alone.
+FULL_DUPLICATE_MIN_SIMILARITY = 0.9
+
+_ASSIGN_CANONICAL = text(
+    """
+    WITH grp AS (
+        SELECT j.id, j.source_id, length(j.description) AS len,
+               first_value(j.id) OVER (
+                   PARTITION BY j.dedup_key ORDER BY length(j.description) DESC, j.id
+               ) AS canon
+        FROM job j
+        WHERE j.status = 'open' AND j.dedup_key = ANY(:keys)
+    ),
+    decided AS (
+        SELECT g.id,
+               CASE WHEN g.id = g.canon THEN NULL
+                    WHEN g.len < :thin AND c.len >= :thin THEN g.canon
+                    WHEN g.len >= :thin AND g.source_id <> c.source_id AND (
+                        SELECT 1 - (a.embedding <=> b.embedding)
+                        FROM job_chunk a, job_chunk b
+                        WHERE a.job_id = g.id AND a.ord = 0 AND b.job_id = g.canon AND b.ord = 0
+                    ) >= :min_similarity THEN g.canon
+               END AS canonical
+        FROM grp g JOIN grp c ON c.id = g.canon
+    )
+    UPDATE job SET canonical_job_id = d.canonical
+    FROM decided d
+    WHERE job.id = d.id AND job.canonical_job_id IS DISTINCT FROM d.canonical
+    """
+)
+
+
+async def assign_canonical(session: AsyncSession, keys: set[str]) -> None:
+    """Point every duplicate in the ``keys`` groups at the group's fullest open posting
+    (``canonical_job_id``); the canonical posting and distinct jobs get NULL."""
+    if not keys:
+        return
+    ordered = sorted(keys)
+    # Serialises concurrent recomputes of a group; sorted, so two groups cannot deadlock.
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(k)) FROM unnest(CAST(:keys AS text[])) k"),
+        {"keys": ordered},
+    )
+    await session.execute(
+        _ASSIGN_CANONICAL,
+        {
+            "keys": ordered,
+            "thin": THIN_DESCRIPTION_CHARS,
+            "min_similarity": FULL_DUPLICATE_MIN_SIMILARITY,
+        },
+    )
+
+
+async def _keys_around(session: AsyncSession, job_id: int) -> set[str]:
+    """The job's group, and the groups of jobs pointing at it (its old group if it moved)."""
+    rows = await session.execute(
+        select(Job.dedup_key).where(or_(Job.id == job_id, Job.canonical_job_id == job_id))
+    )
+    return set(rows.scalars())
 
 
 async def close_unseen_jobs(
@@ -204,16 +269,17 @@ async def close_unseen_jobs(
             if listed_at is not None
             else true()
         )
-        .values(status="closed")
-        .returning(Job.id, Job.external_id)
+        .values(status="closed", canonical_job_id=None)
+        .returning(Job.id, Job.external_id, Job.dedup_key)
     )
     closed = (await session.execute(stmt)).all()
+    await assign_canonical(session, {key for _, _, key in closed})
     session.add_all(
         Outbox(
             topic=JOB_CLOSED,
             payload=JobClosed(job_id=job_id, external_id=external_id).model_dump(),
         )
-        for job_id, external_id in closed
+        for job_id, external_id, _ in closed
     )
     return len(closed)
 
@@ -248,10 +314,15 @@ async def _touch_listed(session: AsyncSession, source_id: int, listed_ids: set[s
         return 0
     listed = (Job.source_id == source_id) & (Job.external_id == any_(_ids_param(listed_ids)))
     reopened = await session.execute(
-        update(Job).where(listed, Job.status == "closed").values(status="open").returning(Job.id)
+        update(Job)
+        .where(listed, Job.status == "closed")
+        .values(status="open")
+        .returning(Job.dedup_key)
     )
+    keys = list(reopened.scalars())
     await session.execute(update(Job).where(listed).values(last_seen_at=func.now()))
-    return len(reopened.all())
+    await assign_canonical(session, set(keys))
+    return len(keys)
 
 
 async def delete_cvs_before(session: AsyncSession, cutoff: datetime) -> int:

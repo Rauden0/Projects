@@ -22,6 +22,13 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 EMBEDDING_DIM = 384
+# Blocking key of cross-source duplicates: company names agreeing on their first letters
+# ("Thermo Fisher Scientific" vs. "thermofisher"), the same title, the same location prefix
+# ("Brno – Černovice" vs. "Brno, Czechia"; generic titles repeat across a company's offices).
+DEDUP_KEY_SQL = (
+    "left(regexp_replace(lower(company), '[^a-z0-9]', '', 'g'), 6) || '|' || lower(title)"
+    " || '|' || left(lower(coalesce(location_raw, '')), 4)"
+)
 
 
 class Base(DeclarativeBase):
@@ -50,6 +57,8 @@ class Job(Base):
             postgresql_where=text("status = 'open'"),
         ),
         Index("job_tech_stack", "tech_stack", postgresql_using="gin"),
+        Index("job_dedup_key", "dedup_key", postgresql_where=text("status = 'open'")),
+        Index("job_canonical", "canonical_job_id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -84,6 +93,10 @@ class Job(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     crawled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    dedup_key: Mapped[str] = mapped_column(Text, Computed(DEDUP_KEY_SQL, persisted=True))
+    canonical_job_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("job.id", ondelete="SET NULL")
+    )
 
     chunks: Mapped[list["JobChunk"]] = relationship(
         back_populates="job", cascade="all, delete-orphan", order_by="JobChunk.ord"

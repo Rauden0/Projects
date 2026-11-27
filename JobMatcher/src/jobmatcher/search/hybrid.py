@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from jobmatcher.domain import THIN_DESCRIPTION_CHARS as THIN_DESCRIPTION_CHARS
 from jobmatcher.domain import ContractType, RemotePolicy, Seniority
 from jobmatcher.search.embeddings import Embedder
 
@@ -59,32 +60,11 @@ class SearchHit(BaseModel):
     score: float
 
 
-# Job boards often carry only a stub of an ad that links to the employer's own career site
-# (jobs.cz -> a JavaScript page). When the same job was also crawled from the employer's ATS
-# with its full text, show that copy and hide the stub. Same job = same title, and company
-# names agreeing on their first letters ("Thermo Fisher Scientific" vs. "thermofisher"),
-# same location prefix ("Brno – Černovice" vs. "Brno, Czechia").
-THIN_DESCRIPTION_CHARS = 300
-_NOT_A_THIN_DUPLICATE = f"""NOT (
-    length(j.description) < {THIN_DESCRIPTION_CHARS}
-    AND EXISTS (
-        SELECT 1 FROM job d
-        WHERE d.id <> j.id AND d.status = 'open'
-          AND lower(d.title) = lower(j.title)
-          AND length(d.description) >= {THIN_DESCRIPTION_CHARS}
-          AND left(regexp_replace(lower(d.company), '[^a-z0-9]', '', 'g'), 6)
-            = left(regexp_replace(lower(j.company), '[^a-z0-9]', '', 'g'), 6)
-          -- and the same place: generic titles repeat across a company's offices
-          AND left(lower(coalesce(d.location_raw, '')), 4)
-            = left(lower(coalesce(j.location_raw, '')), 4)
-    )
-)"""
-
-
 def _filter_sql(
     filters: SearchFilters, params: dict[str, object], strict_city: bool = False
 ) -> str:
-    clauses = ["j.status = 'open'", _NOT_A_THIN_DUPLICATE]
+    # A duplicate of another open posting (see repository.assign_canonical) is hidden.
+    clauses = ["j.status = 'open'", "j.canonical_job_id IS NULL"]
     if filters.remote_policy:
         # Unknown policy is kept, as for the other filters: many postings never state it.
         clauses.append("(j.remote_policy IS NULL OR j.remote_policy = ANY(:remote_policy))")

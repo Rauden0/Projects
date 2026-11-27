@@ -11,6 +11,9 @@ ExtractionStatus = Literal["ok", "pending", "fallback", "batch_failed"]
 MAX_YEARS_REQUIRED = 30
 MAX_SALARY = 2_147_483_647
 CONTRACT_VERSION = 1
+# Job boards often carry only a stub of an ad that links to the employer's career site
+# (jobs.cz -> a JavaScript page); a copy shorter than this loses to a full duplicate.
+THIN_DESCRIPTION_CHARS = 300
 
 
 class InboundEvent(BaseModel):

@@ -1,6 +1,7 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from jobmatcher.db import repository
 from jobmatcher.db.models import EMBEDDING_DIM
 from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.extraction import HeuristicExtractor
@@ -120,3 +121,71 @@ async def test_city_filter_ranks_local_job_above_equal_remote_job(
         )
     assert [h.url.rsplit("/", 1)[1] for h in plain] == ["remote", "local"]
     assert [h.url.rsplit("/", 1)[1] for h in in_brno] == ["local", "remote"]
+
+
+FULL_TEXT = "<p>" + "Python data collection and MES integration. " * 20 + "</p>"
+
+
+async def index_copies(
+    sm: async_sessionmaker[AsyncSession], copies: list[tuple[str, str, str, str]]
+) -> None:
+    indexer = Indexer(sm, HeuristicExtractor(), EMBEDDER)
+    for kind, company, external_id, body in copies:
+        await indexer.index(
+            RawPosting(
+                kind=kind,
+                company=company,
+                external_id=external_id,
+                url=f"https://example.com/{external_id}",
+                title="Python Developer - Manufacturing",
+                location="Brno",
+                description_html=body,
+            )
+        )
+
+
+async def found(sm: async_sessionmaker[AsyncSession]) -> list[str]:
+    async with sm() as session:
+        hits = await search_jobs(session, EMBEDDER, "python developer", k=10)
+    return [h.url.rsplit("/", 1)[1] for h in hits]
+
+
+async def test_full_copy_from_another_source_is_hidden(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    longer = FULL_TEXT.replace("</p>", " Apply now.</p>")
+    await index_copies(
+        sessionmaker,
+        [
+            ("jobscz", "Thermo Fisher", "board", FULL_TEXT),
+            ("workday", "thermofisher", "ats", longer),
+        ],
+    )
+    assert await found(sessionmaker) == ["ats"]
+
+
+async def test_full_postings_from_one_source_both_stay(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    await index_copies(
+        sessionmaker,
+        [("workday", "acme", "a", FULL_TEXT), ("workday", "acme", "b", FULL_TEXT)],
+    )
+    assert sorted(await found(sessionmaker)) == ["a", "b"]
+
+
+async def test_stub_resurfaces_when_full_copy_closes(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    await index_copies(
+        sessionmaker,
+        [
+            ("jobscz", "acme", "board", "<p>Python Developer</p>"),
+            ("workday", "acme", "ats", FULL_TEXT),
+        ],
+    )
+    async with sessionmaker() as session, session.begin():
+        source_id = await repository.get_or_create_source(session, "workday", "acme")
+        await repository.close_unseen_jobs(session, source_id, {"other"})
+
+    assert await found(sessionmaker) == ["board"]
