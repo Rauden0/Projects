@@ -22,6 +22,7 @@ from jobmatcher.budget.limits import (
 from jobmatcher.config import get_settings
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.errors import CsrfRejected, Unauthenticated
+from jobmatcher.search.cache import SearchCache
 from jobmatcher.search.embeddings import Embedder, get_embedder
 
 
@@ -88,6 +89,15 @@ ClientKeyDep = Annotated[str, Depends(client_key)]
 async def require_search_access(request: Request, auth: AuthenticatorDep) -> None:
     if auth.protects_search:
         await get_principal(request, auth)
+
+
+@lru_cache
+def get_search_cache() -> SearchCache:
+    settings = get_settings()
+    return SearchCache(settings.search_cache_size, settings.search_cache_ttl_s)
+
+
+SearchCacheDep = Annotated[SearchCache, Depends(get_search_cache)]
 
 
 @lru_cache

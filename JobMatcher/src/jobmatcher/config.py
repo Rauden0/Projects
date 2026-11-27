@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     cv_deletes_per_minute: int = Field(default=10, ge=1)
     # Larger request bodies get 413 before parsing; a 50k-character CV fits.
     max_request_body_bytes: int = Field(default=256 * 1024, ge=1024)
+    # /jobs/search responses per process, also the max-age the response advertises; 0 = off.
+    search_cache_ttl_s: int = Field(default=60, ge=0)
+    search_cache_size: int = Field(default=1024, ge=1)
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:
