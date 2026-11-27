@@ -47,7 +47,8 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes: [models:/models]
-    ports: ["8000:8000"]
+    # Localhost only; a public deployment puts a TLS proxy in front (docs/deploy.md).
+    ports: ["127.0.0.1:8000:8000"]
     depends_on:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
