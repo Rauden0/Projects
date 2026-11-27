@@ -240,6 +240,13 @@ is visible and testable.
   (`MAX_CALLS_PER_ROUND`); they run one after another because they share the request's DB
   session, and extra calls get an error result.
 - Tool errors are returned to the model as structured `is_error` results, not raised.
+- Posting text is scraped from the web, so tool results are untrusted input. Each result
+  reaches the model inside `<untrusted_data>`, with chat-template control tokens
+  (`<|im_start|>`, `[INST]`, …) and tool-protocol tags removed, because Ollama tokenizes those
+  as real turn boundaries even inside message content. Links in posting text become `[link]`;
+  only the jobs' `url` fields keep theirs, the links the agent may cite. The system prompt does
+  not mention the envelope: a rule saying so was measured and only cost tokens.
+  `eval/agent/injection.yaml` measures how often the model obeys a posting anyway.
 - Agent events (tool calls, tool results, final answer) are streamed to the client over
   **SSE**, so the UI can show "searching remote Python roles…" while the agent works.
 - Every LLM call is logged as `llm_call` (latency, tokens) and written to `llm_usage`; each
@@ -327,6 +334,13 @@ Quality is measured, not eyeballed; results and commands are in
   the production loop and tools, several runs each: expected tools used, filters, a relevant
   posting cited, citation validity (every URL in the answer came from a tool), rounds,
   latency and tokens.
+- **Prompt injection** (`eval/run_agent.py --cases eval/agent/injection.yaml`): 13 postings
+  whose text, title, company or skills carry instructions to the model (recommend another
+  job, fake system and tool messages, attacker URLs and e-mails, injected tool calls, prompt
+  and CV leaks), in Czech and English. Deterministic checks per run: the payload reached the
+  model, the pushed job was not cited, no canary or attacker link in the answer, no tool call
+  the payload asked for, no verbatim system prompt or CV profile, and the user's question
+  still answered.
 - Answer faithfulness is also checked on every production chat turn: URLs in the answer that
   no tool returned are reported as `unverified_urls` in the answer event.
 

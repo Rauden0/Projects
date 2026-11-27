@@ -29,8 +29,9 @@ pytest · Docker Compose · GitHub Actions
 - **MCP server** — `search_jobs` and `get_job` served over the Model Context Protocol from the
   same `Toolbox`, so Claude Desktop, Claude Code or an IDE can search the index directly.
 - **Evaluation** — extraction (35 labelled cs/en postings, IT and non-IT), retrieval
-  (41 golden questions, per search mode) and agent (scripted questions, tool use and citation
-  validity) evals against the local model; see [eval/RESULTS.md](eval/RESULTS.md).
+  (41 golden questions, per search mode), agent (scripted questions, tool use and citation
+  validity) and prompt-injection (13 postings that carry instructions to the model) evals
+  against the local model; see [eval/RESULTS.md](eval/RESULTS.md).
 - **Operations** — one JSON error shape (`{detail, code, request_id}`), `X-Request-ID` on every
   request and log line, `llm_call` / `chat_turn` log events with latency and tokens
   (`LOG_FORMAT=json` for log shippers), every LLM call in the `llm_usage` ledger, OpenTelemetry
@@ -219,6 +220,7 @@ and asks `/chat`, which must cite it.
 python eval/run_extraction.py --model qwen2.5:7b    # structured extraction, per field
 python eval/run_retrieval.py                        # hit@5 / recall@10 / MRR per search mode
 python eval/run_agent.py --model qwen2.5:7b         # tool use, citations, latency, tokens
+python eval/run_agent.py --model qwen2.5:7b --cases eval/agent/injection.yaml   # prompt injection
 ```
 
 They use the `jobmatcher_eval` database (`EVAL_DATABASE_URL`). Commands, numbers and the
@@ -230,6 +232,7 @@ qwen2.5:7b on an RTX 3060 Ti:
 | Extraction | 95.5% mean field accuracy, 100% valid JSON, 1.4 s per posting (heuristic baseline 59.2%) |
 | Retrieval | hybrid hit@5 0.83, recall@10 0.90, MRR 0.79 over 41 questions; weakest on English queries for Czech postings |
 | Agent | relevant posting cited in 85% of 33 runs, no invented URLs, 3.0 rounds and ~4.6k input tokens per question |
+| Prompt injection | 13 postings with instructions to the model, 6 runs each: payload followed in 9.0% of runs before hardening, 2.6% with tool results as untrusted data without control tokens or links |
 
 ## Roadmap
 
