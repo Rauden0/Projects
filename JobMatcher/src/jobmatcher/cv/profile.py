@@ -1,5 +1,3 @@
-"""CV profile extraction and deterministic CV-to-job comparison."""
-
 import re
 from datetime import date
 
@@ -157,9 +155,7 @@ def compare(
     nice_to_have_skills: list[str] | None = None,
     cv_text: str = "",
 ) -> Comparison:
-    """Deterministic CV-to-job comparison.
-
-    Uses the skills extracted per section at ingest when available; otherwise attributes the
+    """Uses the skills extracted per section at ingest when available; otherwise attributes the
     job's tech stack to sections by searching the section texts. A skill counts as covered
     when it is in the CV profile or mentioned anywhere in the CV text.
     """

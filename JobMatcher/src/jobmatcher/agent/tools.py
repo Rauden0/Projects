@@ -1,5 +1,3 @@
-"""Tools the agent can call. Each takes validated input and returns JSON-serializable data."""
-
 import uuid
 from typing import Any
 

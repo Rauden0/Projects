@@ -28,7 +28,7 @@ class _TextExtractor(HTMLParser):
 
 
 def html_to_text(html: str) -> str:
-    """Convert posting HTML to plain text, keeping headings and list items on their own lines."""
+    """Headings and list items stay on their own lines; chunking splits on them."""
     parser = _TextExtractor()
     parser.feed(html)
     text = "".join(parser.parts).replace("\xa0", " ")

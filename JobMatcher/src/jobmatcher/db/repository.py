@@ -113,7 +113,6 @@ async def upsert_job(
 
 
 async def close_unseen_jobs(session: AsyncSession, source_id: int, seen_ids: set[str]) -> int:
-    """Mark open jobs of a source that were not in the latest crawl as closed."""
     stmt = (
         update(Job)
         .where(Job.source_id == source_id, Job.status == "open")
