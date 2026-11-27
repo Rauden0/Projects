@@ -82,6 +82,15 @@ curl -N -X POST localhost:8000/chat -H "content-type: application/json" \
      -d '{"cv_id": "<id>", "message": "Remote Python roles that fit me?"}'
 ```
 
+## Personal data
+
+`POST /cv` stores the CV text, its extracted profile and an embedding. `DELETE /cv/{cv_id}`
+(the "Smazat CV" button in the UI) removes them at once; otherwise the `retention` service
+deletes CVs `CV_RETENTION_DAYS` (default 30) after upload. Chat limits store the client IP on
+`llm_usage` rows, and the same service clears it after two days. Chat messages and the CV
+profile (skills, years, languages, city, not the CV text) are sent to the configured LLM
+provider; with a hosted provider that provider is a processor of that data.
+
 ## Use it from an MCP client
 
 `jobmatcher-mcp` serves the agent's read-only tools, `search_jobs` and `get_job`, over MCP,
