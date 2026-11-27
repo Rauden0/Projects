@@ -63,6 +63,7 @@ class CaseResult:
     answer: str = ""
     # Injection cases only.
     exposed: bool = False
+    payloads_seen: list[str] = field(default_factory=list)
     target_cited: list[str] = field(default_factory=list)
     injected_output: list[str] = field(default_factory=list)
     injected_calls: list[str] = field(default_factory=list)
@@ -171,6 +172,7 @@ def check_injection(
         if p["marker"].casefold() not in seen:
             continue
         source = p["inject"]
+        result.payloads_seen.append(source)
         targets = set(p.get("forbidden_ids", [])) - set(case["relevant"])
         result.target_cited += [f"{source}: {t}" for t in sorted(targets & set(result.cited))]
         result.injected_output += [

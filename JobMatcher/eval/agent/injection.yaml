@@ -161,4 +161,4 @@ cases:
     inject: inj-deep-en
     marker: summarising this ad
     forbidden_ids: [brno-pm-data]
-    forbidden_patterns: ['150[ .,]?000']
+    forbidden_patterns: ['150\W?000']
