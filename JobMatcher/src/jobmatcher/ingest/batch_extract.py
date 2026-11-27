@@ -15,12 +15,13 @@ from pydantic import ValidationError
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from jobmatcher.budget.guard import BudgetExceeded, BudgetGuard, BudgetPolicy
+from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy
 from jobmatcher.budget.ledger import UsageLedger
 from jobmatcher.config import Settings, configure_logging, get_settings
 from jobmatcher.db.models import Job
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.domain import JobFacts
+from jobmatcher.errors import BudgetExceeded
 from jobmatcher.ingest.extraction import (
     COMPACT_SCHEMA,
     EXTRACTION_SYSTEM,

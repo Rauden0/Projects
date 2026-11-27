@@ -11,6 +11,7 @@ from typing import Any, Protocol, get_args
 from pydantic import BaseModel, Field, ValidationError
 
 from jobmatcher.domain import ContractType, JobFacts, RemotePolicy, Seniority
+from jobmatcher.errors import ExtractionError
 from jobmatcher.ingest.normalize import compact_for_llm
 from jobmatcher.llm import LLMClient
 
@@ -186,10 +187,6 @@ class CompactFacts(BaseModel):
 
 def parse_compact(raw: str) -> JobFacts:
     return CompactFacts.model_validate_json(_strip_fences(raw)).to_facts()
-
-
-class ExtractionError(Exception):
-    """The LLM did not produce valid facts; callers fall back and record it."""
 
 
 def extraction_prompt(title: str, location: str | None, text: str) -> str:

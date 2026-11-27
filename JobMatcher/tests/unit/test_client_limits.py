@@ -2,8 +2,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from jobmatcher.budget.guard import BudgetExceeded
-from jobmatcher.budget.limits import ChatGate, ClientLimited, ClientLimiter
+from jobmatcher.budget.limits import ChatGate, ClientLimiter
+from jobmatcher.errors import BudgetExceeded, ClientLimited
 
 START = datetime(2026, 11, 26, 23, 59, 0, tzinfo=UTC)
 

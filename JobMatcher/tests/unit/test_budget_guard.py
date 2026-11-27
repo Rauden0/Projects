@@ -2,8 +2,9 @@ from datetime import UTC, datetime
 
 import pytest
 
-from jobmatcher.budget.guard import BudgetExceeded, BudgetGuard, BudgetPolicy
+from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy
 from jobmatcher.budget.ledger import day_start, month_start
+from jobmatcher.errors import BudgetExceeded
 
 NOW = datetime(2026, 11, 26, 13, 30, tzinfo=UTC)
 

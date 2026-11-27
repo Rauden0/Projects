@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Literal, Protocol
 
 from jobmatcher.budget.ledger import month_start, utc_now
+from jobmatcher.errors import BudgetExceeded
 
 Purpose = Literal["extraction", "chat"]
 
@@ -20,14 +21,6 @@ class BudgetPolicy:
     def limit_for(self, purpose: Purpose) -> float:
         share = self.extraction_share if purpose == "extraction" else 1.0
         return self.monthly_usd * share
-
-
-class BudgetExceeded(Exception):
-    def __init__(self, purpose: Purpose, spent_usd: float, limit_usd: float) -> None:
-        super().__init__(f"{purpose} budget exhausted: ${spent_usd:.2f} of ${limit_usd:.2f}")
-        self.purpose = purpose
-        self.spent_usd = spent_usd
-        self.limit_usd = limit_usd
 
 
 class BudgetGuard:

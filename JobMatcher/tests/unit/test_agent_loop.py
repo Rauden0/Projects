@@ -5,7 +5,7 @@ import pytest
 
 from jobmatcher.agent import loop
 from jobmatcher.agent.loop import run_agent
-from jobmatcher.agent.tools import ToolError
+from jobmatcher.errors import ToolError
 
 
 class ScriptedModel:

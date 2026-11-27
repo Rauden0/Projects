@@ -6,8 +6,7 @@ from jobmatcher.agent.loop import AgentEvent
 from jobmatcher.api import deps
 from jobmatcher.api.main import create_app
 from jobmatcher.api.routes import chat as chat_route
-from jobmatcher.budget.guard import BudgetExceeded
-from jobmatcher.budget.limits import ClientLimited
+from jobmatcher.errors import BudgetExceeded, ClientLimited
 from jobmatcher.search.embeddings import HashingEmbedder
 
 

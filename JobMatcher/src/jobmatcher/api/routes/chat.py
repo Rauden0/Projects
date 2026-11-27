@@ -10,11 +10,11 @@ from pydantic import BaseModel, Field
 from jobmatcher.agent.loop import run_agent
 from jobmatcher.agent.tools import Toolbox
 from jobmatcher.api.deps import ChatGateDep, EmbedderDep, SessionDep
-from jobmatcher.budget.guard import BudgetExceeded
-from jobmatcher.budget.limits import ChatGate, ClientLimited
+from jobmatcher.budget.limits import ChatGate
 from jobmatcher.cv.profile import CvProfile, build_profile
 from jobmatcher.db.models import Cv
 from jobmatcher.db.session import get_sessionmaker
+from jobmatcher.errors import BudgetExceeded, ClientLimited
 from jobmatcher.llm import get_llm
 
 router = APIRouter(tags=["chat"])

@@ -5,19 +5,13 @@ from typing import Protocol
 
 from jobmatcher.budget.guard import Purpose
 from jobmatcher.budget.ledger import day_start, utc_now
+from jobmatcher.errors import ClientLimited
 
 WINDOW = timedelta(minutes=1)
 
 
 class ClientTokens(Protocol):
     async def client_tokens_since(self, client_id: str, since: datetime) -> int: ...
-
-
-class ClientLimited(Exception):
-    def __init__(self, reason: str, retry_after_s: int) -> None:
-        super().__init__(reason)
-        self.reason = reason
-        self.retry_after_s = retry_after_s
 
 
 class ClientLimiter:

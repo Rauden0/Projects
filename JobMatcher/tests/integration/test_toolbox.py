@@ -3,10 +3,11 @@ from datetime import date
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from jobmatcher.agent.tools import Toolbox, ToolError
+from jobmatcher.agent.tools import Toolbox
 from jobmatcher.cv.profile import build_profile
 from jobmatcher.db.models import EMBEDDING_DIM, Cv
 from jobmatcher.domain import RawPosting
+from jobmatcher.errors import ToolError
 from jobmatcher.ingest.extraction import HeuristicExtractor
 from jobmatcher.ingest.indexer import Indexer
 from jobmatcher.search.embeddings import HashingEmbedder

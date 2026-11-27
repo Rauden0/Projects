@@ -3,9 +3,9 @@ from typing import Any
 import pytest
 
 from jobmatcher.domain import JobFacts
+from jobmatcher.errors import ExtractionError
 from jobmatcher.ingest.extraction import (
     COMPACT_SCHEMA,
-    ExtractionError,
     HeuristicExtractor,
     LLMExtractor,
 )

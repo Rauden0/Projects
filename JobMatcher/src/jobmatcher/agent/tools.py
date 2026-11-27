@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobmatcher.cv.profile import CvProfile, compare
 from jobmatcher.db.models import Cv, Job, JobChunk
+from jobmatcher.errors import ToolError
 from jobmatcher.search.embeddings import Embedder
 from jobmatcher.search.hybrid import THIN_DESCRIPTION_CHARS, SearchFilters, SearchHit, search_jobs
 
@@ -29,10 +30,6 @@ class GetJobInput(BaseModel):
 
 class CompareInput(BaseModel):
     job_id: int
-
-
-class ToolError(Exception):
-    pass
 
 
 class Toolbox:

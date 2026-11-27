@@ -8,7 +8,8 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
-from jobmatcher.agent.tools import Toolbox, ToolError
+from jobmatcher.agent.tools import Toolbox
+from jobmatcher.errors import ToolError
 from jobmatcher.llm import LLMClient
 
 log = logging.getLogger(__name__)
