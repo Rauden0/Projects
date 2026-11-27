@@ -120,6 +120,32 @@ def score(case: dict[str, Any], facts: JobFacts | None, result: CaseResult) -> N
     result.predicted["_precise_skills"] = precise
 
 
+def rescore(path: str, cases: list[dict[str, Any]]) -> list[CaseResult]:
+    """Scores saved predictions against the current gold set (after gold or matcher changes)."""
+    by_id = {c["id"]: c for c in cases}
+    results = []
+    for saved in json.loads(Path(path).read_text(encoding="utf-8")):
+        p = saved["predicted"]
+        facts = JobFacts(
+            seniority=p["seniority"],
+            years_required_min=p["years"],
+            remote_policy=p["remote"],
+            office_city=p["city"],
+            salary_min=p["salary_min"],
+            salary_max=p["salary_max"],
+            currency=p["currency"],
+            tech_stack=p["skills"],
+        )
+        result = CaseResult(
+            **{k: saved[k] for k in ("id", "domain", "lang", "ok", "attempts", "latency_s")},
+            input_tokens=saved["input_tokens"],
+            output_tokens=saved["output_tokens"],
+        )
+        score(by_id[saved["id"]], facts, result)
+        results.append(result)
+    return results
+
+
 async def run_case(extractor: Extractor, meter: UsageMeter, case: dict[str, Any]) -> CaseResult:
     meter.calls.clear()
     watch = Stopwatch()
@@ -238,10 +264,14 @@ async def main() -> None:
     parser.add_argument("--prompt", help="file with a system prompt to try instead of the default")
     parser.add_argument("--label")
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--rescore", help="re-score a saved results file, no model calls")
     parser.add_argument("--pace", type=float, default=0, help="seconds between cases (rate limits)")
     args = parser.parse_args()
 
     cases = yaml.safe_load((HERE / "postings.yaml").read_text(encoding="utf-8"))[: args.limit]
+    if args.rescore:
+        print(report(args.label or Path(args.rescore).stem, rescore(args.rescore, cases), True))
+        return
     meter = UsageMeter()
     label, extractor, is_llm = build_extractor(args, meter)
     if is_llm:
