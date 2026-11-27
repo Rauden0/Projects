@@ -895,13 +895,11 @@
   "expected_tools": true,
   "filters_ok": true,
   "relevant_cited": true,
-  "citations_valid": false,
+  "citations_valid": true,
   "cited": [
    "brno-ucetni"
   ],
-  "unverified": [
-   "https://jobs.example/brno-ucetni**"
-  ],
+  "unverified": [],
   "rounds": 3,
   "latency_s": 2.2946756000019377,
   "input_tokens": 4667,

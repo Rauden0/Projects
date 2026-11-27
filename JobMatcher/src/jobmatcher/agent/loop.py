@@ -211,9 +211,11 @@ def _as_dict(block: Any) -> dict[str, Any]:
 
 # Stops at whitespace, brackets and quotes: models also answer in Markdown links or JSON.
 _URL_RE = re.compile(r"https?://[^\s()\[\]<>\"'`]+")
+# Trailing punctuation and Markdown emphasis (**url**, _url_); inside a URL both are legal.
+_URL_TRAILERS = ".,;:!?*_"
 
 
 def _unverified(answer: str, seen: set[str]) -> list[str]:
     """URLs in the answer that no tool returned — a cheap hallucination check."""
-    urls = {u.rstrip(".,;:!?") for u in _URL_RE.findall(answer)}
+    urls = {u.rstrip(_URL_TRAILERS) for u in _URL_RE.findall(answer)}
     return sorted(u for u in urls if u not in seen)

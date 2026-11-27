@@ -245,6 +245,9 @@ async def test_history_is_not_compacted_when_prompts_are_cached() -> None:
         "[Python Dev](https://jobs.example/1).",
         "See <https://jobs.example/1>, it fits.",
         "`https://jobs.example/1`",
+        "**https://jobs.example/1**",
+        "[**Python Dev**](https://jobs.example/1) and **https://jobs.example/1**.",
+        "_https://jobs.example/1_",
     ],
 )
 def test_url_check_ignores_surrounding_markup(answer: str) -> None:
@@ -255,3 +258,8 @@ def test_url_check_reports_invented_urls() -> None:
     assert loop._unverified("Try https://made.up/9!", {"https://jobs.example/1"}) == [
         "https://made.up/9"
     ]
+
+
+def test_url_check_strips_emphasis_only_at_the_end() -> None:
+    answer = "**https://jobs.example/data_eng** and **https://made.up/x_y**"
+    assert loop._unverified(answer, {"https://jobs.example/data_eng"}) == ["https://made.up/x_y"]
