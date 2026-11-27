@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     # Constrain OpenAI-compatible JSON output to the schema (`response_format`). Ollama and
     # most servers support it; turn off for one that rejects the parameter.
     llm_structured_output: bool = True
+    # Sent as `reasoning_effort` to OpenAI-compatible reasoning models (gpt-oss on Groq).
+    llm_reasoning_effort: Literal["", "low", "medium", "high"] = ""
     # Optional overrides for the chat agent, which needs stronger tool use than extraction
     # (e.g. extraction on a local model, chat on a hosted one). Empty = same as above.
     chat_llm_provider: Provider | Literal[""] = ""

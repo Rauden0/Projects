@@ -224,6 +224,11 @@ def extraction_prompt(title: str, location: str | None, text: str) -> str:
     return f"Title: {title}\nLocation: {location or 'n/a'}\n\n{compact_for_llm(text)}"
 
 
+# The JSON itself is ~120 tokens; reasoning models (gpt-oss) think first and need headroom,
+# otherwise the answer is cut off and every posting falls back to heuristics.
+EXTRACTION_MAX_TOKENS = 1024
+
+
 class LLMExtractor:
     def __init__(self, llm: LLMClient, system: str = EXTRACTION_SYSTEM) -> None:
         self.llm = llm
@@ -235,7 +240,10 @@ class LLMExtractor:
         for _ in range(2):
             prompt = user if error is None else f"{user}\n\nPrevious output was invalid: {error}"
             raw = await self.llm.complete_json(
-                system=self.system, user=prompt, schema=COMPACT_SCHEMA, max_tokens=400
+                system=self.system,
+                user=prompt,
+                schema=COMPACT_SCHEMA,
+                max_tokens=EXTRACTION_MAX_TOKENS,
             )
             try:
                 return parse_compact(raw)

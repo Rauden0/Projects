@@ -215,6 +215,7 @@ def build_extractor(args: argparse.Namespace, meter: UsageMeter) -> tuple[str, E
         api_key,
         timeout=args.timeout,
         structured_output=not args.no_structured_output,
+        reasoning_effort=args.reasoning_effort,
         meter=meter,
     )
     suffix = "" if not args.no_structured_output else " (schema in prompt only)"
@@ -232,10 +233,12 @@ async def main() -> None:
     parser.add_argument("--base-url", default="http://localhost:11434/v1")
     parser.add_argument("--model", default="qwen2.5:7b")
     parser.add_argument("--no-structured-output", action="store_true")
+    parser.add_argument("--reasoning-effort", default="", choices=["", "low", "medium", "high"])
     parser.add_argument("--timeout", type=float, default=300)
     parser.add_argument("--prompt", help="file with a system prompt to try instead of the default")
     parser.add_argument("--label")
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--pace", type=float, default=0, help="seconds between cases (rate limits)")
     args = parser.parse_args()
 
     cases = yaml.safe_load((HERE / "postings.yaml").read_text(encoding="utf-8"))[: args.limit]
@@ -243,7 +246,10 @@ async def main() -> None:
     label, extractor, is_llm = build_extractor(args, meter)
     if is_llm:
         await run_case(extractor, meter, cases[0])  # warm-up: loads the model into memory
-    results = [await run_case(extractor, meter, case) for case in cases]
+    results = []
+    for case in cases:
+        results.append(await run_case(extractor, meter, case))
+        await asyncio.sleep(args.pace)
 
     out = HERE / "results" / f"{re.sub(r'[^\w.-]+', '_', label)}.json"
     out.parent.mkdir(exist_ok=True)

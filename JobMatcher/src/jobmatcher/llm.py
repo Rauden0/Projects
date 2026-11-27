@@ -239,6 +239,7 @@ class OpenAICompatClient(_Observed):
         *,
         purpose: Purpose = "extraction",
         structured_output: bool = True,
+        reasoning_effort: str = "",
         ledger: UsageRecorder | None = None,
         guard: BudgetGuard | None = None,
         client_id: str | None = None,
@@ -248,12 +249,16 @@ class OpenAICompatClient(_Observed):
         super().__init__(model, purpose, ledger, guard, client_id, meter)
         self._http = http or _http_client(base_url, api_key, timeout)
         self.structured_output = structured_output
+        self.reasoning_effort = reasoning_effort
 
     async def _chat(self, payload: dict[str, Any], attempts: int = 5) -> dict[str, Any]:
         await self._before()
         watch = Stopwatch()
         try:
-            body = await self._post_with_retries({"model": self.model, **payload}, attempts)
+            extra = {"reasoning_effort": self.reasoning_effort} if self.reasoning_effort else {}
+            body = await self._post_with_retries(
+                {"model": self.model, **extra, **payload}, attempts
+            )
             message: dict[str, Any] = body["choices"][0]["message"]
         except LLMError:
             await self._after(watch, None)
@@ -447,6 +452,7 @@ def get_llm(
             s.llm_timeout_s,
             purpose=purpose,
             structured_output=s.llm_structured_output,
+            reasoning_effort=s.llm_reasoning_effort,
             ledger=ledger,
             guard=guard,
             client_id=client_id,

@@ -232,3 +232,17 @@ async def test_network_error_becomes_llm_error() -> None:
 
     with pytest.raises(LLMError):
         await _client(handler).complete(system="s", user="u")
+
+
+@pytest.mark.asyncio
+async def test_reasoning_effort_is_sent_only_when_set() -> None:
+    sent: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    await _client(handler, reasoning_effort="low").complete(system="s", user="u")
+    await _client(handler).complete(system="s", user="u")
+    assert sent[0]["reasoning_effort"] == "low"
+    assert "reasoning_effort" not in sent[1]
