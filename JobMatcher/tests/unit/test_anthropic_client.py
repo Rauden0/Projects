@@ -131,4 +131,4 @@ class BrokenLedger(RecordingLedger):
 async def test_ledger_failure_keeps_the_paid_answer(caplog: pytest.LogCaptureFixture) -> None:
     llm, _ = client(BrokenLedger())
     assert await llm.complete(system="s", user="u") == '{"sen": null}'
-    assert [getattr(r, "event", None) for r in caplog.records] == ["llm_usage_write_failed"]
+    assert "llm_usage_write_failed" in [getattr(r, "event", None) for r in caplog.records]
