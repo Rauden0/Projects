@@ -19,6 +19,7 @@ MAX_ROUNDS = 4
 # Calls of one round run one after another: the tools share the request's DB session.
 MAX_CALLS_PER_ROUND = 3
 COMPACT_CHARS = 600
+UNTRUSTED_OPEN, UNTRUSTED_CLOSE = "<untrusted_data>\n", "\n</untrusted_data>"
 FINAL_ROUND_NOTE = "No more tool calls are available. Answer now using only the results above."
 
 SYSTEM = """You help a job seeker find jobs that fit their CV, in any occupation.
@@ -117,9 +118,7 @@ async def run_agent(
                 {
                     "type": "tool_result",
                     "tool_use_id": use_id,
-                    "content": output
-                    if isinstance(output, str)
-                    else json.dumps(output, default=str),
+                    "content": output if is_error else _untrusted(output),
                     "is_error": is_error,
                 }
             )
@@ -151,6 +150,24 @@ async def _execute(
         return str(exc), type(exc).__name__
 
 
+# Chat-template control tokens (ChatML, Llama 3, Mistral) and tool-protocol tags. Ollama
+# tokenizes them as real control tokens even inside message content, so a posting containing
+# them could end the tool result and open a fake system or user turn.
+_ROLE_MARKER_RE = re.compile(
+    r"<\|[\w-]{1,30}\|>|\[/?INST\]|<</?SYS>>"
+    r"|</?(?:tool_response|tool_call|tool_result|function_results?|system|assistant|user"
+    r"|untrusted_data)\b[^>]*>",
+    re.IGNORECASE,
+)
+
+
+def _untrusted(output: Any) -> str:
+    """Tool output with role markers removed, wrapped in the envelope SYSTEM tells the model
+    never to take instructions from: posting text is written by whoever published the ad."""
+    text = output if isinstance(output, str) else json.dumps(output, default=str)
+    return f"{UNTRUSTED_OPEN}{_ROLE_MARKER_RE.sub(' ', text)}{UNTRUSTED_CLOSE}"
+
+
 def _compact_old_results(messages: list[dict[str, Any]]) -> None:
     """Shorten tool results from earlier rounds. The model has already read them; keeping them
     whole makes every request re-send the full history, which quickly exceeds the per-minute
@@ -161,7 +178,8 @@ def _compact_old_results(messages: list[dict[str, Any]]) -> None:
             continue
         for block in message["content"]:
             if block.get("type") == "tool_result" and len(block["content"]) > COMPACT_CHARS:
-                block["content"] = block["content"][:COMPACT_CHARS] + " ...(truncated)"
+                closing = UNTRUSTED_CLOSE if block["content"].endswith(UNTRUSTED_CLOSE) else ""
+                block["content"] = block["content"][:COMPACT_CHARS] + " ...(truncated)" + closing
 
 
 def _as_dict(block: Any) -> dict[str, Any]:
