@@ -40,7 +40,7 @@ Work on branch `chore/enterprise-hardening` (from `dev`). Tick items as they lan
 - [x] Retrieval eval: run `eval/run_retrieval.py`, extend golden set, record hit@5 / recall@10 / MRR per mode
 - [x] Agent eval: scripted questions → tool-call correctness, citation validity, latency, tokens
 - [x] Compare local model vs hosted model; write results to `eval/RESULTS.md`
-- [x] Decision record: plain loop vs LangChain / LangGraph / PydanticAI — [ADR 0001](docs/adr/0001-llm-framework.md): keep the loop, add tracing and evals
+- [x] Decision record: plain loop vs LangChain / LangGraph / PydanticAI — [ADR 0001](docs/adr/0001-llm-framework.md): keep the loop, add tracing and evals; superseded for the agent loop by [ADR 0002](docs/adr/0002-langgraph.md) (LangGraph)
 
 ## ADR 0001 follow-ups
 - [x] F1 doc drift: `MAX_ROUNDS` = 4, sequential tool calls, two providers, §14 row links the ADR
