@@ -11,7 +11,7 @@ RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
 # Dependencies first, against an empty package, so source edits reuse this layer.
 COPY pyproject.toml ./
 RUN mkdir -p src/jobmatcher && touch src/jobmatcher/__init__.py \
-    && pip install ".[llm,embeddings,otel,mcp]" \
+    && pip install ".[llm,embeddings,otel,mcp,metrics]" \
     && rm -rf src
 
 COPY src ./src
