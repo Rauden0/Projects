@@ -128,3 +128,13 @@ async def test_worker_counts_each_outcome() -> None:
     await failing.handle(FakeMessage(b"not json", {}))  # type: ignore[arg-type]
     for outcome in outcomes:
         assert sample("jobmatcher_ingest_messages_total", outcome=outcome) == before[outcome] + 1
+
+
+def test_cache_lookups_and_rejections_are_counted() -> None:
+    labels = {"cache": "query_embedding", "result": "hit"}
+    hits = sample("jobmatcher_cache_lookups_total", **labels)
+    rejected = sample("jobmatcher_rejected_requests_total", reason="rate_limit_cv")
+    metrics.recorder.cache_lookup("query_embedding", True)
+    metrics.recorder.rejected("rate_limit_cv")
+    assert sample("jobmatcher_cache_lookups_total", **labels) == hits + 1
+    assert sample("jobmatcher_rejected_requests_total", reason="rate_limit_cv") == rejected + 1

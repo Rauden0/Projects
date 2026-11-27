@@ -88,6 +88,9 @@ class Settings(BaseSettings):
     # Sends the uploaded CV text to the extraction LLM once to build its profile.
     cv_llm_extraction: bool = True
 
+    # Query vectors kept in memory per process (LRU); 0 = off.
+    query_embedding_cache_size: int = Field(default=2048, ge=0)
+
     @model_validator(mode="after")
     def _consistent(self) -> Self:
         if self.embedding_dim != EMBEDDING_DIM:

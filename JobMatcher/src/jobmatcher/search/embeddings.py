@@ -6,6 +6,8 @@ import re
 from functools import lru_cache
 from typing import Protocol
 
+from jobmatcher import metrics
+from jobmatcher.caching import LruCache, normalize_text
 from jobmatcher.config import get_settings
 
 
@@ -71,13 +73,43 @@ class HashingEmbedder:
         return self._embed(text)
 
 
-@lru_cache
-def get_embedder() -> Embedder:
-    settings = get_settings()
+class CachedEmbedder:
+    """Remembers query vectors by their whitespace-normalised text: the same searches repeat,
+    and encoding one costs a model forward pass on the CPU. Documents pass through."""
+
+    def __init__(self, inner: Embedder, max_entries: int) -> None:
+        self.inner = inner
+        self.dim = inner.dim
+        self.model_name = inner.model_name
+        self._vectors: LruCache[str, list[float]] = LruCache(max_entries)
+
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return await self.inner.embed_documents(texts)
+
+    async def embed_query(self, text: str) -> list[float]:
+        key = normalize_text(text)
+        vector = self._vectors.get(key)
+        metrics.recorder.cache_lookup("query_embedding", vector is not None)
+        if vector is None:
+            vector = await self.inner.embed_query(key)
+            self._vectors.put(key, vector)
+        return list(vector)
+
+
+def _model(model_name: str, dim: int) -> Embedder:
     try:
-        return E5Embedder(settings.embedding_model, settings.embedding_dim)
+        return E5Embedder(model_name, dim)
     except ImportError:
         logging.getLogger(__name__).warning(
             "sentence-transformers not installed, using HashingEmbedder (no semantic search)"
         )
-        return HashingEmbedder(settings.embedding_dim)
+        return HashingEmbedder(dim)
+
+
+@lru_cache
+def get_embedder() -> Embedder:
+    settings = get_settings()
+    embedder = _model(settings.embedding_model, settings.embedding_dim)
+    if settings.query_embedding_cache_size == 0:
+        return embedder
+    return CachedEmbedder(embedder, settings.query_embedding_cache_size)

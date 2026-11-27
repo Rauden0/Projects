@@ -4,7 +4,7 @@ from types import ModuleType
 
 import pytest
 
-from jobmatcher.search.embeddings import E5Embedder, HashingEmbedder
+from jobmatcher.search.embeddings import CachedEmbedder, E5Embedder, HashingEmbedder
 
 
 @pytest.mark.asyncio
@@ -50,3 +50,38 @@ def test_e5_embedder_rejects_a_model_with_another_dimension(
     with pytest.raises(ValueError, match="768-dimensional"):
         E5Embedder("intfloat/multilingual-e5-base", 384)
     assert E5Embedder("intfloat/multilingual-e5-base", 768).dim == 768
+
+
+class CountingEmbedder(HashingEmbedder):
+    def __init__(self) -> None:
+        super().__init__(dim=16)
+        self.queries: list[str] = []
+
+    async def embed_query(self, text: str) -> list[float]:
+        self.queries.append(text)
+        return await super().embed_query(text)
+
+
+async def test_cached_embedder_encodes_a_repeated_query_once() -> None:
+    inner = CountingEmbedder()
+    embedder = CachedEmbedder(inner, max_entries=2)
+    first = await embedder.embed_query("python  Brno ")
+    again = await embedder.embed_query("python Brno")
+    assert first == again
+    assert inner.queries == ["python Brno"]
+    assert (embedder.dim, embedder.model_name) == (16, "hashing-16")
+
+
+async def test_cached_embedder_evicts_the_least_recently_used_query() -> None:
+    inner = CountingEmbedder()
+    embedder = CachedEmbedder(inner, max_entries=2)
+    for query in ("a", "b", "a", "c", "a", "b"):
+        await embedder.embed_query(query)
+    assert inner.queries == ["a", "b", "c", "b"]
+
+
+async def test_cached_embedder_passes_documents_through() -> None:
+    inner = CountingEmbedder()
+    embedder = CachedEmbedder(inner, max_entries=2)
+    assert await embedder.embed_documents(["x"]) == await inner.embed_documents(["x"])
+    assert inner.queries == []

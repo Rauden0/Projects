@@ -73,6 +73,12 @@ class Recorder:
     def ingest_message(self, outcome: str) -> None:
         pass
 
+    def cache_lookup(self, cache: str, hit: bool) -> None:
+        pass
+
+    def rejected(self, reason: str) -> None:
+        pass
+
     def outbox_batch(self, published: int, oldest_created_at: datetime | None) -> None:
         pass
 
@@ -125,6 +131,12 @@ class _Prometheus(Recorder):
         self._ingest: _Labeled[_Inc] = prom.Counter(
             "jobmatcher_ingest_messages", "job.discovered messages by outcome", ["outcome"]
         )
+        self._cache: _Labeled[_Inc] = prom.Counter(
+            "jobmatcher_cache_lookups", "Cache lookups by cache and result", ["cache", "result"]
+        )
+        self._rejected: _Labeled[_Inc] = prom.Counter(
+            "jobmatcher_rejected_requests", "Requests refused by an abuse guard", ["reason"]
+        )
         self._outbox_published: _Inc = prom.Counter(
             "jobmatcher_outbox_published", "Outbox rows published to RabbitMQ"
         )
@@ -163,6 +175,12 @@ class _Prometheus(Recorder):
 
     def ingest_message(self, outcome: str) -> None:
         self._ingest.labels(outcome).inc()
+
+    def cache_lookup(self, cache: str, hit: bool) -> None:
+        self._cache.labels(cache, "hit" if hit else "miss").inc()
+
+    def rejected(self, reason: str) -> None:
+        self._rejected.labels(reason).inc()
 
     def outbox_batch(self, published: int, oldest_created_at: datetime | None) -> None:
         self._outbox_published.inc(published)
