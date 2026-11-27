@@ -21,7 +21,7 @@ from jobmatcher.config import Settings, configure_logging, get_settings
 from jobmatcher.db.models import Job
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.domain import JobFacts
-from jobmatcher.errors import BudgetExceeded
+from jobmatcher.errors import BudgetExceeded, LLMError
 from jobmatcher.ingest.extraction import (
     COMPACT_SCHEMA,
     EXTRACTION_SYSTEM,
@@ -44,6 +44,7 @@ class PendingJob:
     title: str
     location: str | None
     description: str
+    content_hash: bytes
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,8 +100,10 @@ class BatchExtraction:
         model: str,
         effort: str = "low",
         poll_interval_s: float = POLL_INTERVAL_S,
+        sdk_errors: tuple[type[Exception], ...] = (),
     ) -> None:
         self.sdk = sdk
+        self.sdk_errors = sdk_errors
         self.sessionmaker = sessionmaker
         self.ledger = ledger
         self.guard = guard
@@ -109,6 +112,13 @@ class BatchExtraction:
         self.poll_interval_s = poll_interval_s
 
     async def run(self, limit: int = DEFAULT_LIMIT) -> tuple[int, int]:
+        try:
+            return await self._run(limit)
+        except self.sdk_errors as exc:
+            status = getattr(exc, "status_code", None)
+            raise LLMError(f"anthropic batch: {exc}"[:500], status) from exc
+
+    async def _run(self, limit: int) -> tuple[int, int]:
         jobs = await self.pending_jobs(limit)
         if not jobs:
             return 0, 0
@@ -117,12 +127,12 @@ class BatchExtraction:
         batch = await self.sdk.messages.batches.create(requests=requests)
         log.info("submitted batch %s with %d jobs", batch.id, len(requests))
         await self.wait(batch.id)
-        applied = await self.apply(batch.id)
+        applied = await self.apply(batch.id, {job.id: job.content_hash for job in jobs})
         return applied, len(jobs)
 
     async def pending_jobs(self, limit: int) -> list[PendingJob]:
         query = (
-            select(Job.id, Job.title, Job.location_raw, Job.description)
+            select(Job.id, Job.title, Job.location_raw, Job.description, Job.content_hash)
             .where(Job.status == "open", Job.extraction_status.in_(("pending", "fallback")))
             .order_by(Job.id)
             .limit(limit)
@@ -138,13 +148,13 @@ class BatchExtraction:
                 return
             await asyncio.sleep(self.poll_interval_s)
 
-    async def apply(self, batch_id: str) -> int:
+    async def apply(self, batch_id: str, hashes: dict[int, bytes]) -> int:
         applied = 0
         async for result in await self.sdk.messages.batches.results(batch_id):
-            applied += await self.apply_one(result)
+            applied += await self.apply_one(result, hashes)
         return applied
 
-    async def apply_one(self, result: Any) -> int:
+    async def apply_one(self, result: Any, hashes: dict[int, bytes]) -> int:
         outcome = outcome_of(result)
         if result.result.type == "succeeded":
             await self.ledger.record(
@@ -153,20 +163,33 @@ class BatchExtraction:
                 usage=usage_of(result.result.message),
                 batch=True,
             )
+        content_hash = hashes.get(outcome.job_id)
+        if content_hash is None:
+            log.warning("batch result for unknown job %s", outcome.job_id)
+            return 0
         if outcome.facts is None:
-            await self.mark(outcome.job_id, {"extraction_status": "fallback"})
+            await self.mark(outcome.job_id, content_hash, {"extraction_status": "batch_failed"})
             return 0
         values = outcome.facts.model_dump(exclude={"languages_required"})
-        await self.mark(outcome.job_id, {**values, "extraction_status": "ok"})
-        return 1
+        return await self.mark(outcome.job_id, content_hash, {**values, "extraction_status": "ok"})
 
-    async def mark(self, job_id: int, values: dict[str, Any]) -> None:
+    async def mark(self, job_id: int, content_hash: bytes, values: dict[str, Any]) -> int:
+        stmt = (
+            update(Job)
+            .where(Job.id == job_id, Job.content_hash == content_hash)
+            .values(**values)
+            .returning(Job.id)
+        )
         async with self.sessionmaker() as session, session.begin():
-            await session.execute(update(Job).where(Job.id == job_id).values(**values))
+            updated = (await session.execute(stmt)).scalar_one_or_none()
+        if updated is None:
+            log.info("job %s changed during the batch, keeping its newer facts", job_id)
+            return 0
+        return 1
 
 
 def build(settings: Settings) -> BatchExtraction:
-    from anthropic import AsyncAnthropic
+    from anthropic import APIError, AsyncAnthropic
 
     api_key = settings.llm_api_key.get_secret_value()
     if settings.llm_provider != "anthropic" or not api_key:
@@ -181,6 +204,7 @@ def build(settings: Settings) -> BatchExtraction:
         BudgetGuard(ledger, policy),
         settings.llm_model,
         settings.llm_effort,
+        sdk_errors=(APIError,),
     )
 
 
@@ -191,6 +215,8 @@ async def loop(extraction: BatchExtraction, limit: int, every_s: float | None) -
             log.info("batch done: %d of %d jobs extracted", applied, total)
         except BudgetExceeded as exc:
             log.warning("skipping batch: %s", exc)
+        except LLMError as exc:
+            log.warning("batch failed: %s", exc)
         if every_s is None:
             return
         await asyncio.sleep(every_s)

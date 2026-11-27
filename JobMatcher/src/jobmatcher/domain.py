@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 Seniority = Literal["junior", "medior", "senior", "staff"]
 RemotePolicy = Literal["onsite", "hybrid", "remote_country", "remote_region", "remote_global"]
 ContractType = Literal["employment", "contract", "freelance"]
-ExtractionStatus = Literal["ok", "pending", "fallback"]
+ExtractionStatus = Literal["ok", "pending", "fallback", "batch_failed"]
 
 
 class RawPosting(BaseModel):
