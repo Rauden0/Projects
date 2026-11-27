@@ -2,14 +2,10 @@ name: Job Matcher CI
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "JobMatcher/**"
-      - ".github/workflows/jobmatcher-ci.yml"
+    branches: [main, dev]
+    paths: ["JobMatcher/**", ".github/workflows/jobmatcher-ci.yml"]
   pull_request:
-    paths:
-      - "JobMatcher/**"
-      - ".github/workflows/jobmatcher-ci.yml"
+    paths: ["JobMatcher/**", ".github/workflows/jobmatcher-ci.yml"]
 
 defaults:
   run:
@@ -18,47 +14,45 @@ defaults:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: jobmatcher
           POSTGRES_PASSWORD: jobmatcher
-          POSTGRES_DB: jobmatcher
-        ports:
-          - 5432:5432
+          POSTGRES_DB: jobmatcher_test
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
       rabbitmq:
         image: rabbitmq:3.13
-        ports:
-          - 5672:5672
+        env:
+          RABBITMQ_DEFAULT_VHOST: jobmatcher_test
+        ports: ["5672:5672"]
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_port_connectivity"
+          --health-interval 10s --health-timeout 5s --health-retries 10
 
     env:
-      DATABASE_URL: postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher
-      AMQP_URL: amqp://guest:guest@localhost:5672/
+      DATABASE_URL: postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher_test
+      TEST_DATABASE_URL: postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher_test
+      TEST_AMQP_URL: amqp://guest:guest@localhost:5672/jobmatcher_test
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: JobMatcher/pyproject.toml
-
-      - name: Install
-        run: pip install -e ".[dev]"
-
-      - name: Lint
-        run: ruff check src tests eval alembic
-
+      - run: pip install -e ".[dev]"
+      - name: Lint and format
+        run: |
+          ruff check src tests eval alembic
+          ruff format --check src tests eval alembic
+      - name: Types
+        run: mypy src
       - name: Migrate
         run: alembic upgrade head
-
-      - name: Test
-        run: pytest -q
+      - name: Tests (unit, integration, e2e with a scripted model)
+        run: pytest -q --cov=jobmatcher --cov-report=term-missing:skip-covered

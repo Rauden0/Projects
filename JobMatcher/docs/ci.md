@@ -4,7 +4,7 @@ The workflow lives at the repository root, `../.github/workflows/jobmatcher-ci.y
 the git root is `Projects/`. It currently runs `ruff check`, migrations and `pytest` against
 service containers, on pushes to `main` and on pull requests.
 
-What it does not check yet, and the replacement below adds:
+What the earlier workflow missed:
 
 | Gap | Effect today |
 |---|---|
@@ -15,8 +15,7 @@ What it does not check yet, and the replacement below adds:
 | no coverage | `pytest-cov` reports it now |
 | only `main` pushes | `dev` is the working branch |
 
-Proposed `.github/workflows/jobmatcher-ci.yml` (to be applied by whoever owns the root
-workflows; it was left untouched here because changes are scoped to `JobMatcher/`):
+Current `.github/workflows/jobmatcher-ci.yml`:
 
 ```yaml
 name: Job Matcher CI
