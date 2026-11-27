@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher import messaging
+from jobmatcher.agent.loop import UNTRUSTED_CLOSE, UNTRUSTED_OPEN
 from jobmatcher.api import deps
 from jobmatcher.api.main import create_app
 from jobmatcher.api.routes import chat as chat_route
@@ -85,7 +86,8 @@ class ScriptedChatModel:
             call = {"type": "tool_use", "id": "t1", "name": "search_jobs"}
             return {"content": [{**call, "input": {"query": "python backend", "city": "Brno"}}]}
         result = kwargs["messages"][-1]["content"][0]["content"]
-        url = json.loads(result)[0]["url"]
+        hits = json.loads(result.removeprefix(UNTRUSTED_OPEN).removesuffix(UNTRUSTED_CLOSE))
+        url = hits[0]["url"]
         return {"content": [{"type": "text", "text": f"Python Backend Developer: {url}"}]}
 
 
