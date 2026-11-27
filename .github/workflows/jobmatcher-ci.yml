@@ -120,3 +120,32 @@ jobs:
             ${{ env.IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # JobMatcher/docs/deploy.md: skipped until the DEPLOY_* secrets exist.
+  deploy:
+    needs: [image]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: { group: jobmatcher-deploy, cancel-in-progress: false }
+    defaults:
+      run:
+        working-directory: .
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+    steps:
+      - if: env.DEPLOY_HOST == ''
+        run: echo "::notice::DEPLOY_HOST is not set; skipping the deploy"
+      - if: env.DEPLOY_HOST != ''
+        name: Deploy over SSH
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "${DEPLOY_USER:-deploy}@$DEPLOY_HOST" \
+            "cd '${DEPLOY_PATH:-/opt/projects/JobMatcher}' && git pull --ff-only && deploy/deploy.sh '$GITHUB_SHA'"
