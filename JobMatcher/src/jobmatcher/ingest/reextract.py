@@ -37,24 +37,31 @@ async def reextract(include_empty: bool) -> tuple[int, int]:
     async with sessionmaker() as session:
         jobs = (
             await session.execute(
-                select(Job.id, Job.title, Job.location_raw, Job.description)
+                select(Job.id, Job.title, Job.location_raw, Job.description, Job.content_hash)
                 .where(Job.status == "open", condition)
                 .order_by(Job.id)
             )
         ).all()
 
     fixed = 0
-    for job_id, title, location, description in jobs:
+    for job_id, title, location, description, digest in jobs:
         try:
             facts: JobFacts = await extractor.extract(title, location, description)
         except (LLMError, ExtractionError) as exc:
             log.warning("job %s still failing: %s", job_id, exc)
             continue
         values = facts.model_dump(exclude={"languages_required"})
+        stmt = (
+            update(Job)
+            .where(Job.id == job_id, Job.content_hash == digest)
+            .values(**values, extraction_status="ok")
+            .returning(Job.id)
+        )
         async with sessionmaker() as session, session.begin():
-            await session.execute(
-                update(Job).where(Job.id == job_id).values(**values, extraction_status="ok")
-            )
+            updated = (await session.execute(stmt)).scalar_one_or_none()
+        if updated is None:
+            log.info("job %s changed meanwhile, keeping its newer facts", job_id)
+            continue
         fixed += 1
         log.info("re-extracted job %s (%d/%d)", job_id, fixed, len(jobs))
     return fixed, len(jobs)
