@@ -13,7 +13,7 @@ import logging
 
 from sqlalchemy import or_, select, update
 
-from jobmatcher.config import configure_logging
+from jobmatcher.config import configure_logging, configure_tracing
 from jobmatcher.db.models import Job
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.domain import JobFacts
@@ -62,6 +62,7 @@ async def reextract(include_empty: bool) -> tuple[int, int]:
 
 def main() -> None:
     configure_logging()
+    configure_tracing()
     parser = argparse.ArgumentParser()
     parser.add_argument("--empty", action="store_true", help="also jobs without skills")
     args = parser.parse_args()

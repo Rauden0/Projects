@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from jobmatcher.db.models import EMBEDDING_DIM
 from jobmatcher.observability import LogFormat
 from jobmatcher.observability import configure_logging as _configure_logging
+from jobmatcher.telemetry import configure_tracing as _configure_tracing
 
 Provider = Literal["anthropic", "openai_compat"]
 Effort = Literal["low", "medium", "high", "max"]
@@ -52,6 +53,12 @@ class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
     log_format: LogFormat = "text"
 
+    # OpenTelemetry traces over OTLP/HTTP, e.g. http://phoenix:6006. Empty = no tracing.
+    otel_exporter_otlp_endpoint: str = Field(default="", pattern=r"^(https?://\S+)?$")
+    otel_service_name: str = Field(default="jobmatcher", min_length=1)
+    # Prompts, completions and tool arguments and results on spans: CV and posting text.
+    otel_capture_content: bool = False
+
     @model_validator(mode="after")
     def _consistent(self) -> Self:
         if self.embedding_dim != EMBEDDING_DIM:
@@ -72,3 +79,12 @@ def get_settings() -> Settings:
 def configure_logging() -> None:
     settings = get_settings()
     _configure_logging(settings.log_level, settings.log_format)
+
+
+def configure_tracing() -> None:
+    settings = get_settings()
+    _configure_tracing(
+        settings.otel_exporter_otlp_endpoint,
+        service_name=settings.otel_service_name,
+        capture_content=settings.otel_capture_content,
+    )

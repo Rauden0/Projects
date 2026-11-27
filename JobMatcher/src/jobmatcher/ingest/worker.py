@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher import messaging
-from jobmatcher.config import configure_logging, get_settings
+from jobmatcher.config import configure_logging, configure_tracing, get_settings
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.extraction import Extractor, HeuristicExtractor, LLMExtractor
@@ -88,6 +88,7 @@ async def start_consumers(
 
 async def main() -> None:
     configure_logging()
+    configure_tracing()
     settings = get_settings()
     indexer = Indexer(
         get_sessionmaker(),
