@@ -202,11 +202,20 @@ revision. `'simple'` text-search config is used because postings mix Czech and E
 `search_jobs` uses **hybrid search** with Reciprocal Rank Fusion, done in one SQL query:
 
 1. **Hard filters** first (from the structured fields): `status='open'`, remote policy,
-   city, max years required, seniority, contract type.
-2. **Vector search**: top 50 chunks by cosine distance to the query embedding.
-3. **Full-text search**: top 50 chunks by `ts_rank` against `websearch_to_tsquery`.
-4. **Fusion**: `score = Σ 1 / (60 + rank)` across both lists, grouped per job (best chunk
-   wins), top *k* jobs returned with the matching chunk as the citation snippet.
+   city (remote jobs pass any city unless `strict_city`), max years required, seniority,
+   contract type, tech stack; board stubs that have a full copy from the employer's ATS are
+   hidden. Unknown values (`NULL`) pass, since many postings never state them.
+2. **Vector search**: top `CANDIDATES` (50) chunks by cosine distance to the query embedding,
+   limited in a subquery so the HNSW index serves it.
+3. **Full-text search**: top `KEYWORD_CANDIDATES` (10) chunks by `ts_rank_cd` against an
+   any-term `to_tsquery('simple', 'a | b | c')` built from the query (short words and stop
+   words dropped).
+4. **Title search** (hybrid mode only): top `KEYWORD_CANDIDATES` jobs whose title matches the
+   same query, ranked the same way; titles are the most precise signal.
+5. **Fusion**: `score = Σ w_list / (60 + rank)` across the lists (`WEIGHTS`, all 1), with each
+   list contributing its best rank per job; the best-ranked chunk is the citation snippet. With
+   a city filter, jobs actually in that city get `LOCAL_BOOST` (one first place, 1/61) so
+   remote jobs do not bury them. Top *k* jobs are returned.
 
 Why hybrid: embeddings catch synonyms ("backend developer" ≈ "Python vývojář"), full-text
 catches exact tokens embeddings blur (`RabbitMQ`, `TimescaleDB`, `Databricks`).
@@ -228,7 +237,7 @@ is visible and testable.
 
 | Tool | Input | Output |
 |---|---|---|
-| `search_jobs` | `query`, optional filters (`remote_policy`, `city`, `max_years`, `seniority`, `contract_type`), `k` | ranked jobs with id, title, company, location, snippet, url |
+| `search_jobs` | `query`, optional filters (`remote_policy`, `city`, `max_years_required`, `seniority`, `contract_type`, `tech`), `k` | ranked jobs with id, title, company, location, snippet, url |
 | `get_job` | `job_id` | full normalized posting + extracted fields |
 | `compare_with_cv` | `job_id`, `cv_id` | structured gap analysis: matched skills, missing must-haves, missing nice-to-haves, years gap, location fit |
 
@@ -275,17 +284,14 @@ is visible and testable.
 location rules), so it is unit-testable and costs no tokens.
 
 **MCP.** The loop calls its tools in process, without MCP
-([ADR 0001](docs/adr/0001-llm-framework.md), option 9). A separate entry point, `jobmatcher-mcp` (`mcp_server.py`, stdio or streamable
-HTTP), serves `search_jobs` and `get_job` to other MCP clients. It uses the SDK's low-level
-server and lists `Toolbox.definitions()` as they are, so the schemas cannot drift from the
-agent's, and each call runs the same `Toolbox` with its own DB session and no CV.
-`ToolError`, Pydantic validation errors and database errors become `isError` results; an
-unknown tool, including `compare_with_cv`, is a protocol error.
-
-The same three tools are also served over **MCP** (`jobmatcher-mcp`, stdio or streamable
-HTTP), so Claude Desktop, Claude Code or any other MCP client can use the index directly.
-The MCP server is a thin adapter over the same `Toolbox`, with one DB session per call;
-the tools are marked read-only, and tool errors become `is_error` results there too.
+([ADR 0001](docs/adr/0001-llm-framework.md), option 9). A separate entry point,
+`jobmatcher-mcp` (`mcp_server.py`, stdio or streamable HTTP), serves `search_jobs` and
+`get_job` to Claude Desktop, Claude Code or any other MCP client. `compare_with_cv` is not
+exposed: it needs a CV uploaded through the API, and CV data stays there. The server uses the
+SDK's low-level API and lists `Toolbox.definitions()` as they are, so the schemas cannot drift
+from the agent's; the tools are marked read-only, and each call runs the same `Toolbox` with
+its own DB session and no CV. `ToolError`, Pydantic validation errors and database errors
+become `isError` results; an unknown tool, including `compare_with_cv`, is a protocol error.
 
 ---
 
@@ -410,9 +416,12 @@ JobMatcher/
 
 All configuration via environment variables loaded by `pydantic-settings`
 (`DATABASE_URL`, `AMQP_URL`, `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`,
-`EMBEDDING_MODEL`, budget and limits, `LOG_LEVEL` / `LOG_FORMAT`, `OTEL_EXPORTER_OTLP_ENDPOINT`
+optional `CHAT_LLM_*` overrides, `EMBEDDING_MODEL`, budget and limits, `LOG_LEVEL` / `LOG_FORMAT`, `OTEL_EXPORTER_OTLP_ENDPOINT`
 / `OTEL_SERVICE_NAME` / `OTEL_CAPTURE_CONTENT`), validated at startup (enums, ranges, URL
-schemes, `EMBEDDING_DIM` against the schema). API keys are `SecretStr`.
+schemes of the database, broker, LLM and OTLP URLs, `EMBEDDING_DIM` against the schema, a
+`CHAT_LLM_PROVIDER` other than `LLM_PROVIDER` having its own model and base URL). API keys are
+`SecretStr`, and a chat provider or host that differs from the base one never inherits
+`LLM_API_KEY`. The embedder checks at startup that the model's dimension matches.
 The default LLM is a local Ollama model, so the project runs without any paid API.
 `.env.example` is committed; `.env` is git-ignored. No keys in code or in the image.
 

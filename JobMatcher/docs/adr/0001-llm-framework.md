@@ -21,7 +21,7 @@ November 2026.
 | Provider abstraction | `llm.py` (327 lines) | `LLMClient` protocol with `complete`, `complete_json` and `create_message`. `AnthropicClient` wraps the official SDK. `OpenAICompatClient` uses plain `httpx` against `/chat/completions` (Ollama `qwen2.5:7b` by default; Groq and Gemini also work) and translates Anthropic-style content blocks to and from the OpenAI wire format, so the loop has a single message format. |
 | Provider workarounds | `OpenAICompatClient._chat`, `create_message` | Resamples on Groq `400 tool_use_failed`. Honours 429 `Retry-After`, or the "try again in Ns" text in the body. Drops `tools` instead of sending `tool_choice: none`, because Groq rejects it. Invents `call_{i}` ids when a local server leaves them out. |
 | Prompt caching | `AnthropicClient.create_message` | `cache_control` on the system prompt and the last tool definition, plus top-level automatic caching. On non-caching providers the loop shortens old tool results instead (`_compact_old_results`). |
-| Cost control | `budget/` + `AnthropicClient._send` | Before each call, `BudgetGuard.check(purpose)` runs against a monthly cap, with a separate extraction share. After each call, `UsageLedger.record` writes input, output, cache-read and cache-write tokens and the USD cost to `llm_usage`. Per-client rate and daily token limits are enforced from the same table. |
+| Cost control | `budget/` + `llm._Observed` | Before each call, `BudgetGuard.check(purpose)` runs against a monthly cap, with a separate extraction share. After each call, `UsageLedger.record` writes input, output, cache-read and cache-write tokens and the USD cost to `llm_usage`. Per-client rate and daily token limits are enforced from the same table. |
 | Agent loop | `agent/loop.py` (147 lines) | Up to `MAX_ROUNDS = 4` tool rounds, then a final round with tools disabled and a "no more tool calls" note. Runs at most 3 tool calls per round; extra calls get an error result. Tool errors go back to the model as `is_error` results. `AgentEvent`s (`tool_call`, `tool_result`, `answer`, `error`) are yielded for SSE. Answer URLs that no tool returned are reported as `unverified_urls`. Thinking blocks are passed back unchanged. |
 | Tools | `agent/tools.py` | `search_jobs`, `get_job` and `compare_with_cv`, with JSON Schemas generated from Pydantic models. `compare_with_cv` is deterministic; search results carry a pre-computed CV "fit" so fewer rounds are needed. |
 | Structured extraction | `ingest/extraction.py` | Compact short-key schema (`COMPACT_SCHEMA`) that maps to `JobFacts`. Anthropic enforces the schema natively (`output_config.format: json_schema`); the OpenAI-compatible client only puts the schema in the prompt. Pydantic validates the output, with one retry that includes the validation error, then a heuristic fallback. |
@@ -44,6 +44,10 @@ These matter for the decision, because they are what a framework would claim to 
 3. **No budget accounting on the OpenAI-compatible path.** Only `AnthropicClient` writes to
    the ledger. Free local Ollama does not need it, but a paid OpenAI-compatible endpoint (Groq,
    Gemini) is never counted against `LLM_MONTHLY_BUDGET_USD`.
+   *Since then (F8, partly): both clients check the guard and write the ledger through
+   `llm._Observed`, so OpenAI-compatible calls are recorded too. `PRICES` lists Claude models
+   only, so those rows cost $0 and still do not count against the cap; their tokens do count
+   for the per-client limits.*
 4. **No eval of extraction or agent behaviour.** These are the two parts where model or prompt
    changes are most likely to cause silent regressions.
 5. **Documentation drift.** ARCHITECTURE.md §6 says "Max 6 tool-call rounds", but the code has
