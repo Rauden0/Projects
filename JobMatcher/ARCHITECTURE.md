@@ -235,16 +235,21 @@ is visible and testable.
 **Loop rules:**
 - System prompt states the user's CV profile summary and that every recommended job must
   come from a tool result and be cited by URL.
-- Max 6 tool-call rounds per question, max 3 parallel tool calls per round; then the
-  model must answer with what it has.
+- Max 4 tool-call rounds per question (`MAX_ROUNDS`), then a fifth call with tools disabled,
+  so the model must answer with what it has. At most 3 tool calls per round
+  (`MAX_CALLS_PER_ROUND`); they run one after another because they share the request's DB
+  session, and extra calls get an error result.
 - Tool errors are returned to the model as structured `is_error` results, not raised.
 - Agent events (tool calls, tool results, final answer) are streamed to the client over
   **SSE**, so the UI can show "searching remote Python roles…" while the agent works.
-- Token usage and latency per request are logged.
+- Every LLM call is logged as `llm_call` (latency, tokens) and written to `llm_usage`; each
+  chat turn ends with one `chat_turn` line (LLM calls, tool calls, tokens, duration). The
+  answer event carries the number of rounds.
+- Client-supplied history is validated as plain `user` / `assistant` text turns, so a client
+  cannot inject tool calls or system messages.
 
-`compare_with_cv` is deterministic first (set overlap of normalized skills, years and
-location rules), and only asks the LLM to phrase the explanation — so the important part
-is unit-testable.
+`compare_with_cv` is fully deterministic (set overlap of normalized skills, years and
+location rules), so it is unit-testable and costs no tokens.
 
 ---
 
@@ -252,7 +257,7 @@ is unit-testable.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/cv` | Upload CV (PDF or text) → extracted profile, returns `cv_id` |
+| `POST` | `/cv` | Upload CV text → extracted profile, returns `cv_id` |
 | `GET` | `/jobs/search` | Direct hybrid search with filters (no LLM) |
 | `GET` | `/jobs/{id}` | Job detail |
 | `POST` | `/chat` | `{cv_id, message, history}` → SSE stream of tool events + answer |
@@ -260,33 +265,60 @@ is unit-testable.
 
 Request/response models are Pydantic v2; OpenAPI docs come for free from FastAPI.
 
+Every error has one shape, produced in `api/errors.py` from the typed errors in
+`jobmatcher.errors`:
+
+```json
+{"detail": "job 42 not found", "code": "not_found", "request_id": "3f9c0a1b2d4e5f60"}
+```
+
+| Code | Status | Raised by |
+|---|---|---|
+| `validation_error` | 422 | request validation (adds an `errors` list) |
+| `not_found` | 404 | unknown job, CV or route |
+| `rate_limited` | 429 + `Retry-After` | per-client chat limits |
+| `budget_exhausted`, `llm_unavailable` | 503 | monthly LLM budget, no chat model configured |
+| `llm_error` | 502 | provider failure outside the SSE stream |
+| `internal_error` | 500 | anything unexpected (logged, details not exposed) |
+
+Each request gets an `X-Request-ID` (the caller's, if well-formed), echoed in the response and
+attached to every log line written while handling it.
+
 ---
 
 ## 8. Evaluation
 
-Retrieval quality is measured, not eyeballed:
+Quality is measured, not eyeballed; results and commands are in
+[eval/RESULTS.md](eval/RESULTS.md).
 
-- `eval/golden.yaml`: 15 questions (to grow to ~30), each with the set of job ids that a human marked as
-  relevant, e.g. *"remote Python backend, max 3 years, no relocation"*.
-- `eval/run_retrieval.py` computes **hit@5**, **recall@10** and **MRR** for
-  (a) vector only, (b) full-text only, (c) hybrid — so the README can show *why* hybrid
-  was chosen, with numbers.
-- Answer faithfulness is checked on every chat turn: URLs in the final answer that no tool
-  returned are reported as `unverified_urls` in the answer event.
-- Evaluation runs against a frozen fixture snapshot of postings (`eval/fixtures/*.json`)
-  so results are reproducible and CI does not depend on live job boards.
+- **Extraction** (`eval/run_extraction.py`): 35 labelled postings (Czech and English, IT and
+  non-IT) with gold seniority, years, remote policy, city, salary and skills. Per-field
+  accuracy, skills precision/recall/F1, JSON validity, latency and tokens, for any
+  OpenAI-compatible model, the configured chat model or the heuristic baseline; prompt
+  variants in `eval/extraction/prompts/`.
+- **Retrieval** (`eval/run_retrieval.py`): 41 golden questions over 32 frozen postings
+  (`eval/fixtures/postings.yaml`), hit@5, recall@10 and MRR per mode (vector, full-text,
+  hybrid), reported for the original IT set and the added non-IT / cross-language set.
+- **Agent** (`eval/run_agent.py`): 11 scripted questions against the seeded fixtures through
+  the production loop and tools, several runs each: expected tools used, filters, a relevant
+  posting cited, citation validity (every URL in the answer came from a tool), rounds,
+  latency and tokens.
+- Answer faithfulness is also checked on every production chat turn: URLs in the answer that
+  no tool returned are reported as `unverified_urls` in the answer event.
+
+The eval runners use their own database (`jobmatcher_eval`) because they truncate it.
 
 ---
 
 ## 9. Testing
 
-- **Unit:** source adapters (recorded JSON fixtures), normalization, chunking, RRF fusion,
-  `compare_with_cv` rules, extraction schema validation.
-- **Integration:** pytest against real Postgres + pgvector and RabbitMQ (CI service
-  containers, same approach as the BubuTracker Go CI); LLM and embeddings replaced by
-  deterministic fakes.
-- **Contract:** the agent loop tested with a scripted fake model that issues predefined
-  tool calls — verifies limits, error handling and citations without network.
+| Level | What | Needs |
+|---|---|---|
+| Unit | normalization, chunking, extraction parsing, RRF SQL, budget and limits, LLM client translation and error mapping, agent loop with a scripted model, API error schema | nothing |
+| Integration | indexer, search, toolbox, listing sync, outbox relay, ledger, batch extraction against Postgres + pgvector; the worker against RabbitMQ (retry queue, DLQ, gzip bodies) | `TEST_DATABASE_URL` (`*_test` only), `TEST_AMQP_URL` (own vhost) |
+| E2E | `job.discovered` on the exchange → worker → `/jobs/search` → `/chat` citing the posting; scripted model by default, `E2E_LLM=local` for Ollama | same |
+
+LLM and embeddings are deterministic fakes except in `E2E_LLM=local` runs and the evals.
 
 ---
 
@@ -301,23 +333,30 @@ JobMatcher/
 ├── alembic/                    # migrations
 ├── src/jobmatcher/
 │   ├── config.py               # pydantic-settings
-│   ├── llm.py                  # provider wrapper (Anthropic)
+│   ├── llm.py                  # Anthropic + OpenAI-compatible clients, usage, LLMError
+│   ├── errors.py               # typed errors (JobMatcherError)
+│   ├── observability.py        # logging, request ids, LLM call records
 │   ├── messaging.py            # RabbitMQ topology
 │   ├── db/                     # SQLAlchemy models, session, repositories
 │   ├── domain.py               # RawPosting, JobFacts, Chunk, enums shared by all modules
 │   ├── ingest/                 # worker, indexer, listing sync, normalize, chunking, extraction
 │   ├── outbox/relay.py
 │   ├── search/                 # embeddings.py, hybrid.py, metrics.py
-│   ├── agent/                  # loop.py, tools.py, prompts.py
-│   ├── cv/                     # profile.py (extraction + comparison)
-│   └── api/                    # main.py, deps.py, routes/, schemas.py
+│   ├── agent/                  # loop.py, tools.py, session.py
+│   ├── cv/                     # profile.py (extraction + comparison), service.py
+│   └── api/                    # main.py, deps.py, errors.py, middleware.py, routes/, schemas.py
 ├── eval/
+│   ├── RESULTS.md
+│   ├── run_extraction.py, run_retrieval.py, run_agent.py
+│   ├── extraction/             # labelled postings, prompt variants, results
+│   ├── agent/                  # scripted cases, prompt variants, results
 │   ├── golden.yaml
-│   ├── fixtures/
-│   └── run_retrieval.py
+│   └── fixtures/
+├── docs/                       # adr/, ci.md
 └── tests/
     ├── unit/
-    └── integration/
+    ├── integration/
+    └── e2e/
 ```
 
 ---
@@ -326,8 +365,9 @@ JobMatcher/
 
 All configuration via environment variables loaded by `pydantic-settings`
 (`DATABASE_URL`, `AMQP_URL`, `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`,
-`EMBEDDING_MODEL`, crawl intervals). The default LLM is a local Ollama model, so the project
-runs without any paid API.
+`EMBEDDING_MODEL`, budget and limits, `LOG_LEVEL` / `LOG_FORMAT`), validated at startup
+(enums, ranges, URL schemes, `EMBEDDING_DIM` against the schema). API keys are `SecretStr`.
+The default LLM is a local Ollama model, so the project runs without any paid API.
 `.env.example` is committed; `.env` is git-ignored. No keys in code or in the image.
 
 ---
