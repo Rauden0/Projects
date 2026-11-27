@@ -118,6 +118,47 @@ def test_chat_overrides_only_the_chat_client(monkeypatch: pytest.MonkeyPatch) ->
     assert chat._http.headers["Authorization"] == "Bearer gsk_test"
 
 
+def test_chat_on_another_provider_inherits_no_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from jobmatcher import llm as llm_module
+    from jobmatcher.config import Settings
+
+    settings = Settings(
+        _env_file=None,  # type: ignore[call-arg]
+        llm_provider="anthropic",
+        llm_api_key="sk-ant-secret",
+        llm_model="claude-haiku-5-5",
+        chat_llm_provider="openai_compat",
+        chat_llm_base_url="https://api.groq.com/openai/v1",
+        chat_llm_model="openai/gpt-oss-120b",
+    )
+    monkeypatch.setattr(llm_module, "get_settings", lambda: settings)
+
+    chat = llm_module.get_llm("chat")
+    assert isinstance(chat, OpenAICompatClient)
+    assert chat.model == "openai/gpt-oss-120b"
+    assert "Authorization" not in chat._http.headers
+
+
+def test_chat_on_another_host_does_not_get_the_base_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    from jobmatcher import llm as llm_module
+    from jobmatcher.config import Settings
+
+    settings = Settings(
+        _env_file=None,  # type: ignore[call-arg]
+        llm_base_url="https://api.groq.com/openai/v1",
+        llm_api_key="gsk_secret",
+        chat_llm_base_url="http://ollama:11434/v1",
+    )
+    monkeypatch.setattr(llm_module, "get_settings", lambda: settings)
+
+    chat = llm_module.get_llm("chat")
+    assert isinstance(chat, OpenAICompatClient)
+    assert chat.base_url == "http://ollama:11434/v1"
+    assert "Authorization" not in chat._http.headers
+
+
 @pytest.mark.asyncio
 async def test_rate_limit_and_tool_use_failed_are_retried(monkeypatch: pytest.MonkeyPatch) -> None:
     from jobmatcher import llm as llm_module

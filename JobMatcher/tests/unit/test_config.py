@@ -29,6 +29,13 @@ def test_defaults_are_valid_and_hide_secrets() -> None:
         {"otel_exporter_otlp_endpoint": "phoenix:6006"},
         {"otel_service_name": ""},
         {"otel_capture_content": "sometimes"},
+        {"llm_provider": "anthropic", "chat_llm_provider": "openai_compat"},
+        {
+            "llm_provider": "anthropic",
+            "chat_llm_provider": "openai_compat",
+            "chat_llm_model": "openai/gpt-oss-120b",
+        },
+        {"chat_llm_provider": "anthropic"},
     ],
 )
 def test_invalid_settings_are_rejected(overrides: dict[str, object]) -> None:
@@ -49,3 +56,13 @@ def test_tracing_is_off_and_without_content_by_default() -> None:
 def test_otlp_endpoint_accepts_http_urls() -> None:
     endpoint = make(otel_exporter_otlp_endpoint="http://phoenix:6006").otel_exporter_otlp_endpoint
     assert endpoint == "http://phoenix:6006"
+
+
+def test_chat_on_another_provider_with_explicit_values_is_valid() -> None:
+    settings = make(
+        llm_provider="anthropic",
+        chat_llm_provider="openai_compat",
+        chat_llm_base_url="https://api.groq.com/openai/v1",
+        chat_llm_model="openai/gpt-oss-120b",
+    )
+    assert settings.chat_llm_provider == "openai_compat"

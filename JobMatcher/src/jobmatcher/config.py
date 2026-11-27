@@ -34,7 +34,8 @@ class Settings(BaseSettings):
     # Sent as `reasoning_effort` to OpenAI-compatible reasoning models (gpt-oss on Groq).
     llm_reasoning_effort: Literal["", "low", "medium", "high"] = ""
     # Optional overrides for the chat agent, which needs stronger tool use than extraction
-    # (e.g. extraction on a local model, chat on a hosted one). Empty = same as above.
+    # (e.g. extraction on a local model, chat on a hosted one). Empty = same as above; a
+    # different CHAT_LLM_PROVIDER inherits nothing, so the other provider's key never leaks.
     chat_llm_provider: Provider | Literal[""] = ""
     chat_llm_base_url: str = ""
     chat_llm_api_key: SecretStr = SecretStr("")
@@ -68,7 +69,16 @@ class Settings(BaseSettings):
             )
         if self.extraction_mode == "batch" and self.llm_provider != "anthropic":
             raise ValueError("EXTRACTION_MODE=batch needs LLM_PROVIDER=anthropic")
+        self._check_chat_provider()
         return self
+
+    def _check_chat_provider(self) -> None:
+        if self.chat_llm_provider in ("", self.llm_provider):
+            return
+        if not self.chat_llm_model:
+            raise ValueError("a CHAT_LLM_PROVIDER other than LLM_PROVIDER needs CHAT_LLM_MODEL")
+        if self.chat_llm_provider == "openai_compat" and not self.chat_llm_base_url:
+            raise ValueError("CHAT_LLM_PROVIDER=openai_compat needs CHAT_LLM_BASE_URL")
 
 
 @lru_cache

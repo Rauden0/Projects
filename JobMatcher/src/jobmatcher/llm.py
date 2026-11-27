@@ -20,7 +20,7 @@ from jobmatcher import telemetry
 from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy, Purpose
 from jobmatcher.budget.ledger import UsageLedger
 from jobmatcher.budget.pricing import TokenUsage
-from jobmatcher.config import get_settings
+from jobmatcher.config import Provider, Settings, get_settings
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.errors import LLMError
 from jobmatcher.observability import LlmCall, Stopwatch, UsageMeter
@@ -466,13 +466,7 @@ def get_llm(
 ) -> LLMClient | None:
     """The configured client for a purpose, or None when Anthropic has no API key."""
     s = get_settings()
-    provider, base_url, model = s.llm_provider, s.llm_base_url, s.llm_model
-    api_key = s.llm_api_key.get_secret_value()
-    if purpose == "chat":
-        provider = s.chat_llm_provider or provider
-        base_url = s.chat_llm_base_url or base_url
-        api_key = s.chat_llm_api_key.get_secret_value() or api_key
-        model = s.chat_llm_model or model
+    provider, base_url, api_key, model = _chat_target(s) if purpose == "chat" else _target(s)
 
     ledger = UsageLedger(get_sessionmaker())
     guard = BudgetGuard(
@@ -504,6 +498,22 @@ def get_llm(
         client_id=client_id,
         meter=meter,
     )
+
+
+def _target(s: Settings) -> tuple[Provider, str, str, str]:
+    return s.llm_provider, s.llm_base_url, s.llm_api_key.get_secret_value(), s.llm_model
+
+
+def _chat_target(s: Settings) -> tuple[Provider, str, str, str]:
+    chat_key = s.chat_llm_api_key.get_secret_value()
+    chat_provider = s.chat_llm_provider
+    if chat_provider != "" and chat_provider != s.llm_provider:
+        return chat_provider, s.chat_llm_base_url, chat_key, s.chat_llm_model
+    provider, base_url, api_key, model = _target(s)
+    # The base key only follows the base URL: a different chat host never receives it.
+    if s.chat_llm_base_url not in ("", base_url):
+        base_url, api_key = s.chat_llm_base_url, ""
+    return provider, base_url, chat_key or api_key, s.chat_llm_model or model
 
 
 def _retry_delay(response: httpx.Response) -> float:
