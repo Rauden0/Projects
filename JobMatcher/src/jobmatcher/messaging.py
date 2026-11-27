@@ -15,7 +15,6 @@ One retry queue per delay keeps TTLs uniform within a queue, which avoids the he
 blocking you get with per-message expiration.
 """
 
-import gzip
 import zlib
 from collections.abc import Mapping
 
@@ -29,6 +28,7 @@ DLQ = "job.discovered.dlq"
 SOURCE_CRAWLED = "source.crawled"
 SOURCE_CRAWLED_QUEUE = "job.source_crawled"
 RETRY_DELAYS_S = (30, 300, 1800)
+MAX_DECODED_BYTES = 5 * 1024 * 1024
 
 
 async def declare_topology(channel: AbstractChannel) -> AbstractExchange:
@@ -82,7 +82,13 @@ def decode_body(body: bytes, encoding: str | None) -> bytes:
         return body
     if encoding != "gzip":
         raise UndecodableBody(f"unsupported content encoding {encoding}")
+    decompressor = zlib.decompressobj(wbits=31)
     try:
-        return gzip.decompress(body)
-    except (OSError, EOFError, zlib.error) as exc:
+        decoded = decompressor.decompress(body, MAX_DECODED_BYTES)
+    except zlib.error as exc:
         raise UndecodableBody(str(exc)) from exc
+    if decompressor.unconsumed_tail:
+        raise UndecodableBody(f"decoded body exceeds {MAX_DECODED_BYTES} bytes")
+    if not decompressor.eof:
+        raise UndecodableBody("truncated gzip body")
+    return decoded
