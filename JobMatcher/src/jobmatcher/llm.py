@@ -1,8 +1,8 @@
 """Thin wrapper over the LLM providers so the rest of the code (and tests) never import an SDK.
 
-Every call is checked against the budget, timed, logged as `llm_call` with its token usage,
-written to the usage ledger and, when the caller passes one, added to a `UsageMeter`.
-Provider failures surface as `LLMError`.
+Every call is checked against the budget, timed, traced as a `chat {model}` span, logged as
+`llm_call` with its token usage, written to the usage ledger and, when the caller passes one,
+added to a `UsageMeter`. Provider failures surface as `LLMError`.
 """
 
 import asyncio
@@ -14,6 +14,7 @@ from typing import Any, Protocol
 
 import httpx
 
+from jobmatcher import telemetry
 from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy, Purpose
 from jobmatcher.budget.ledger import UsageLedger
 from jobmatcher.budget.pricing import TokenUsage
@@ -190,14 +191,27 @@ class AnthropicClient(_Observed):
         )
 
     async def _send(self, **params: Any) -> Any:
-        await self._before()
-        watch = Stopwatch()
-        try:
-            response = await self._client.messages.create(model=self.model, **params)
-        except self._errors as exc:
-            await self._after(watch, None)
-            raise LLMError(f"anthropic: {exc}"[:500], getattr(exc, "status_code", None)) from exc
-        await self._after(watch, usage_of(response))
+        with telemetry.llm_call(
+            "anthropic", self.model, purpose=self.purpose, max_tokens=params.get("max_tokens")
+        ) as span:
+            await self._before()
+            span.prompt(params["messages"], system=params.get("system"))
+            watch = Stopwatch()
+            try:
+                response = await self._client.messages.create(model=self.model, **params)
+            except self._errors as exc:
+                await self._after(watch, None)
+                status = getattr(exc, "status_code", None)
+                raise LLMError(f"anthropic: {exc}"[:500], status) from exc
+            usage = usage_of(response)
+            span.response(
+                usage,
+                model=getattr(response, "model", None),
+                response_id=getattr(response, "id", None),
+                finish_reason=getattr(response, "stop_reason", None),
+                output=response.content,
+            )
+            await self._after(watch, usage)
         return response
 
 
@@ -247,26 +261,44 @@ class OpenAICompatClient(_Observed):
         http: httpx.AsyncClient | None = None,
     ) -> None:
         super().__init__(model, purpose, ledger, guard, client_id, meter)
+        self.base_url = base_url
         self._http = http or _http_client(base_url, api_key, timeout)
         self.structured_output = structured_output
         self.reasoning_effort = reasoning_effort
 
     async def _chat(self, payload: dict[str, Any], attempts: int = 5) -> dict[str, Any]:
-        await self._before()
-        watch = Stopwatch()
-        try:
-            extra = {"reasoning_effort": self.reasoning_effort} if self.reasoning_effort else {}
-            body = await self._post_with_retries(
-                {"model": self.model, **extra, **payload}, attempts
+        with telemetry.llm_call(
+            telemetry.provider_of(self.base_url),
+            self.model,
+            purpose=self.purpose,
+            max_tokens=payload.get("max_tokens"),
+            base_url=self.base_url,
+        ) as span:
+            await self._before()
+            span.prompt(payload["messages"])
+            watch = Stopwatch()
+            try:
+                extra = {"reasoning_effort": self.reasoning_effort} if self.reasoning_effort else {}
+                body = await self._post_with_retries(
+                    {"model": self.model, **extra, **payload}, attempts
+                )
+                choice: dict[str, Any] = body["choices"][0]
+                message: dict[str, Any] = choice["message"]
+            except LLMError:
+                await self._after(watch, None)
+                raise
+            except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
+                await self._after(watch, None)
+                raise LLMError(f"{type(exc).__name__} from LLM: {exc}"[:500]) from exc
+            usage = _openai_usage(body)
+            span.response(
+                usage,
+                model=body.get("model"),
+                response_id=body.get("id"),
+                finish_reason=choice.get("finish_reason"),
+                output=[message],
             )
-            message: dict[str, Any] = body["choices"][0]["message"]
-        except LLMError:
-            await self._after(watch, None)
-            raise
-        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
-            await self._after(watch, None)
-            raise LLMError(f"{type(exc).__name__} from LLM: {exc}"[:500]) from exc
-        await self._after(watch, _openai_usage(body))
+            await self._after(watch, usage)
         return message
 
     async def _post_with_retries(self, payload: dict[str, Any], attempts: int) -> Any:
