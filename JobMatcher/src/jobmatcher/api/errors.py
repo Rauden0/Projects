@@ -51,7 +51,7 @@ _DOMAIN_ERRORS: dict[type[JobMatcherError], tuple[int, str]] = {
 }
 
 ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
-    status: {"model": ErrorOut} for status in (401, 403, 404, 422, 429, 500, 502, 503)
+    status: {"model": ErrorOut} for status in (401, 403, 404, 413, 422, 429, 500, 502, 503)
 }
 
 

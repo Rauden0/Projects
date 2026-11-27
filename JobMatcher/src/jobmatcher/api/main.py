@@ -11,12 +11,13 @@ from jobmatcher import metrics
 from jobmatcher.api.deps import get_authenticator
 from jobmatcher.api.errors import install_error_handlers
 from jobmatcher.api.middleware import (
+    BodyLimitMiddleware,
     RequestIdMiddleware,
     SecurityHeadersMiddleware,
     SessionCookieMiddleware,
 )
 from jobmatcher.api.routes import chat, health, jobs
-from jobmatcher.config import configure_logging, configure_tracing
+from jobmatcher.config import configure_logging, configure_tracing, get_settings
 
 STATIC = Path(__file__).parent / "static"
 CDN_SCRIPTS = (
@@ -53,6 +54,7 @@ def create_app() -> FastAPI:
     index_csp = page_csp((STATIC / "index.html").read_text(encoding="utf-8"))
     app = FastAPI(title="Job Matcher", version="0.1.0")
     app.add_middleware(GZipMiddleware, minimum_size=1024)
+    app.add_middleware(BodyLimitMiddleware, max_bytes=get_settings().max_request_body_bytes)
     app.add_middleware(SessionCookieMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIdMiddleware)

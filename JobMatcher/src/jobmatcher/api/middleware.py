@@ -4,7 +4,9 @@ from typing import Any
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from jobmatcher import metrics
 from jobmatcher.api.auth import ISSUED_COOKIE
+from jobmatcher.api.errors import error_response
 from jobmatcher.observability import Stopwatch, new_request_id, request_id_var
 
 log = logging.getLogger("jobmatcher.access")
@@ -118,3 +120,64 @@ def _security_headers(with_csp: bool) -> list[tuple[bytes, bytes]]:
     if with_csp:
         headers.append((b"content-security-policy", API_CSP.encode()))
     return headers
+
+
+class BodyLimitMiddleware:
+    """Refuses a request body over `max_bytes` with 413 before anything parses it: by its
+    Content-Length, or while reading a chunked body, which is buffered (at most `max_bytes`)
+    and replayed to the app."""
+
+    def __init__(self, app: ASGIApp, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope["method"] not in BODY_METHODS:
+            await self.app(scope, receive, send)
+            return
+        length = dict(scope["headers"]).get(b"content-length", b"")
+        if length.isdigit() and int(length) > self.max_bytes:
+            await self._refuse(scope, receive, send)
+            return
+        body = await self._read(receive)
+        if body is None:
+            await self._refuse(scope, receive, send)
+            return
+        await self.app(scope, _replay(body, receive), send)
+
+    async def _read(self, receive: Receive) -> bytes | None:
+        chunks: list[bytes] = []
+        size = 0
+        while True:
+            message = await receive()
+            if message["type"] != "http.request":
+                return b"".join(chunks)
+            chunk = message.get("body", b"")
+            size += len(chunk)
+            if size > self.max_bytes:
+                return None
+            chunks.append(chunk)
+            if not message.get("more_body", False):
+                return b"".join(chunks)
+
+    async def _refuse(self, scope: Scope, receive: Receive, send: Send) -> None:
+        metrics.recorder.rejected("body_too_large")
+        detail = f"request body exceeds {self.max_bytes} bytes"
+        response = error_response(413, "payload_too_large", detail)
+        await response(scope, receive, send)
+
+
+BODY_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def _replay(body: bytes, receive: Receive) -> Receive:
+    sent = False
+
+    async def replay() -> Message:
+        nonlocal sent
+        if sent:
+            return await receive()
+        sent = True
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    return replay

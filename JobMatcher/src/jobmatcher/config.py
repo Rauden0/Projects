@@ -96,6 +96,8 @@ class Settings(BaseSettings):
     cv_uploads_per_minute: int = Field(default=5, ge=1)
     cv_uploads_per_day: int = Field(default=20, ge=1)
     cv_deletes_per_minute: int = Field(default=10, ge=1)
+    # Larger request bodies get 413 before parsing; a 50k-character CV fits.
+    max_request_body_bytes: int = Field(default=256 * 1024, ge=1024)
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:
