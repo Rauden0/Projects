@@ -54,3 +54,54 @@
   relevant: [remote-contract-py]
 - query: vývoj firmware a softwaru pro vědecké přístroje
   relevant: [brno-embedded]
+# Non-IT and harder questions: occupation words in another language than the posting,
+# paraphrases, and near neighbours that must not be confused.
+- query: řidič nákladního auta
+  tag: added
+  relevant: [brno-ridic-c]
+- query: rozvoz balíků dodávkou, stačí řidičák na osobák
+  tag: added
+  relevant: [ostrava-kuryr]
+- query: péče o staré lidi
+  tag: added
+  relevant: [brno-pecovatelka]
+- query: nurse job in a hospital
+  tag: added
+  relevant: [praha-zdravotni-sestra]
+- query: nursing job in Prague
+  tag: added
+  filters: { city: Prague }
+  relevant: [praha-zdravotni-sestra]
+- query: vedení účetnictví a daňová přiznání
+  tag: added
+  relevant: [brno-ucetni]
+- query: payroll and HR administration
+  tag: added
+  relevant: [praha-mzdova-ucetni]
+- query: elektroinstalace v rodinných domech
+  tag: added
+  relevant: [brno-elektrikar]
+- query: oprava kotlů a rozvodů vody
+  tag: added
+  relevant: [ostrava-instalater]
+- query: cooking in a restaurant kitchen
+  tag: added
+  relevant: [brno-kuchar]
+- query: front desk job greeting visitors
+  tag: added
+  relevant: [praha-recepcni]
+- query: manual work in a warehouse with a forklift
+  tag: added
+  relevant: [brno-skladnik]
+- query: zákaznická podpora z domova
+  tag: added
+  relevant: [remote-zakaznicka-podpora, brno-support-py]
+- query: práce bez maturity v logistice a dopravě
+  tag: added
+  relevant: [brno-skladnik, brno-ridic-c, ostrava-kuryr]
+- query: řemeslná práce na stavbách a v domácnostech
+  tag: added
+  relevant: [brno-elektrikar, ostrava-instalater]
+- query: systems programming in a compiled language
+  tag: added
+  relevant: [brno-go, brno-embedded]

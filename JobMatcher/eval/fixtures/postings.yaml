@@ -188,3 +188,117 @@
     Fully remote. Hire backend, Kubernetes and Python engineers across Europe.
     ## Requirements
     - 2+ years of technical recruiting
+# Non-IT postings: the product is occupation-neutral since JobIngestor crawls every occupation.
+# Pairs of near neighbours (truck vs. van driver, accountant vs. payroll accountant, technical
+# vs. customer support) keep the queries from being answerable by one keyword.
+- id: brno-ridic-c
+  title: Řidič sk. C
+  company: Jihomoravská doprava
+  location: Brno, Czechia
+  description: |
+    Rozvoz zboží nákladním vozidlem po Jihomoravském kraji, jednosměnný provoz.
+    ## Požadujeme
+    - řidičské oprávnění sk. C, profesní průkaz, karta do tachografu
+    - praxe 2 roky
+    Mzda 38 000 – 45 000 Kč.
+- id: ostrava-kuryr
+  title: Kurýr – řidič dodávky
+  company: Rychlé balíky
+  location: Ostrava, Czechia
+  description: |
+    Doručování balíků zákazníkům dodávkou do 3,5 t, firemní auto a telefon.
+    ## Požadujeme
+    - řidičský průkaz sk. B
+    - znalost Ostravy výhodou
+    Odměna 32 000 Kč + bonus za doručené zásilky.
+- id: brno-pecovatelka
+  title: Pečovatelka v domově pro seniory
+  company: Domov Slunce
+  location: Brno, Czechia
+  description: |
+    Pomoc klientům s hygienou, oblékáním a stravováním, doprovod na procházky.
+    Nepřetržitý provoz, dvanáctihodinové směny.
+    ## Požadujeme
+    - kurz pracovník v sociálních službách (lze doplnit)
+    Nástupní mzda 31 000 Kč.
+- id: praha-zdravotni-sestra
+  title: Všeobecná sestra – chirurgie
+  company: Nemocnice Vinohrady Sever
+  location: Prague, Czechia
+  description: |
+    Fakultní nemocnice přijme všeobecnou sestru na chirurgické oddělení.
+    ## Požadavky
+    - odborná způsobilost dle zákona 96/2004 Sb.
+    - vhodné i pro absolventy
+    Náborový příspěvek 50 000 Kč, 6 týdnů dovolené.
+- id: brno-ucetni
+  title: Účetní
+  company: Účetnictví Morava
+  location: Brno, Czechia
+  description: |
+    Samostatné vedení podvojného účetnictví pro malé firmy, daňová přiznání, DPH.
+    ## Požadujeme
+    - 5 let praxe, znalost programu Pohoda
+    Hybridní režim, 2 dny z domova.
+- id: praha-mzdova-ucetni
+  title: Mzdová účetní / personalistka
+  company: Stavby Praha
+  location: Prague, Czechia
+  description: |
+    Zpracování mezd pro 300 zaměstnanců, komunikace s úřady, personální agenda,
+    nástupy a výstupy zaměstnanců.
+    ## Požadujeme
+    - praxe v mzdovém účetnictví 3 roky, znalost zákoníku práce
+- id: brno-elektrikar
+  title: Elektrikář
+  company: Elektro Kuřim
+  location: Brno, Czechia
+  description: |
+    Montáže elektroinstalací v novostavbách rodinných domů, zapojování rozvaděčů.
+    ## Požadujeme
+    - vyhláška 50/1978 Sb. § 6, vyučení v oboru elektro, ŘP sk. B
+    Mzda až 60 000 Kč, služební auto.
+- id: ostrava-instalater
+  title: Instalatér – topenář
+  company: Teplo Ostrava
+  location: Ostrava, Czechia
+  description: |
+    Montáž a servis kotlů, rozvodů vody a topení u zákazníků v domácnostech.
+    ## Požadujeme
+    - výuční list instalatér, oprávnění na plyn výhodou
+- id: brno-kuchar
+  title: Kuchař / kuchařka
+  company: Restaurace U Zelného trhu
+  location: Brno, Czechia
+  description: |
+    Příprava jídel à la carte a poledního menu v restauraci v centru Brna.
+    ## Požadujeme
+    - vyučení v oboru kuchař, zdravotní průkaz, praxe 2 roky
+    Krátký a dlouhý týden, spropitné.
+- id: praha-recepcni
+  title: Office Receptionist
+  company: Vltava Legal
+  location: Prague, Czechia
+  description: |
+    First point of contact for clients of our law firm: greeting visitors, answering the
+    phone, booking meeting rooms and couriers.
+    ## Requirements
+    - Fluent Czech and English, MS Office
+- id: brno-skladnik
+  title: Skladník – VZV
+  company: Logistika Modřice
+  location: Brno, Czechia
+  description: |
+    Vychystávání a nakládka zboží v logistickém centru, obsluha vysokozdvižného vozíku.
+    ## Požadujeme
+    - průkaz VZV (lze udělat u nás), praxe není nutná
+    Třísměnný provoz, doprava do práce zajištěna.
+- id: remote-zakaznicka-podpora
+  title: Operátor/ka zákaznické linky – home office
+  company: Telefonica Služby
+  location: Remote, Czechia
+  description: |
+    Práce z domova, kdekoli v ČR. Vyřizování dotazů zákazníků po telefonu, e-mailu a chatu
+    k vyúčtování a tarifům.
+    ## Požadujeme
+    - výborná čeština, příjemný telefonický projev, základní práce s PC
