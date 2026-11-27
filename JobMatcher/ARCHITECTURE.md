@@ -220,6 +220,22 @@ CREATE TABLE outbox (
     published_at timestamptz
 );
 CREATE INDEX outbox_unpublished ON outbox (id) WHERE published_at IS NULL;
+
+-- ADR 0004: replayable first chat turns and shared rate limit windows; keys are SHA-256.
+CREATE TABLE chat_answer_cache (
+    key         bytea PRIMARY KEY,
+    cv_id       uuid REFERENCES cv (id) ON DELETE CASCADE,
+    events      jsonb NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    expires_at  timestamptz NOT NULL
+);
+CREATE TABLE rate_limit (
+    key           bytea NOT NULL,
+    window_start  timestamptz NOT NULL,
+    hits          integer NOT NULL,
+    expires_at    timestamptz NOT NULL,
+    PRIMARY KEY (key, window_start)
+);
 ```
 
 Migrations are managed with **Alembic**; the schema above is the target of the first
@@ -378,10 +394,14 @@ Every error has one shape, produced in `api/errors.py` from the typed errors in
 | `validation_error` | 422 | request validation (adds an `errors` list) |
 | `unauthenticated` | 401 + `WWW-Authenticate` | `AUTH_MODE=oidc` without a valid bearer token |
 | `csrf_rejected` | 403 | cross-site or non-JSON state-changing request |
+| `captcha_failed` | 403 | `POST /cv` without an accepted Turnstile token (`TURNSTILE_SECRET` set) |
+| `payload_too_large` | 413 | request body over `MAX_REQUEST_BODY_BYTES` |
 | `not_found` | 404 | unknown job or route, or a CV the caller does not own |
-| `rate_limited` | 429 + `Retry-After` | per-client chat limits |
+| `rate_limited` | 429 + `Retry-After` | per-client limits: chat, CV upload/delete, search, streams, duplicate messages |
+| `server_busy` | 503 + `Retry-After` | all `CHAT_MAX_STREAMS` chat streams in use |
 | `budget_exhausted`, `llm_unavailable` | 503 | monthly LLM budget, no chat model configured |
 | `auth_unavailable` | 503 | the OIDC issuer's discovery document or keys cannot be fetched |
+| `captcha_unavailable` | 503 | Cloudflare's Turnstile verification cannot be reached |
 | `llm_error` | 502 | provider failure outside the SSE stream |
 | `internal_error` | 500 | anything unexpected (logged, details not exposed) |
 
@@ -405,8 +425,28 @@ Decided in [ADR 0003](docs/adr/0003-authentication.md).
 - **CSRF.** SameSite=Lax plus `reject_cross_site`: unsafe methods with
   `Sec-Fetch-Site: cross-site` and `POST`s without `Content-Type: application/json` get 403;
   no CORS, so cross-origin JSON never passes the preflight.
-- **Chat limits** key on the client address in session mode (a cookie is free to reset) and
+- **Limits** key on the client address in session mode (a cookie is free to reset) and
   on the principal in oidc mode.
+
+### 7.2 Caching and abuse limits
+
+Decided in [ADR 0004](docs/adr/0004-caching-and-abuse-protection.md).
+
+- **Caches.** `CachedEmbedder` (LRU of query vectors, per process); `SearchCache` (search
+  responses for 60 s per process, keyed by the request and the index version
+  `max(outbox.id)`, which every job.created/updated/closed changes); `chat_answer_cache`
+  (first turns without history, in Postgres for 10 min, keyed by a hash of the prompt and
+  tools version, model, normalised message, index version and, with a CV, the CV id, owner
+  and profile). Only turns ending in an answer without `unverified_urls` are stored; a hit
+  replays the SSE events with `cached: true`.
+- **Admission of a chat turn** (`agent/session.start_turn`), before the first event so that
+  refusals are HTTP errors: cached replay (counts as a request, not tokens) → budget and
+  per-client rate and daily tokens → duplicate message → a stream slot (per client and in
+  total) → the turn, ended by `CHAT_STREAM_TIMEOUT_S`.
+- **Rate buckets** (`budget/limits.RequestLimiter`): `chat`, `cv_upload` (per minute and per
+  day), `cv_delete`, `search`; in memory per process or, with `RATE_LIMIT_BACKEND=postgres`,
+  fixed windows in `rate_limit` shared by replicas.
+- **Body limit** middleware (413 before parsing) and an optional Turnstile check on `POST /cv`.
 - **Headers.** nosniff, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` and a deny-all
   CSP on API responses; the page's CSP allows only the two pinned CDN scripts and the hashes
   of its own inline script and style, computed at startup.
@@ -474,15 +514,17 @@ JobMatcher/
 │   ├── observability.py        # logging, request ids, LLM call records
 │   ├── telemetry.py            # OpenTelemetry spans, GenAI attribute names, OTLP setup
 │   ├── messaging.py            # RabbitMQ topology
+│   ├── caching.py              # bounded LRU / TTL caches
 │   ├── db/                     # SQLAlchemy models, session, repositories
 │   ├── domain.py               # RawPosting, JobFacts, Chunk, enums shared by all modules
 │   ├── ingest/                 # worker, indexer, listing sync, normalize, chunking, extraction
 │   ├── outbox/relay.py
-│   ├── search/                 # embeddings.py, hybrid.py, metrics.py
-│   ├── agent/                  # loop.py (entry, prompt), graph.py (LangGraph), tools.py, session.py
+│   ├── search/                 # embeddings.py, hybrid.py, cache.py, metrics.py
+│   ├── agent/                  # loop.py (entry, prompt), graph.py (LangGraph), tools.py, session.py, answers.py
+│   ├── budget/                 # guard.py, ledger.py, pricing.py, limits.py (rates, streams, duplicates)
 │   ├── cv/                     # extraction.py (LLM profile), profile.py (heuristic, merge, comparison), service.py
 │   ├── mcp_server.py           # jobmatcher-mcp: search_jobs / get_job over MCP
-│   └── api/                    # main.py, deps.py, errors.py, middleware.py, routes/, schemas.py
+│   └── api/                    # main.py, deps.py, errors.py, middleware.py, captcha.py, routes/, schemas.py
 ├── eval/
 │   ├── RESULTS.md
 │   ├── run_extraction.py, run_retrieval.py, run_agent.py
@@ -504,7 +546,8 @@ JobMatcher/
 All configuration via environment variables loaded by `pydantic-settings`
 (`DATABASE_URL`, `AMQP_URL`, `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`,
 optional `CHAT_LLM_*` overrides, `EMBEDDING_MODEL`, budget and limits, `AUTH_MODE` /
-`SESSION_SECRET` / `OIDC_*` / `MCP_HTTP_TOKEN`, `LOG_LEVEL` / `LOG_FORMAT`, `OTEL_EXPORTER_OTLP_ENDPOINT`
+`SESSION_SECRET` / `OIDC_*` / `MCP_HTTP_TOKEN`, caches and abuse limits (ADR 0004),
+`TURNSTILE_*`, `LOG_LEVEL` / `LOG_FORMAT`, `OTEL_EXPORTER_OTLP_ENDPOINT`
 / `OTEL_SERVICE_NAME` / `OTEL_CAPTURE_CONTENT`), validated at startup (enums, ranges, URL
 schemes of the database, broker, LLM and OTLP URLs, `EMBEDDING_DIM` against the schema, a
 `CHAT_LLM_PROVIDER` other than `LLM_PROVIDER` having its own model and base URL). API keys are

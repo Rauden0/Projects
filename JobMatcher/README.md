@@ -116,13 +116,37 @@ anywhere else is a 404, as if it did not exist ([ADR 0003](docs/adr/0003-authent
 (CSRF protection for the cookie). CVs uploaded before owners were recorded belong to nobody
 and are only removed by retention.
 
+## Caching and abuse limits
+
+Decided in [ADR 0004](docs/adr/0004-caching-and-abuse-protection.md).
+
+- **Caches.** Query embeddings (LRU, `QUERY_EMBEDDING_CACHE_SIZE`), `/jobs/search` responses
+  (`SEARCH_CACHE_TTL_S`, 60 s, also sent as `Cache-Control`) and first chat turns without
+  history (`CHAT_ANSWER_CACHE_TTL_S`, 10 min, in Postgres). Every new, changed or closed job
+  invalidates the search and chat caches at once; a replayed chat answer has `"cached": true`
+  on its events, counts against the per-minute limit and costs no tokens. An answer that used
+  a CV is only ever replayed to the CV's owner; deleting the CV deletes it.
+- **Limits.** Per client: chat requests and tokens (above), CV uploads
+  (`CV_UPLOADS_PER_MINUTE`, `CV_UPLOADS_PER_DAY`), CV deletes, searches
+  (`SEARCH_REQUESTS_PER_MINUTE`), concurrent chat streams (`CHAT_MAX_STREAMS_PER_CLIENT`, and
+  `CHAT_MAX_STREAMS` in total, then 503), and the same chat message twice within
+  `CHAT_DUPLICATE_WINDOW_S`. Refusals are 429 with `Retry-After`. Chat turns end after
+  `CHAT_STREAM_TIMEOUT_S`; request bodies over `MAX_REQUEST_BODY_BYTES` get 413. With several
+  API replicas set `RATE_LIMIT_BACKEND=postgres` so they share the rate windows.
+- **CAPTCHA.** Set `TURNSTILE_SECRET` and `TURNSTILE_SITE_KEY` to require a Cloudflare
+  Turnstile check on CV uploads; off by default.
+- **Metrics.** `jobmatcher_cache_lookups_total{cache,result}` and
+  `jobmatcher_rejected_requests_total{reason}`.
+
 ## Personal data
 
 `POST /cv` stores the CV text, its extracted profile and an embedding. `DELETE /cv/{cv_id}`
 (the "Smazat CV" button in the UI) removes them at once; otherwise the `retention` service
 deletes CVs `CV_RETENTION_DAYS` (default 30) after upload. Chat limits store the client IP (in
 `AUTH_MODE=oidc` the token subject) on `llm_usage` rows, and the same service clears it after
-two days. The session cookie holds a random id and nothing else. At upload the CV text (its
+two days. Cached chat answers (10 minutes) and rate limit windows (at most a day) are keyed
+by hashes; the same service deletes them once expired, and an answer that used a CV goes
+with the CV. The session cookie holds a random id and nothing else. At upload the CV text (its
 first 12,000 characters) is sent once to the configured extraction LLM to build the profile;
 set `CV_LLM_EXTRACTION=false` to keep the CV text local and use the keyword-based profile
 instead. Chat messages and the CV profile (skills, years, languages, city, seniority, desired
