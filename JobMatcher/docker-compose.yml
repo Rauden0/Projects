@@ -24,6 +24,10 @@ services:
   ollama:
     image: ollama/ollama:latest
     ports: ["11434:11434"]
+    environment:
+      # The default 4096-token window is silently truncated from the start (the system prompt)
+      # once a chat has a few turns: one agent question alone reaches ~3.3k tokens.
+      OLLAMA_CONTEXT_LENGTH: "8192"
     volumes: [ollama:/root/.ollama]
     deploy:
       resources:
