@@ -26,8 +26,13 @@ pytest · Docker Compose · GitHub Actions
 - **Agent** — a plain tool-calling loop (no framework) with `search_jobs`, `get_job` and
   `compare_with_cv`; round and parallelism limits; tool errors fed back to the model;
   answer URLs checked against tool results; events streamed over SSE.
-- **Evaluation** — a frozen fixture set and golden questions; hit@5, recall@10 and MRR per
-  search mode.
+- **Evaluation** — extraction (35 labelled cs/en postings, IT and non-IT), retrieval
+  (41 golden questions, per search mode) and agent (scripted questions, tool use and citation
+  validity) evals against the local model; see [eval/RESULTS.md](eval/RESULTS.md).
+- **Operations** — one JSON error shape (`{detail, code, request_id}`), `X-Request-ID` on every
+  request and log line, `llm_call` / `chat_turn` log events with latency and tokens
+  (`LOG_FORMAT=json` for log shippers), every LLM call in the `llm_usage` ledger, settings
+  validated at startup.
 
 ## Run it
 
@@ -98,43 +103,51 @@ merge). Fixes on a release branch are merged back into `dev`.
 
 ## Develop
 
-```bash
-pip install -e ".[dev]"          # add ,embeddings for the real e5 model
-ruff check src tests eval alembic
-pytest -q                        # integration tests skip without Postgres
-```
-
-Integration tests need a migrated Postgres with pgvector and run in CI against service
-containers.
-
-## Evaluate retrieval
+See [CODING_GUIDELINES.md](CODING_GUIDELINES.md).
 
 ```bash
-alembic upgrade head
-python eval/run_retrieval.py            # configured embedder (e5 if installed)
-python eval/run_retrieval.py --hashing  # dependency-free baseline
+python -m venv .venv && .venv/Scripts/pip install -e ".[dev,embeddings,llm]"   # bin/ on Linux
+ruff check src tests eval alembic && ruff format --check src tests eval alembic
+mypy src
+pytest -q -m "not integration and not e2e"          # unit tests, no services
 ```
 
-Prints a markdown table of hit@5, recall@10 and MRR for vector, full-text and hybrid search
-over [`eval/golden.yaml`](eval/golden.yaml): 25 questions (15 keyword-style, 10 paraphrased
-or in Czech) against 20 fixture postings, 4 of them deliberate distractors.
+Integration and e2e tests need Postgres and RabbitMQ, and only ever touch a database named
+`*_test` and their own RabbitMQ vhost, because they truncate tables:
 
-Current results with `multilingual-e5-small`:
+```bash
+docker compose up -d postgres rabbitmq ollama
+docker compose exec postgres psql -U jobmatcher -c "CREATE DATABASE jobmatcher_test"
+docker compose exec postgres psql -U jobmatcher -d jobmatcher_test -c "CREATE EXTENSION vector"
+docker compose exec rabbitmq rabbitmqctl add_vhost jobmatcher_test
+docker compose exec rabbitmq rabbitmqctl set_permissions -p jobmatcher_test guest ".*" ".*" ".*"
+DATABASE_URL=postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher_test alembic upgrade head
 
-| mode | hit@5 | recall@10 | MRR |
-|---|---|---|---|
-| vector | 1.00 | 0.98 | 0.90 |
-| full-text | 0.68 | 0.66 | 0.64 |
-| hybrid | 0.96 | 0.98 | 0.87 |
+pytest -q --cov=jobmatcher                          # unit + integration + e2e (scripted model)
+E2E_LLM=local pytest -q -m e2e                      # e2e with the local Ollama model
+```
 
-What the numbers changed:
-- The first version of the set (keyword questions only) scored 1.00 everywhere and could not
-  tell the modes apart, so paraphrased and Czech questions and distractors were added.
-- Stop words ("a", "z", "and") in the full-text query matched every posting and pushed hybrid
-  MRR down to 0.77; dropping them brought it to 0.87.
-- Vector search alone is best on this set; hybrid is kept because the title and full-text
-  lists fix real cases the set does not cover yet, e.g. a "TypeScript Developer" ad that
-  mentions Python once outranking "Python Developer" in pure vector search.
+Override the targets with `TEST_DATABASE_URL` and `TEST_AMQP_URL`. The e2e test publishes a
+gzipped `job.discovered` message, lets the real worker index it, finds it via `/jobs/search`
+and asks `/chat`, which must cite it.
+
+## Evaluate
+
+```bash
+python eval/run_extraction.py --model qwen2.5:7b    # structured extraction, per field
+python eval/run_retrieval.py                        # hit@5 / recall@10 / MRR per search mode
+python eval/run_agent.py --model qwen2.5:7b         # tool use, citations, latency, tokens
+```
+
+They use the `jobmatcher_eval` database (`EVAL_DATABASE_URL`). Commands, numbers and the
+conclusions drawn from them are in [eval/RESULTS.md](eval/RESULTS.md). Headlines with
+qwen2.5:7b on an RTX 3060 Ti:
+
+| | |
+|---|---|
+| Extraction | 95.5% mean field accuracy, 100% valid JSON, 1.4 s per posting (heuristic baseline 59.2%) |
+| Retrieval | hybrid hit@5 0.83, recall@10 0.90, MRR 0.79 over 41 questions; weakest on English queries for Czech postings |
+| Agent | relevant posting cited in 85% of 33 runs, no invented URLs, 3.0 rounds and ~4.6k input tokens per question |
 
 ## Roadmap
 
