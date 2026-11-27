@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from jobmatcher import telemetry
 from jobmatcher.agent.tools import Toolbox
 from jobmatcher.errors import BudgetExceeded, LLMError, ToolError
 from jobmatcher.llm import LLMClient
@@ -103,13 +104,7 @@ async def run_agent(
         for i, use in enumerate(tool_uses):
             name, tool_input, use_id = _block(use, "name"), _block(use, "input"), _block(use, "id")
             yield AgentEvent("tool_call", {"name": name, "input": tool_input})
-            if i >= MAX_CALLS_PER_ROUND:
-                output, is_error = "too many tool calls in one round; ask again next turn", True
-            else:
-                try:
-                    output, is_error = await toolbox.call(name, tool_input), False
-                except (ToolError, ValueError) as exc:
-                    output, is_error = str(exc), True
+            output, is_error = await _call_tool(toolbox, i, name, tool_input, use_id)
             yield AgentEvent(
                 "tool_result",
                 {
@@ -133,6 +128,27 @@ async def run_agent(
         messages.append({"role": "user", "content": results})
 
     yield AgentEvent("error", {"message": "agent did not finish"})  # pragma: no cover
+
+
+async def _call_tool(
+    toolbox: Toolbox, index: int, name: str, tool_input: Any, use_id: str
+) -> tuple[Any, bool]:
+    with telemetry.tool_call(name, use_id, tool_input) as span:
+        output, error = await _execute(toolbox, index, name, tool_input)
+        span.result(output, error=error)
+    return output, error is not None
+
+
+async def _execute(
+    toolbox: Toolbox, index: int, name: str, tool_input: Any
+) -> tuple[Any, str | None]:
+    """The tool's output, or the message the model gets instead, and the error type if any."""
+    if index >= MAX_CALLS_PER_ROUND:
+        return "too many tool calls in one round; ask again next turn", "too_many_calls"
+    try:
+        return await toolbox.call(name, tool_input), None
+    except (ToolError, ValueError) as exc:
+        return str(exc), type(exc).__name__
 
 
 def _compact_old_results(messages: list[dict[str, Any]]) -> None:
