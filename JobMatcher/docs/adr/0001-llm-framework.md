@@ -1,6 +1,7 @@
 # ADR 0001: No agent framework for the LLM layer; add OpenTelemetry tracing and agent-level evals
 
-- **Status:** Proposed
+- **Status:** Superseded by [ADR 0002](0002-langgraph.md) for the agent loop; the tracing,
+  eval and structured-output decisions still hold
 - **Date:** 2026-11-27
 - **Scope:** `src/jobmatcher/llm.py`, `agent/`, `ingest/extraction.py`, `ingest/batch_extract.py`,
   `budget/`, `eval/`
