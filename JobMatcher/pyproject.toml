@@ -23,6 +23,7 @@ embeddings = ["sentence-transformers>=3.0"]
 llm = ["anthropic>=0.40"]
 # Only needed to export traces (OTEL_EXPORTER_OTLP_ENDPOINT); without it the API is a no-op.
 otel = ["opentelemetry-sdk>=1.30", "opentelemetry-exporter-otlp-proto-http>=1.30"]
+mcp = ["mcp>=2.3,<3"]
 dev = [
     "jobmatcher[otel]",
     "pytest>=8.2",
@@ -31,6 +32,9 @@ dev = [
     "ruff>=0.5",
     "mypy>=1.10",
 ]
+
+[project.scripts]
+jobmatcher-mcp = "jobmatcher.mcp_server:main"
 
 [build-system]
 requires = ["hatchling"]
