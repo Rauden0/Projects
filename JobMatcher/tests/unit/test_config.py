@@ -29,6 +29,9 @@ def test_defaults_are_valid_and_hide_secrets() -> None:
         {"otel_exporter_otlp_endpoint": "phoenix:6006"},
         {"otel_service_name": ""},
         {"otel_capture_content": "sometimes"},
+        {"llm_base_url": "localhost:11434/v1"},
+        {"llm_base_url": ""},
+        {"chat_llm_base_url": "ftp://groq"},
         {"llm_provider": "anthropic", "chat_llm_provider": "openai_compat"},
         {
             "llm_provider": "anthropic",

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     amqp_url: str = Field(default="amqp://guest:guest@localhost:5672/", pattern=r"^amqps?://")
 
     llm_provider: Provider = "openai_compat"
-    llm_base_url: str = "http://localhost:11434/v1"
+    llm_base_url: str = Field(default="http://localhost:11434/v1", pattern=r"^https?://\S+$")
     llm_api_key: SecretStr = SecretStr("")
     llm_model: str = Field(default="qwen2.5:7b", min_length=1)
     llm_timeout_s: float = Field(default=180.0, gt=0)
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # (e.g. extraction on a local model, chat on a hosted one). Empty = same as above; a
     # different CHAT_LLM_PROVIDER inherits nothing, so the other provider's key never leaks.
     chat_llm_provider: Provider | Literal[""] = ""
-    chat_llm_base_url: str = ""
+    chat_llm_base_url: str = Field(default="", pattern=r"^(https?://\S+)?$")
     chat_llm_api_key: SecretStr = SecretStr("")
     chat_llm_model: str = ""
     llm_effort: Effort = "low"
