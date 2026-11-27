@@ -59,12 +59,15 @@ def test_chat_streams_agent_events(monkeypatch) -> None:  # type: ignore[no-unty
 
 def test_rate_limited_client_gets_429_with_retry_after() -> None:
     gate = FakeGate(ClientLimited("too many requests", 12))
-    response = make_client(gate).post(
-        "/chat", json={"message": "hi"}, headers={"X-Client-Id": "martin"}
-    )
+    response = make_client(gate).post("/chat", json={"message": "hi"})
     assert response.status_code == 429
     assert response.headers["retry-after"] == "12"
-    assert gate.clients == ["martin"]
+
+
+def test_client_is_keyed_by_peer_address_not_header() -> None:
+    gate = FakeGate(ClientLimited("too many requests", 12))
+    make_client(gate).post("/chat", json={"message": "hi"}, headers={"X-Client-Id": "martin"})
+    assert gate.clients == ["testclient"]
 
 
 def test_exhausted_budget_is_503() -> None:

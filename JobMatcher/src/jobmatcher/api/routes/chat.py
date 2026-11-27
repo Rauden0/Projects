@@ -19,7 +19,6 @@ from jobmatcher.observability import UsageMeter
 
 router = APIRouter(tags=["chat"], responses=ERROR_RESPONSES)
 
-CLIENT_ID_CHARS = 64
 # The history is re-sent on every LLM round of a turn, so its size multiplies the token cost.
 HISTORY_CHARS = 24_000
 
@@ -61,9 +60,6 @@ def _sse(event: str, data: dict[str, Any]) -> str:
 
 
 def client_id_of(request: Request) -> str:
-    header = request.headers.get("x-client-id")
-    if header:
-        return header[:CLIENT_ID_CHARS]
     return request.client.host if request.client else "anonymous"
 
 
