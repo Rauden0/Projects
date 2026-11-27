@@ -17,6 +17,9 @@ from jobmatcher.search.embeddings import Embedder
 
 RRF_K = 60
 CANDIDATES = 50
+# Nearest chunks fetched to fill CANDIDATES distinct jobs: a long posting has several chunks
+# near the query and would otherwise take several of the vector list's slots.
+VECTOR_CHUNKS = 4 * CANDIDATES
 # Keyword lists only contribute their strongest matches: their long tails (any posting that
 # shares one common word) mostly add noise to the fusion.
 KEYWORD_CANDIDATES = 10
@@ -154,6 +157,7 @@ async def search_jobs(
     params: dict[str, object] = {
         "k": k,
         "candidates": CANDIDATES,
+        "vector_chunks": VECTOR_CHUNKS,
         "keyword_candidates": KEYWORD_CANDIDATES,
         "rrf_k": RRF_K,
     }
@@ -163,18 +167,27 @@ async def search_jobs(
     ranked: list[str] = []
     if mode in ("hybrid", "vector"):
         params["qvec"] = str(await embedder.embed_query(query))
+        # An HNSW scan returns at most ef_search rows (default 40), whatever the LIMIT.
+        await session.execute(
+            text("SELECT set_config('hnsw.ef_search', :ef, true)"), {"ef": str(VECTOR_CHUNKS)}
+        )
         # ORDER BY distance LIMIT stays in its own subquery: a window function over the whole
-        # table would force a full sort and bypass the HNSW index.
+        # table would force a full sort and bypass the HNSW index. Each job then keeps its
+        # nearest chunk.
         ranked.append(
             f"""
             (SELECT 'vector' AS list, v.chunk_id, v.job_id,
                     row_number() OVER (ORDER BY v.distance) AS rank
-             FROM (SELECT c.id AS chunk_id, c.job_id,
-                          c.embedding <=> CAST(:qvec AS vector) AS distance
-                   FROM job_chunk c JOIN job j ON j.id = c.job_id
-                   WHERE {where}
-                   ORDER BY c.embedding <=> CAST(:qvec AS vector)
-                   LIMIT :candidates) v)
+             FROM (SELECT DISTINCT ON (n.job_id) n.chunk_id, n.job_id, n.distance
+                   FROM (SELECT c.id AS chunk_id, c.job_id,
+                                c.embedding <=> CAST(:qvec AS vector) AS distance
+                         FROM job_chunk c JOIN job j ON j.id = c.job_id
+                         WHERE {where}
+                         ORDER BY c.embedding <=> CAST(:qvec AS vector)
+                         LIMIT :vector_chunks) n
+                   ORDER BY n.job_id, n.distance) v
+             ORDER BY v.distance
+             LIMIT :candidates)
             """
         )
     if mode in ("hybrid", "fulltext"):

@@ -7,6 +7,7 @@ from jobmatcher.db.models import EMBEDDING_DIM
 from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.extraction import HeuristicExtractor
 from jobmatcher.ingest.indexer import Indexer
+from jobmatcher.search import hybrid
 from jobmatcher.search.embeddings import HashingEmbedder
 from jobmatcher.search.hybrid import SearchFilters, search_jobs
 
@@ -214,3 +215,27 @@ async def test_title_match_ignores_accents(sessionmaker: async_sessionmaker[Asyn
         ).all()
     assert [h.url for h in hits] == ["https://example.com/cz"]
     assert len(titles) == 1
+
+
+async def test_long_posting_takes_one_vector_slot(
+    sessionmaker: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(hybrid, "CANDIDATES", 2)
+    monkeypatch.setattr(hybrid, "VECTOR_CHUNKS", 20)
+    indexer = Indexer(sessionmaker, HeuristicExtractor(), EMBEDDER)
+    sections = "".join(f"<h3>Part {n}:</h3><p>{'kotlin android ' * 400}</p>" for n in range(3))
+    for external_id, body in [("long", sections), ("short", "<p>kotlin</p>")]:
+        await indexer.index(
+            RawPosting(
+                kind="greenhouse",
+                company="acme",
+                external_id=external_id,
+                url=f"https://example.com/{external_id}",
+                title=f"Kotlin Developer {external_id}",
+                location="Brno",
+                description_html=body,
+            )
+        )
+    async with sessionmaker() as session:
+        hits = await search_jobs(session, EMBEDDER, "kotlin android", k=5, mode="vector")
+    assert sorted(h.url.rsplit("/", 1)[1] for h in hits) == ["long", "short"]
