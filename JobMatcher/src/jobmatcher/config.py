@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     # address on llm_usage rows (only needed for the daily per-client limit) after two days.
     cv_retention_days: int = Field(default=30, ge=1)
     usage_client_retention_days: int = Field(default=2, ge=2)
+    # Published outbox rows are kept this long for debugging, then deleted.
+    outbox_retention_days: int = Field(default=7, ge=1)
 
     log_level: LogLevel = "INFO"
     log_format: LogFormat = "text"

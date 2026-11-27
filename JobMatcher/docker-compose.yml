@@ -93,7 +93,8 @@ services:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
 
-  # Deletes CVs after CV_RETENTION_DAYS and client addresses on usage rows after two days.
+  # Deletes CVs after CV_RETENTION_DAYS, client addresses on usage rows after two days and
+  # published outbox rows after OUTBOX_RETENTION_DAYS.
   retention:
     build: .
     image: jobmatcher:latest

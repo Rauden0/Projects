@@ -1,5 +1,5 @@
-"""Deletes personal data past its retention period: uploaded CVs and the client address on
-usage rows.
+"""Deletes data past its retention period: uploaded CVs, the client address on usage rows and
+published outbox rows.
 
     python -m jobmatcher.retention               # once
     python -m jobmatcher.retention --every 3600  # keep running
@@ -25,12 +25,14 @@ log = logging.getLogger(__name__)
 class Retention:
     cv: timedelta
     usage_client: timedelta
+    outbox: timedelta
 
 
 @dataclass(frozen=True, slots=True)
 class Purged:
     cvs: int
     usage_clients: int
+    outbox: int
 
 
 async def purge(
@@ -41,13 +43,20 @@ async def purge(
         clients = await repository.forget_usage_clients_before(
             session, now - retention.usage_client
         )
+        outbox = await repository.delete_outbox_published_before(session, now - retention.outbox)
     log.info(
-        "retention_purge cvs=%d usage_clients=%d",
+        "retention_purge cvs=%d usage_clients=%d outbox=%d",
         cvs,
         clients,
-        extra={"event": "retention_purge", "cvs": cvs, "usage_clients": clients},
+        outbox,
+        extra={
+            "event": "retention_purge",
+            "cvs": cvs,
+            "usage_clients": clients,
+            "outbox": outbox,
+        },
     )
-    return Purged(cvs, clients)
+    return Purged(cvs, clients, outbox)
 
 
 async def loop(retention: Retention, every_s: float | None) -> None:
@@ -68,6 +77,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     retention = Retention(
         cv=timedelta(days=settings.cv_retention_days),
         usage_client=timedelta(days=settings.usage_client_retention_days),
+        outbox=timedelta(days=settings.outbox_retention_days),
     )
     asyncio.run(loop(retention, args.every))
 

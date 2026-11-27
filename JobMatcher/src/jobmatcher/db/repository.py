@@ -165,6 +165,13 @@ async def delete_cvs_before(session: AsyncSession, cutoff: datetime) -> int:
     return len(result.all())
 
 
+async def delete_outbox_published_before(session: AsyncSession, cutoff: datetime) -> int:
+    result = await session.execute(
+        delete(Outbox).where(Outbox.published_at < cutoff).returning(Outbox.id)
+    )
+    return len(result.all())
+
+
 async def forget_usage_clients_before(session: AsyncSession, cutoff: datetime) -> int:
     result = await session.execute(
         update(LlmUsage)
