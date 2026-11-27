@@ -305,7 +305,7 @@ question are mostly qwen's usual weaknesses, not payloads: invented filters (`se
 snippet instead of calling `get_job`.
 
 **Fix 1: untrusted envelope, no control tokens**
-([`agent/loop.py`](../src/jobmatcher/agent/loop.py) `_untrusted`). Every successful tool
+([`agent/tools.py`](../src/jobmatcher/agent/tools.py) `as_untrusted_data`). Every successful tool
 result reaches the model as `<untrusted_data>\n{json}\n</untrusted_data>`, after removing
 chat-template control tokens (`<|…|>`, `[INST]`, `<<SYS>>`) and tool-protocol tags
 (`<tool_response>`, `<tool_call>`, `<system>`, the envelope's own tags). The prompt stays v2.
@@ -325,7 +325,7 @@ question (2.8 → 3.8), +43% input tokens (4,567 → 6,510), relevant cited 82% 
 it opened with `get_job` on a guessed id. For qwen2.5:7b the shape of the tool result
 mattered and the instruction did not.
 
-**Fix 2: no links in posting text** (`_without_links` in the same module). With the envelope
+**Fix 2: no links in posting text** (`without_links` in the same module). With the envelope
 alone, every follow except the tool call was a link that a payload supplied: the fake tool
 result's URL and the Java job named by the planted skill (1/6 each in the envelope run; the
 skill 3/6 in the prompt-rule run; the Czech posting's receptionist job 2/6 in the narrower

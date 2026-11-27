@@ -143,8 +143,9 @@ With `LLM_PROVIDER=anthropic` and `claude-haiku-5-5` ($0.10 / $0.50 per million 
 Every call is written to `llm_usage` with its cost. `LLM_MONTHLY_BUDGET_USD` (default 40) is a
 hard cap: extraction stops at `LLM_EXTRACTION_BUDGET_SHARE` of it (jobs then keep heuristic
 facts and are retried later) and chat answers 503 at the full amount. Chat is also limited per
-client (`X-Client-Id` header, otherwise the IP): `CHAT_REQUESTS_PER_MINUTE` and
-`CHAT_DAILY_TOKENS_PER_CLIENT`. Set a spend limit on the workspace in the Claude Console as well.
+client IP: `CHAT_REQUESTS_PER_MINUTE` and `CHAT_DAILY_TOKENS_PER_CLIENT`. Behind a reverse
+proxy, run uvicorn with `--proxy-headers --forwarded-allow-ips` so the limits see the real
+client address. Set a spend limit on the workspace in the Claude Console as well.
 The cap is checked before every call, whatever the provider: `LLM_MONTHLY_BUDGET_USD=0` blocks
 all LLM calls, free local models included, so to run on Ollama without a cap leave it at a
 positive value. Only models listed in `budget/pricing.py` have a cost; any other model is
