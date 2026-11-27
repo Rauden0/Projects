@@ -118,3 +118,17 @@ async def test_sdk_errors_become_llm_error() -> None:
     )
     with pytest.raises(LLMError):
         await llm.complete(system="s", user="u")
+
+
+@dataclass
+class BrokenLedger(RecordingLedger):
+    async def record(self, **entry: Any) -> float:
+        from sqlalchemy.exc import OperationalError
+
+        raise OperationalError("INSERT", {}, ConnectionRefusedError())
+
+
+async def test_ledger_failure_keeps_the_paid_answer(caplog: pytest.LogCaptureFixture) -> None:
+    llm, _ = client(BrokenLedger())
+    assert await llm.complete(system="s", user="u") == '{"sen": null}'
+    assert [getattr(r, "event", None) for r in caplog.records] == ["llm_usage_write_failed"]

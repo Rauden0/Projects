@@ -15,6 +15,7 @@ from functools import lru_cache
 from typing import Any, Protocol
 
 import httpx
+from sqlalchemy.exc import SQLAlchemyError
 
 from jobmatcher import telemetry
 from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy, Purpose
@@ -110,8 +111,26 @@ class _Observed:
         if self.meter is not None:
             self.meter.add(call)
         if usage is not None and self.ledger is not None:
-            await self.ledger.record(
+            await self._record(self.ledger, usage)
+
+    async def _record(self, ledger: UsageRecorder, usage: TokenUsage) -> None:
+        # The call is already paid for; losing its answer over a ledger outage would cost twice.
+        try:
+            await ledger.record(
                 purpose=self.purpose, model=self.model, usage=usage, client_id=self.client_id
+            )
+        except (SQLAlchemyError, OSError) as exc:
+            log.error(
+                "llm_usage_write_failed purpose=%s model=%s error=%s",
+                self.purpose,
+                self.model,
+                type(exc).__name__,
+                extra={
+                    "event": "llm_usage_write_failed",
+                    "purpose": self.purpose,
+                    "model": self.model,
+                    "error": type(exc).__name__,
+                },
             )
 
 
