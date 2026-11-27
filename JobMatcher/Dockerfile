@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 
 COPY pyproject.toml ./
 COPY src ./src
-RUN pip install --no-cache-dir ".[llm,embeddings]"
+RUN pip install --no-cache-dir ".[llm,embeddings,otel]"
 
 COPY alembic.ini ./
 COPY alembic ./alembic

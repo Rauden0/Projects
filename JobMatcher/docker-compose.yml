@@ -63,6 +63,8 @@ services:
     env_file: .env
     volumes: [models:/models]
     command: ["python", "-m", "jobmatcher.ingest.worker"]
+    environment:
+      OTEL_SERVICE_NAME: jobmatcher-worker
     depends_on:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
@@ -89,7 +91,20 @@ services:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
 
+  # Trace viewer: `docker compose --profile phoenix up -d`, then set
+  # OTEL_EXPORTER_OTLP_ENDPOINT=http://phoenix:6006 in .env and recreate api and worker.
+  # UI and OTLP/HTTP on http://localhost:6006; traces are kept in the phoenix volume (SQLite).
+  phoenix:
+    profiles: ["phoenix"]
+    image: arizephoenix/phoenix:version-22
+    restart: unless-stopped
+    ports: ["6006:6006"]
+    environment:
+      PHOENIX_WORKING_DIR: /mnt/data
+    volumes: [phoenix:/mnt/data]
+
 volumes:
   pgdata:
   ollama:
   models:
+  phoenix:
