@@ -1,0 +1,6 @@
+# Used by docker-compose.prod.yml. Caddy gets and renews the Let's Encrypt certificate for
+# DOMAIN (an A/AAAA record must point at this host, ports 80 and 443 open).
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:8000
+}

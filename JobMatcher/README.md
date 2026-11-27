@@ -57,7 +57,11 @@ ingestion falls back to heuristic extraction; only `/chat` needs the model.
 
 - Chat UI: http://localhost:8000 (paste a CV, then ask)
 - API docs: http://localhost:8000/docs
-- RabbitMQ UI: http://localhost:15672 (`RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS`, guest / guest by default)
+- RabbitMQ UI: http://localhost:15672 (`RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS`,
+  guest / guest by default)
+
+Every port is published on `127.0.0.1` only. For a public deployment (one VPS, Caddy with TLS,
+a hosted LLM, the image from GHCR, nightly backups) see [docs/deploy.md](docs/deploy.md).
 
 Crawling runs in [JobIngestor](../JobIngestor): a separate service with a source registry, a
 planner and horizontally scaled crawlers. It publishes `job.discovered` (only new or changed

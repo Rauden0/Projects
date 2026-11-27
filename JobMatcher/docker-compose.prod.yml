@@ -1,0 +1,70 @@
+# Single-VPS production override (docs/deploy.md):
+# docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+# docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+x-app: &app
+  image: ${JOBMATCHER_IMAGE:?set JOBMATCHER_IMAGE, e.g. ghcr.io/<owner>/jobmatcher:latest}
+  build: !reset null
+
+services:
+  caddy:
+    image: caddy:2.11.9
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN to the public host name}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      default: { ipv4_address: 172.30.0.10 }
+    depends_on:
+      api: { condition: service_healthy }
+    mem_limit: 128m
+
+  api:
+    <<: *app
+    environment:
+      # Trust X-Forwarded-For from Caddy only, so per-client chat limits see the real client.
+      FORWARDED_ALLOW_IPS: 172.30.0.10
+    mem_limit: 1g
+
+  worker:
+    <<: *app
+    mem_limit: 1g
+
+  migrate:
+    <<: *app
+    mem_limit: 256m
+
+  outbox-relay:
+    <<: *app
+    mem_limit: 256m
+
+  retention:
+    <<: *app
+    mem_limit: 256m
+
+  batch-extract:
+    <<: *app
+    mem_limit: 256m
+
+  postgres:
+    mem_limit: 512m
+
+  rabbitmq:
+    mem_limit: 384m
+
+  # No local LLM on a CPU VPS: use a hosted provider (docs/deploy.md).
+  ollama:
+    profiles: ["ollama"]
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  caddy_data:
+  caddy_config:
