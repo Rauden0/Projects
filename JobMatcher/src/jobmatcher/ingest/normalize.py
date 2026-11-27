@@ -56,6 +56,20 @@ _BOILERPLATE_LINE_RE = re.compile(
     re.I,
 )
 _MONEY_RE = re.compile(r"\d[\d\s.,]*\s*(?:kč|czk|eur|€|\$|usd|k\b)", re.I)
+_WORK_MODE_RE = re.compile(r"remote|home ?office|hybrid|z domova|na dálku", re.I)
+
+
+def is_boilerplate_heading(heading: str) -> bool:
+    return bool(_BOILERPLATE_HEADING_RE.search(heading))
+
+
+def boilerplate_facts(lines: list[str]) -> list[str]:
+    """What a benefits or company section says that a search can use: pay and work mode."""
+    return [line for line in lines if _MONEY_RE.search(line) or _WORK_MODE_RE.search(line)]
+
+
+def is_boilerplate_line(line: str) -> bool:
+    return bool(_BOILERPLATE_LINE_RE.search(line)) and not _MONEY_RE.search(line)
 
 
 def compact_for_llm(text: str, limit: int = LLM_TEXT_LIMIT) -> str:

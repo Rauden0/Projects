@@ -40,3 +40,20 @@ def test_long_section_is_split() -> None:
 
 def test_empty_posting_still_has_one_chunk() -> None:
     assert len(chunk_posting("T", "C", "")) == 1
+
+
+BOILERPLATE = """
+<h3>Requirements</h3><ul><li>Python</li></ul>
+<h3>What we offer</h3><ul><li>Free coffee</li><li>Salary 80 000 Kč</li><li>Home office</li></ul>
+<h3>About us</h3><p>We have been great since 1990.</p>
+<h3>Your profile:</h3><p>Kafka in production</p>
+<p>Your personal data are processed according to GDPR.</p>
+"""
+
+
+def test_boilerplate_is_not_chunked_except_pay_and_work_mode() -> None:
+    chunks = chunk_posting("T", "C", html_to_text(BOILERPLATE))
+    text = "\n".join(c.content for c in chunks)
+    assert "coffee" not in text and "1990" not in text and "GDPR" not in text
+    assert "80 000 Kč" in text and "Home office" in text
+    assert "Kafka in production" in text

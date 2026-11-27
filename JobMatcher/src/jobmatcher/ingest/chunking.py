@@ -1,6 +1,11 @@
 import re
 
 from jobmatcher.domain import Chunk
+from jobmatcher.ingest.normalize import (
+    boilerplate_facts,
+    is_boilerplate_heading,
+    is_boilerplate_line,
+)
 
 # Rough token estimate: good enough to keep chunks well under the embedding model limit.
 _WORDS_PER_CHUNK = 350
@@ -27,11 +32,29 @@ _SECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 ]
 
 
+# Benefits, company blurbs and GDPR text match almost any query and say nothing about the
+# job, so they are not embedded; only their pay and work-mode lines are kept.
+_BOILERPLATE_SECTIONS = {"benefits", "boilerplate"}
+
+
 def _classify(heading: str) -> str | None:
     for name, pattern in _SECTION_PATTERNS:
         if pattern.search(heading):
             return name
-    return None
+    return "boilerplate" if is_boilerplate_heading(heading) else None
+
+
+def _carried(section: str | None) -> str | None:
+    """An unrecognised heading continues the section, unless that would drop it as
+    boilerplate: better to embed some benefits than lose a requirements list."""
+    return None if section in _BOILERPLATE_SECTIONS else section
+
+
+def _searchable(section: str | None, body: str) -> str:
+    lines = [line for line in body.splitlines() if not is_boilerplate_line(line)]
+    if section in _BOILERPLATE_SECTIONS:
+        lines = boilerplate_facts(lines)
+    return "\n".join(lines).strip()
 
 
 def _split_sections(text: str) -> list[tuple[str | None, str]]:
@@ -46,7 +69,7 @@ def _split_sections(text: str) -> list[tuple[str | None, str]]:
         if is_heading:
             if current:
                 sections.append((current_name, "\n".join(current).strip()))
-            current_name = _classify(stripped) or current_name
+            current_name = _classify(stripped) or _carried(current_name)
             current = [stripped.removeprefix("## ")]
         else:
             current.append(line)
@@ -56,12 +79,12 @@ def _split_sections(text: str) -> list[tuple[str | None, str]]:
 
 
 def chunk_posting(title: str, company: str, text: str) -> list[Chunk]:
-    """Split a posting by section, then by size; every chunk carries the title and company
-    so it is self-explanatory when retrieved on its own."""
+    """Split a posting by section, then by size, leaving out boilerplate; every chunk carries
+    the title and company so it is self-explanatory when retrieved on its own."""
     header = f"{title} — {company}"
     chunks: list[Chunk] = []
     for section, body in _split_sections(text):
-        words = body.split()
+        words = _searchable(section, body).split()
         for start in range(0, len(words), _WORDS_PER_CHUNK):
             piece = " ".join(words[start : start + _WORDS_PER_CHUNK])
             chunks.append(Chunk(ord=len(chunks), section=section, content=f"{header}\n{piece}"))
