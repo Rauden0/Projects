@@ -42,3 +42,15 @@ class ClientLimited(JobMatcherError):
         super().__init__(reason)
         self.reason = reason
         self.retry_after_s = retry_after_s
+
+
+class Unauthenticated(JobMatcherError):
+    """The request carries no valid credentials for an endpoint that needs them."""
+
+
+class CsrfRejected(JobMatcherError):
+    """A state-changing request that a cross-site page could have forged."""
+
+
+class AuthUnavailable(JobMatcherError):
+    """The identity provider's discovery document or signing keys cannot be fetched."""

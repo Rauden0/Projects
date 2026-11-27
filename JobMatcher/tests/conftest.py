@@ -28,6 +28,11 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["AMQP_URL"] = TEST_AMQP_URL
 # Tests install their own in-memory tracer; never export to whatever .env points at.
 os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
+# Session mode with a key made per run, and a cookie the http:// test clients send back.
+os.environ["AUTH_MODE"] = "session"
+os.environ["SESSION_SECRET"] = ""
+os.environ["AUTH_INSECURE_DEV"] = "true"
+os.environ["SESSION_COOKIE_SECURE"] = "false"
 for cached in (get_settings, get_engine, get_sessionmaker):
     cached.cache_clear()
 

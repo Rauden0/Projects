@@ -3,12 +3,19 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any, Literal
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from jobmatcher.agent.session import chat_events
-from jobmatcher.api.deps import ChatGateDep, EmbedderDep, SessionDep
+from jobmatcher.api.deps import (
+    ChatGateDep,
+    ClientKeyDep,
+    EmbedderDep,
+    PrincipalDep,
+    SessionDep,
+    reject_cross_site,
+)
 from jobmatcher.api.errors import ERROR_RESPONSES
 from jobmatcher.cv.profile import CvProfile
 from jobmatcher.cv.service import create_cv, delete_cv, profile_summary
@@ -17,7 +24,9 @@ from jobmatcher.errors import LLMUnavailable
 from jobmatcher.llm import get_llm
 from jobmatcher.observability import UsageMeter
 
-router = APIRouter(tags=["chat"], responses=ERROR_RESPONSES)
+router = APIRouter(
+    tags=["chat"], responses=ERROR_RESPONSES, dependencies=[Depends(reject_cross_site)]
+)
 
 # The history is re-sent on every LLM round of a turn, so its size multiplies the token cost.
 HISTORY_CHARS = 24_000
@@ -50,38 +59,36 @@ class ChatIn(BaseModel):
 
 
 @router.post("/cv", response_model=CvOut, status_code=201)
-async def upload_cv(body: CvIn, session: SessionDep, embedder: EmbedderDep) -> CvOut:
-    cv_id, profile = await create_cv(session, embedder, body.text)
+async def upload_cv(
+    body: CvIn, session: SessionDep, embedder: EmbedderDep, principal: PrincipalDep
+) -> CvOut:
+    cv_id, profile = await create_cv(session, embedder, body.text, principal)
     return CvOut(cv_id=cv_id, profile=profile)
 
 
 @router.delete("/cv/{cv_id}", status_code=204)
-async def remove_cv(cv_id: uuid.UUID, session: SessionDep) -> None:
-    await delete_cv(session, cv_id)
+async def remove_cv(cv_id: uuid.UUID, session: SessionDep, principal: PrincipalDep) -> None:
+    await delete_cv(session, cv_id, principal)
 
 
 def _sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
 
 
-def client_id_of(request: Request) -> str:
-    return request.client.host if request.client else "anonymous"
-
-
 @router.post("/chat", response_class=StreamingResponse)
 async def chat(
     body: ChatIn,
-    request: Request,
     session: SessionDep,
     embedder: EmbedderDep,
     gate: ChatGateDep,
+    principal: PrincipalDep,
+    client_id: ClientKeyDep,
 ) -> StreamingResponse:
-    client_id = client_id_of(request)
     meter = UsageMeter()
     llm = get_llm("chat", client_id=client_id, meter=meter)
     if llm is None:
         raise LLMUnavailable("no API key configured for the chat model")
-    summary = await profile_summary(session, body.cv_id)
+    summary = await profile_summary(session, body.cv_id, principal)
     await gate.admit(client_id)
     history = [turn.model_dump() for turn in body.history]
 

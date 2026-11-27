@@ -12,6 +12,7 @@ from jobmatcher.telemetry import configure_tracing as _configure_tracing
 Provider = Literal["anthropic", "openai_compat"]
 Effort = Literal["low", "medium", "high", "max"]
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
+AuthMode = Literal["session", "oidc"]
 
 
 class Settings(BaseSettings):
@@ -60,6 +61,21 @@ class Settings(BaseSettings):
     # Published outbox rows are kept this long for debugging, then deleted.
     outbox_retention_days: int = Field(default=7, ge=1)
 
+    # session: an anonymous identity in a signed cookie; oidc: a bearer JWT from OIDC_ISSUER.
+    auth_mode: AuthMode = "session"
+    # HMAC key for the session cookie, at least 32 characters. The API refuses to start
+    # without one unless AUTH_INSECURE_DEV=true, which signs with a key made at startup.
+    session_secret: SecretStr = SecretStr("")
+    auth_insecure_dev: bool = False
+    # Browsers keep Secure cookies on http://localhost; turn off only for plain http elsewhere.
+    session_cookie_secure: bool = True
+    oidc_issuer: str = Field(default="", pattern=r"^(https?://\S+)?$")
+    oidc_audience: str = ""
+    # In oidc mode, also require a token for /jobs/search and /jobs/{id}.
+    auth_protect_search: bool = False
+    # Bearer token for `jobmatcher-mcp --http`; required when it binds to a non-loopback host.
+    mcp_http_token: SecretStr = SecretStr("")
+
     log_level: LogLevel = "INFO"
     log_format: LogFormat = "text"
 
@@ -79,6 +95,8 @@ class Settings(BaseSettings):
         if self.extraction_mode == "batch" and self.llm_provider != "anthropic":
             raise ValueError("EXTRACTION_MODE=batch needs LLM_PROVIDER=anthropic")
         self._check_chat_provider()
+        if self.auth_mode == "oidc" and not (self.oidc_issuer and self.oidc_audience):
+            raise ValueError("AUTH_MODE=oidc needs OIDC_ISSUER and OIDC_AUDIENCE")
         return self
 
     def _check_chat_provider(self) -> None:

@@ -49,7 +49,7 @@ def test_chat_without_llm_key_is_503_and_not_counted(monkeypatch) -> None:  # ty
 
 @pytest.mark.usefixtures("llm")
 def test_unknown_cv_is_404_and_not_counted(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    async def missing(_: Any, cv_id: uuid.UUID | None) -> str:
+    async def missing(_: Any, cv_id: uuid.UUID | None, owner_id: str) -> str:
         raise NotFound("cv", cv_id)
 
     monkeypatch.setattr(chat_route, "profile_summary", missing)
@@ -115,21 +115,70 @@ def test_history_within_total_limit_is_accepted(monkeypatch) -> None:  # type: i
 
 
 def test_delete_cv_is_204(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    deleted: list[uuid.UUID] = []
+    deleted: list[tuple[uuid.UUID, str]] = []
 
-    async def fake_delete(_: Any, cv_id: uuid.UUID) -> None:
-        deleted.append(cv_id)
+    async def fake_delete(_: Any, cv_id: uuid.UUID, owner_id: str) -> None:
+        deleted.append((cv_id, owner_id))
 
     monkeypatch.setattr(chat_route, "delete_cv", fake_delete)
     cv_id = uuid.uuid4()
     response = make_client().delete(f"/cv/{cv_id}")
     assert response.status_code == 204
-    assert deleted == [cv_id]
+    assert deleted[0][0] == cv_id
+    assert deleted[0][1].startswith("session:")
 
 
 def test_delete_unknown_cv_is_404(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    async def missing(_: Any, cv_id: uuid.UUID) -> None:
+    async def missing(_: Any, cv_id: uuid.UUID, owner_id: str) -> None:
         raise NotFound("cv", cv_id)
 
     monkeypatch.setattr(chat_route, "delete_cv", missing)
     assert make_client().delete(f"/cv/{uuid.uuid4()}").status_code == 404
+
+
+def test_chat_issues_a_signed_http_only_session_cookie(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(chat_route, "get_llm", lambda *_, **__: None)
+    response = make_client().post("/chat", json={"message": "hi"})
+    cookie = response.headers["set-cookie"]
+    assert cookie.startswith("jm_session=")
+    assert "HttpOnly" in cookie and "SameSite=Lax" in cookie
+
+
+def test_known_session_cookie_is_not_reissued(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(chat_route, "get_llm", lambda *_, **__: None)
+    client = make_client()
+    client.post("/chat", json={"message": "hi"})
+    assert "set-cookie" not in client.post("/chat", json={"message": "hi"}).headers
+
+
+def test_session_principal_is_stable_across_requests(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    owners: list[str] = []
+
+    async def record(_: Any, cv_id: uuid.UUID, owner_id: str) -> None:
+        owners.append(owner_id)
+
+    monkeypatch.setattr(chat_route, "delete_cv", record)
+    client = make_client()
+    client.delete(f"/cv/{uuid.uuid4()}")
+    client.delete(f"/cv/{uuid.uuid4()}")
+    other = make_client()
+    other.delete(f"/cv/{uuid.uuid4()}")
+    assert owners[0] == owners[1] != owners[2]
+
+
+def test_form_post_is_rejected_as_csrf() -> None:
+    response = make_client().post(
+        "/chat", content='{"message": "hi"}', headers={"content-type": "text/plain"}
+    )
+    assert response.status_code == 403
+    assert response.json()["code"] == "csrf_rejected"
+
+
+def test_post_without_content_type_is_rejected_as_csrf() -> None:
+    response = make_client().post("/cv", content=b'{"text": "x"}')
+    assert response.status_code == 403
+
+
+def test_cross_site_delete_is_rejected() -> None:
+    response = make_client().delete(f"/cv/{uuid.uuid4()}", headers={"sec-fetch-site": "cross-site"})
+    assert response.status_code == 403

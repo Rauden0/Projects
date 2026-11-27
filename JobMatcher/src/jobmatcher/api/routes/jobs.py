@@ -1,9 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 
 from jobmatcher.agent.tools import MAX_JOB_ID
-from jobmatcher.api.deps import EmbedderDep, SessionDep
+from jobmatcher.api.deps import EmbedderDep, SessionDep, require_search_access
 from jobmatcher.api.errors import ERROR_RESPONSES
 from jobmatcher.api.schemas import JobDetail
 from jobmatcher.db import repository
@@ -11,7 +11,12 @@ from jobmatcher.db.models import Job
 from jobmatcher.domain import RemotePolicy, Seniority
 from jobmatcher.search.hybrid import Mode, SearchFilters, SearchHit, search_jobs
 
-router = APIRouter(prefix="/jobs", tags=["jobs"], responses=ERROR_RESPONSES)
+router = APIRouter(
+    prefix="/jobs",
+    tags=["jobs"],
+    responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_search_access)],
+)
 
 
 @router.get("/search", response_model=list[SearchHit])

@@ -14,12 +14,15 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from jobmatcher.errors import (
+    AuthUnavailable,
     BudgetExceeded,
     ClientLimited,
+    CsrfRejected,
     JobMatcherError,
     LLMError,
     LLMUnavailable,
     NotFound,
+    Unauthenticated,
 )
 from jobmatcher.observability import request_id_var
 
@@ -35,6 +38,9 @@ class ErrorOut(BaseModel):
 
 _DOMAIN_ERRORS: dict[type[JobMatcherError], tuple[int, str]] = {
     NotFound: (404, "not_found"),
+    Unauthenticated: (401, "unauthenticated"),
+    CsrfRejected: (403, "csrf_rejected"),
+    AuthUnavailable: (503, "auth_unavailable"),
     ClientLimited: (429, "rate_limited"),
     BudgetExceeded: (503, "budget_exhausted"),
     LLMUnavailable: (503, "llm_unavailable"),
@@ -42,7 +48,7 @@ _DOMAIN_ERRORS: dict[type[JobMatcherError], tuple[int, str]] = {
 }
 
 ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
-    status: {"model": ErrorOut} for status in (404, 422, 429, 500, 502, 503)
+    status: {"model": ErrorOut} for status in (401, 403, 404, 422, 429, 500, 502, 503)
 }
 
 
@@ -64,10 +70,18 @@ def _status_and_code(exc: JobMatcherError) -> tuple[int, str]:
     return 500, "internal_error"
 
 
+def _headers(exc: JobMatcherError) -> dict[str, str] | None:
+    if isinstance(exc, ClientLimited):
+        return {"Retry-After": str(exc.retry_after_s)}
+    if isinstance(exc, Unauthenticated):
+        return {"WWW-Authenticate": "Bearer"}
+    return None
+
+
 async def _domain_error(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, JobMatcherError)
     status, code = _status_and_code(exc)
-    headers = {"Retry-After": str(exc.retry_after_s)} if isinstance(exc, ClientLimited) else None
+    headers = _headers(exc)
     detail = "monthly LLM budget exhausted" if isinstance(exc, BudgetExceeded) else str(exc)
     if status >= 500:
         log.warning("%s: %s", code, exc)
