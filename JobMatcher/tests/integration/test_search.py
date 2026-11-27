@@ -91,3 +91,32 @@ async def test_thin_board_copy_is_hidden_when_full_copy_exists(
     async with sessionmaker() as session:
         hits = await search_jobs(session, EMBEDDER, "python developer", k=10)
     assert [h.url.rsplit("/", 1)[1] for h in hits] == ["ats"]
+
+
+async def test_city_filter_ranks_local_job_above_equal_remote_job(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    indexer = Indexer(sessionmaker, HeuristicExtractor(), EMBEDDER)
+    for external_id, location, body in [
+        ("remote", "Remote, Europe", "<p>Fully remote. Python, FastAPI, Python, FastAPI.</p>"),
+        ("local", "Brno", "<p>Hybrid, office in Brno. Python, FastAPI.</p>"),
+    ]:
+        await indexer.index(
+            RawPosting(
+                kind="greenhouse",
+                company="acme",
+                external_id=external_id,
+                url=f"https://example.com/{external_id}",
+                title="Python Developer",
+                location=location,
+                description_html=body,
+            )
+        )
+
+    async with sessionmaker() as session:
+        plain = await search_jobs(session, EMBEDDER, "python fastapi", k=10)
+        in_brno = await search_jobs(
+            session, EMBEDDER, "python fastapi", SearchFilters(city="Brno"), k=10
+        )
+    assert [h.url.rsplit("/", 1)[1] for h in plain] == ["remote", "local"]
+    assert [h.url.rsplit("/", 1)[1] for h in in_brno] == ["local", "remote"]

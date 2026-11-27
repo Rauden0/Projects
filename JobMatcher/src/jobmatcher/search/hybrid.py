@@ -213,7 +213,8 @@ async def search_jobs(
     if filters and filters.city:
         local_boost = (
             "CASE WHEN j.office_city ILIKE '%' || :city || '%'"
-            " OR j.location_raw ILIKE '%' || :city || '%' THEN :local_boost ELSE 0 END"
+            " OR j.location_raw ILIKE '%' || :city || '%'"
+            " THEN CAST(:local_boost AS float8) ELSE 0.0 END"
         )
         params["local_boost"] = LOCAL_BOOST
 
