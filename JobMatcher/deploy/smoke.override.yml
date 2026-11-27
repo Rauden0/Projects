@@ -1,0 +1,33 @@
+# Local production smoke test only (deploy/smoke.sh): no host ports but Caddy's, on
+# 127.0.0.1:${SMOKE_HTTPS_PORT}, an env file outside the checkout and a subnet that does not
+# collide with other local compose projects.
+x-env: &env
+  env_file: !override ["${SMOKE_ENV_FILE:?}"]
+
+services:
+  caddy:
+    ports: !override ["127.0.0.1:${SMOKE_HTTPS_PORT:-18443}:443"]
+    networks:
+      default: { ipv4_address: 192.168.240.10 }
+  api:
+    <<: *env
+    ports: !reset []
+    environment:
+      FORWARDED_ALLOW_IPS: 192.168.240.10
+  worker: *env
+  migrate: *env
+  outbox-relay: *env
+  retention: *env
+  batch-extract: *env
+  postgres:
+    ports: !reset []
+  rabbitmq:
+    ports: !reset []
+  ollama:
+    ports: !reset []
+
+networks:
+  default:
+    ipam:
+      config: !override
+        - subnet: 192.168.240.0/24

@@ -1,0 +1,16 @@
+# Install: sudo cp deploy/jobmatcher-backup.{service,timer} /etc/systemd/system/ &&
+# sudo systemctl daemon-reload && sudo systemctl enable --now jobmatcher-backup.timer
+# Adjust WorkingDirectory/ExecStart if the checkout is not /opt/projects/JobMatcher.
+[Unit]
+Description=pg_dump of the JobMatcher database
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/projects/JobMatcher
+Environment=BACKUP_DIR=/var/backups/jobmatcher
+# Environment=BACKUP_RSYNC_TARGET=u123456@u123456.your-storagebox.de:jobmatcher
+ExecStart=/opt/projects/JobMatcher/deploy/backup.sh
