@@ -78,5 +78,13 @@ jobs:
         run: pytest -q --cov=jobmatcher --cov-report=term-missing:skip-covered
 ```
 
+The MCP server (`src/jobmatcher/mcp_server.py`) imports the optional `mcp` SDK, so once it is
+merged the install step needs the `mcp` extra; otherwise `mypy src` fails on the import and
+`tests/unit/test_mcp_server.py` is skipped:
+
+```yaml
+      - run: pip install -e ".[dev,llm,mcp]"
+```
+
 The LLM evals are not part of CI: they need a GPU (or a paid API) and take minutes. Run them
 before changing a prompt or a model and record the numbers in `eval/RESULTS.md`.

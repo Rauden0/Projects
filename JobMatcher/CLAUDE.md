@@ -6,7 +6,7 @@ the parent `Projects/` folder: stage only files under `JobMatcher/`.
 ## Commands
 
 ```bash
-python -m venv .venv && .venv/Scripts/pip install -e ".[dev,embeddings,llm]"
+python -m venv .venv && .venv/Scripts/pip install -e ".[dev,embeddings,llm,mcp]"
 ruff check src tests eval alembic && ruff format --check src tests eval alembic
 mypy src
 pytest -q -m "not integration and not e2e"      # unit, no services

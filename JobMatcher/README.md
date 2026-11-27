@@ -26,6 +26,8 @@ pytest · Docker Compose · GitHub Actions
 - **Agent** — a plain tool-calling loop (no framework) with `search_jobs`, `get_job` and
   `compare_with_cv`; round and parallelism limits; tool errors fed back to the model;
   answer URLs checked against tool results; events streamed over SSE.
+- **MCP server** — `search_jobs` and `get_job` served over the Model Context Protocol from the
+  same `Toolbox`, so Claude Desktop, Claude Code or an IDE can search the index directly.
 - **Evaluation** — extraction (35 labelled cs/en postings, IT and non-IT), retrieval
   (41 golden questions, per search mode) and agent (scripted questions, tool use and citation
   validity) evals against the local model; see [eval/RESULTS.md](eval/RESULTS.md).
@@ -78,6 +80,52 @@ curl -X POST localhost:8000/cv -H "content-type: application/json" -d '{"text": 
 curl -N -X POST localhost:8000/chat -H "content-type: application/json" \
      -d '{"cv_id": "<id>", "message": "Remote Python roles that fit me?"}'
 ```
+
+## Use it from an MCP client
+
+`jobmatcher-mcp` serves the agent's read-only tools, `search_jobs` and `get_job`, over MCP,
+with the same schemas and code the agent uses. `compare_with_cv` stays with `/chat`, because
+it needs a CV uploaded in that conversation. The server only needs Postgres with indexed jobs;
+it reads `DATABASE_URL` (default: the Compose Postgres on localhost) and loads the embedding
+model at startup.
+
+```bash
+pip install -e ".[mcp,embeddings]"
+jobmatcher-mcp                                  # stdio (also: python -m jobmatcher.mcp_server)
+jobmatcher-mcp --http --port 8001               # streamable HTTP at http://127.0.0.1:8001/mcp
+```
+
+The HTTP transport has no authentication, so it binds to `127.0.0.1` unless you pass `--host`.
+
+Claude Desktop starts stdio servers itself, without your shell's virtualenv or `.env`, so
+give the absolute path to the script and the environment it needs. Add this to
+`claude_desktop_config.json` (Windows: `%APPDATA%\Claude\`, macOS:
+`~/Library/Application Support/Claude/`):
+
+```json
+{
+  "mcpServers": {
+    "jobmatcher": {
+      "command": "C:\\path\\to\\JobMatcher\\.venv\\Scripts\\jobmatcher-mcp.exe",
+      "env": {
+        "DATABASE_URL": "postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher"
+      }
+    }
+  }
+}
+```
+
+On Linux and macOS the command is `.venv/bin/jobmatcher-mcp`. VS Code takes the same `command`
+and `env` under `"servers"` in `.vscode/mcp.json`. For Claude Code:
+
+```bash
+claude mcp add jobmatcher -e DATABASE_URL=postgresql+asyncpg://... -- /path/to/.venv/bin/jobmatcher-mcp
+claude mcp add --transport http jobmatcher http://127.0.0.1:8001/mcp   # or a running --http server
+```
+
+Each tool call opens its own database session. A missing job, invalid arguments or an
+unreachable database come back as `isError` tool results the client's model can read, and
+every call is logged as `mcp_tool_call` with its duration.
 
 ## LLM costs
 
@@ -140,7 +188,7 @@ merge). Fixes on a release branch are merged back into `dev`.
 See [CODING_GUIDELINES.md](CODING_GUIDELINES.md).
 
 ```bash
-python -m venv .venv && .venv/Scripts/pip install -e ".[dev,embeddings,llm]"   # bin/ on Linux
+python -m venv .venv && .venv/Scripts/pip install -e ".[dev,embeddings,llm,mcp]"   # bin/ on Linux
 ruff check src tests eval alembic && ruff format --check src tests eval alembic
 mypy src
 pytest -q -m "not integration and not e2e"          # unit tests, no services

@@ -267,6 +267,14 @@ is visible and testable.
 `compare_with_cv` is fully deterministic (set overlap of normalized skills, years and
 location rules), so it is unit-testable and costs no tokens.
 
+**MCP.** The loop calls its tools in process, without MCP
+([ADR 0001](docs/adr/0001-llm-framework.md), option 9). A separate entry point, `jobmatcher-mcp` (`mcp_server.py`, stdio or streamable
+HTTP), serves `search_jobs` and `get_job` to other MCP clients. It uses the SDK's low-level
+server and lists `Toolbox.definitions()` as they are, so the schemas cannot drift from the
+agent's, and each call runs the same `Toolbox` with its own DB session and no CV.
+`ToolError`, Pydantic validation errors and database errors become `isError` results; an
+unknown tool, including `compare_with_cv`, is a protocol error.
+
 ---
 
 ## 7. API
@@ -361,6 +369,7 @@ JobMatcher/
 │   ├── search/                 # embeddings.py, hybrid.py, metrics.py
 │   ├── agent/                  # loop.py, tools.py, session.py
 │   ├── cv/                     # profile.py (extraction + comparison), service.py
+│   ├── mcp_server.py           # jobmatcher-mcp: search_jobs / get_job over MCP
 │   └── api/                    # main.py, deps.py, errors.py, middleware.py, routes/, schemas.py
 ├── eval/
 │   ├── RESULTS.md
