@@ -228,6 +228,22 @@ async def test_complete_json_sends_schema_as_response_format() -> None:
 
 
 @pytest.mark.asyncio
+async def test_only_complete_json_is_sent_with_temperature_zero() -> None:
+    sent: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    client = _client(handler)
+    await client.complete_json(system="s", user="u", schema={"type": "object"})
+    await client.complete(system="s", user="u")
+    await client.create_message(system="s", messages=[{"role": "user", "content": "q"}], tools=[])
+
+    assert [body.get("temperature") for body in sent] == [0, None, None]
+
+
+@pytest.mark.asyncio
 async def test_usage_is_metered_and_recorded() -> None:
     from jobmatcher.budget.pricing import TokenUsage
     from jobmatcher.observability import UsageMeter

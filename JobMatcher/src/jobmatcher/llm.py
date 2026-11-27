@@ -363,6 +363,7 @@ class OpenAICompatClient(_Observed):
         instructions = f"{system}\nReturn only JSON matching this schema:\n{json.dumps(schema)}"
         payload: dict[str, Any] = {
             "max_tokens": max_tokens,
+            "temperature": 0,
             "messages": [
                 {"role": "system", "content": instructions},
                 {"role": "user", "content": user},
