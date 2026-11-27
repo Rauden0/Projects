@@ -63,18 +63,6 @@ services:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
 
-  # Crawling runs in JobIngestor; this standalone scheduler is kept for running JobMatcher alone.
-  scheduler:
-    profiles: ["legacy-scheduler"]
-    build: .
-    image: jobmatcher:latest
-    restart: unless-stopped
-    env_file: .env
-    command: ["python", "-m", "jobmatcher.ingest.scheduler"]
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-      rabbitmq: { condition: service_healthy }
-
   # With EXTRACTION_MODE=batch the worker stores heuristic facts and this service extracts
   # the pending jobs once an hour through the Message Batches API (half the token price).
   batch-extract:

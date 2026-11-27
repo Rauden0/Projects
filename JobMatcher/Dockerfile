@@ -10,7 +10,7 @@ COPY pyproject.toml ./
 COPY src ./src
 RUN pip install --no-cache-dir ".[llm,embeddings]"
 
-COPY alembic.ini sources.yaml ./
+COPY alembic.ini ./
 COPY alembic ./alembic
 
 CMD ["uvicorn", "jobmatcher.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

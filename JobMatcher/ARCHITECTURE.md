@@ -1,6 +1,6 @@
 # Job Matcher — Architecture
 
-Job Matcher ingests job postings from public career-site APIs, indexes them for hybrid
+Job Matcher indexes job postings crawled by the separate JobIngestor service for hybrid
 (semantic + full-text) search, and exposes an LLM agent that answers questions like
 *"Which remote Python backend roles fit my CV, and what am I missing?"* — always citing
 the concrete postings it used.
@@ -15,15 +15,7 @@ rather than guessed, and an agent loop with explicit tools and limits.
 
 ```mermaid
 flowchart LR
-    subgraph Sources
-        GH[Greenhouse API]
-        LV[Lever API]
-        AS[Ashby API]
-        WD[Workday API]
-    end
-
-    SCH[Scheduler<br/>periodic crawl] -->|fetch| Sources
-    SCH -->|job.discovered| MQ[(RabbitMQ)]
+    ING[JobIngestor<br/>separate service] -->|job.discovered<br/>source.crawled| MQ[(RabbitMQ)]
 
     MQ --> W[Ingest worker<br/>normalize · dedupe · chunk · embed]
     W -->|upsert + outbox row<br/>single transaction| PG[(PostgreSQL<br/>+ pgvector)]
@@ -46,43 +38,26 @@ flowchart LR
 | Service | Responsibility |
 |---|---|
 | `api` | FastAPI app: CV upload, search endpoint, chat endpoint (SSE streaming), health. |
-| `scheduler` | Legacy, behind the `legacy-scheduler` compose profile. Crawling moved to the separate JobIngestor service, which publishes `job.discovered` and `source.crawled`. |
 | `worker` (listing sync) | Consumes `source.crawled`: reopens listed jobs and closes missing ones only when the listing was complete. |
 | `worker` | Consumes `job.discovered`; fetches detail, normalizes, deduplicates, chunks, embeds, upserts. |
 | `outbox-relay` | Publishes `job.indexed` / `job.closed` events from the outbox table (same pattern as at work). |
 | `postgres` | System of record, vector index (pgvector) and full-text index (tsvector). |
-| `rabbitmq` | Work queue between scheduler and workers, with retry + dead-letter queues. |
+| `rabbitmq` | Work queue between JobIngestor and the worker, with retry + dead-letter queues. |
 
 ---
 
 ## 2. Data sources
 
-Only **public, documented JSON endpoints** that companies publish for their own job
-boards, plus Jobs.cz as the one exception where a Czech board has no API — never logged-in
-sessions:
+Crawling lives in JobIngestor (source registry, planner, crawlers for Greenhouse, Lever,
+Ashby, Workday, Jobs.cz and others). It publishes two events to the shared `jobs` exchange:
 
-| Source | Endpoint | Notes |
+| Routing key | Body | Consumer here |
 |---|---|---|
-| Greenhouse | `boards-api.greenhouse.io/v1/boards/{company}/jobs?content=true` | Full description in one call. |
-| Lever | `api.lever.co/v0/postings/{company}?mode=json` | |
-| Ashby | `api.ashbyhq.com/posting-api/job-board/{company}` | |
-| Workday | `POST {tenant}.wd{n}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs` | Detail needs a second call. |
-| Jobs.cz | `www.jobs.cz/prace/{locality}/?q[]=…` + `/rpd/{id}/` | No API: server-rendered HTML, only robots.txt-allowed paths, one request per second, capped pages. |
+| `job.discovered` | `RawPosting` (`jobmatcher.domain`): kind, company, source, external_id, url, title, location, description_html | worker → indexer |
+| `source.crawled` | kind, source, external_ids, complete | worker → listing sync (reopen / close) |
 
-The list of companies lives in `sources.yaml` (company slug, ATS type, optional location
-filter). Each source is a small adapter implementing one protocol:
-
-```python
-class SourceAdapter(ABC):
-    kind: str
-    def list_postings(self) -> AsyncIterator[RawPosting]: ...
-```
-
-Greenhouse, Lever and Ashby return full descriptions in the listing call, so the scheduler
-publishes complete postings and the worker never calls the source. A Workday adapter would
-fetch details in `list_postings` the same way.
-
-Crawling is polite: a bounded connection pool per crawl and one request per company per run.
+JobMatcher used to carry its own adapters and a scheduler; they were removed so that one
+service owns crawling and the message contract above is the only coupling.
 
 ---
 
@@ -90,7 +65,7 @@ Crawling is polite: a bounded connection pool per crawl and one request per comp
 
 ```mermaid
 sequenceDiagram
-    participant S as Scheduler
+    participant S as JobIngestor
     participant Q as RabbitMQ
     participant W as Worker
     participant DB as Postgres
@@ -324,14 +299,13 @@ JobMatcher/
 ├── docker-compose.yml
 ├── pyproject.toml              # uv, ruff, mypy, pytest
 ├── alembic/                    # migrations
-├── sources.yaml
 ├── src/jobmatcher/
 │   ├── config.py               # pydantic-settings
 │   ├── llm.py                  # provider wrapper (Anthropic)
 │   ├── messaging.py            # RabbitMQ topology
 │   ├── db/                     # SQLAlchemy models, session, repositories
-│   ├── sources/                # base.py, greenhouse.py, lever.py, ashby.py
-│   ├── ingest/                 # scheduler, worker, indexer, normalize, chunking, extraction
+│   ├── domain.py               # RawPosting, JobFacts, Chunk, enums shared by all modules
+│   ├── ingest/                 # worker, indexer, listing sync, normalize, chunking, extraction
 │   ├── outbox/relay.py
 │   ├── search/                 # embeddings.py, hybrid.py, metrics.py
 │   ├── agent/                  # loop.py, tools.py, prompts.py
@@ -361,7 +335,7 @@ runs without any paid API.
 ## 12. Deployment
 
 **Phase 1 — local:** `docker compose up` brings up postgres (pgvector image), rabbitmq
-(management plugin), a one-shot migration, api, worker, scheduler, outbox-relay.
+(management plugin), ollama, a one-shot migration, api, worker, outbox-relay.
 `eval/run_retrieval.py` loads the eval fixtures, so the app is usable without crawling.
 
 **Phase 2 — cloud via Terraform** (separate milestone, `infra/`):

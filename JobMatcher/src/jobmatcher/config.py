@@ -31,9 +31,6 @@ class Settings(BaseSettings):
     embedding_model: str = "intfloat/multilingual-e5-small"
     embedding_dim: int = 384
 
-    sources_file: str = "sources.yaml"
-    crawl_interval_s: int = 6 * 3600
-    http_concurrency_per_host: int = 4
     worker_prefetch: int = 8
     max_delivery_attempts: int = 3
 

@@ -1,6 +1,6 @@
 # Job Matcher
 
-Ingests job postings from public career-site APIs, indexes them for hybrid (semantic +
+Indexes job postings crawled by [JobIngestor](../JobIngestor) for hybrid (semantic +
 full-text) search in PostgreSQL, and exposes an LLM agent that answers questions like
 *"Which remote Python backend roles fit my CV, and what am I missing?"* — citing the
 postings it used.
@@ -15,7 +15,7 @@ pytest · Docker Compose · GitHub Actions
 
 ## What's inside
 
-- **Ingestion** — Greenhouse, Lever, Ashby, Workday and Jobs.cz adapters → RabbitMQ → worker that normalizes,
+- **Ingestion** — `job.discovered` messages from JobIngestor → RabbitMQ → worker that normalizes,
   deduplicates by content hash, extracts structured facts (seniority, years required,
   remote policy, salary, stack) with an LLM validated by Pydantic, chunks by section and
   embeds. Retries via per-delay TTL queues, then a dead-letter queue.
@@ -59,8 +59,9 @@ cd ../JobIngestor && docker compose up --build  # JobIngestor: registry api, pla
 docker compose exec api job-ingestor seed sources.yaml
 ```
 
-To run JobMatcher alone with its original scheduler and [`sources.yaml`](sources.yaml):
-`docker compose --profile legacy-scheduler up`.
+JobMatcher has no crawler of its own any more: the adapters and the scheduler that used to live
+here were removed once JobIngestor took over, so without JobIngestor nothing new is indexed
+(the API still serves what is already in the database).
 
 ```bash
 # search without the LLM
