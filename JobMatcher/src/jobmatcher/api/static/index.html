@@ -52,10 +52,12 @@
 
   <details id="cvbox">
     <summary>CV <span id="cvstate" class="profile"></span></summary>
-    <p class="profile">Vlož text životopisu (stačí zkopírovat z PDF).</p>
+    <p class="profile">Vlož text životopisu (stačí zkopírovat z PDF). Uložený text slouží jen
+      k porovnání s nabídkami, po 30 dnech se sám smaže a smazat ho můžeš kdykoli.</p>
     <textarea id="cvtext" rows="8"></textarea>
     <div class="row">
       <button id="cvsave" type="button">Uložit CV</button>
+      <button id="cvdelete" type="button">Smazat CV</button>
       <span id="profile" class="profile"></span>
     </div>
   </details>
@@ -110,10 +112,34 @@ $("cvsave").onclick = async () => {
     store.set("cv_profile", JSON.stringify(data.profile));
     showProfile(data.profile);
     $("cvstate").textContent = "· uloženo";
+    $("cvdelete").disabled = false;
   } catch (e) {
     $("profile").textContent = "Chyba: " + e.message;
   } finally {
     $("cvsave").disabled = false;
+  }
+};
+
+function forgetCv(state) {
+  cvId = null;
+  store.set("cv_id", "");
+  store.set("cv_profile", "null");
+  showProfile(null);
+  $("cvstate").textContent = state;
+  $("cvdelete").disabled = true;
+}
+
+$("cvdelete").disabled = !cvId;
+$("cvdelete").onclick = async () => {
+  if (!cvId) return;
+  $("cvdelete").disabled = true;
+  try {
+    const r = await fetch(`/cv/${encodeURIComponent(cvId)}`, { method: "DELETE" });
+    if (!r.ok && r.status !== 404) throw new Error((await r.json()).detail ?? r.statusText);
+    forgetCv("· smazáno");
+  } catch (e) {
+    $("profile").textContent = "Chyba: " + e.message;
+    $("cvdelete").disabled = false;
   }
 };
 
@@ -160,6 +186,10 @@ $("ask").onsubmit = async (ev) => {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ message, cv_id: cvId, history }),
     });
+    if (r.status === 404 && cvId) {
+      forgetCv("· vypršelo, nahraj ho znovu");
+      $("cvbox").open = true;
+    }
     if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText);
 
     const reader = r.body.getReader();

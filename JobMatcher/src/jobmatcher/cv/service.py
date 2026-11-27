@@ -32,3 +32,11 @@ async def profile_summary(session: AsyncSession, cv_id: uuid.UUID | None) -> str
     if cv is None:
         raise NotFound("cv", cv_id)
     return json.dumps(cv.profile, ensure_ascii=False)
+
+
+async def delete_cv(session: AsyncSession, cv_id: uuid.UUID) -> None:
+    cv = await session.get(Cv, cv_id)
+    if cv is None:
+        raise NotFound("cv", cv_id)
+    await session.delete(cv)
+    await session.commit()

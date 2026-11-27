@@ -112,3 +112,24 @@ def test_history_within_total_limit_is_accepted(monkeypatch) -> None:  # type: i
     history = [{"role": "user", "content": "x" * 2_000}] * 10
     response = make_client().post("/chat", json={"message": "hi", "history": history})
     assert response.status_code == 503
+
+
+def test_delete_cv_is_204(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    deleted: list[uuid.UUID] = []
+
+    async def fake_delete(_: Any, cv_id: uuid.UUID) -> None:
+        deleted.append(cv_id)
+
+    monkeypatch.setattr(chat_route, "delete_cv", fake_delete)
+    cv_id = uuid.uuid4()
+    response = make_client().delete(f"/cv/{cv_id}")
+    assert response.status_code == 204
+    assert deleted == [cv_id]
+
+
+def test_delete_unknown_cv_is_404(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    async def missing(_: Any, cv_id: uuid.UUID) -> None:
+        raise NotFound("cv", cv_id)
+
+    monkeypatch.setattr(chat_route, "delete_cv", missing)
+    assert make_client().delete(f"/cv/{uuid.uuid4()}").status_code == 404

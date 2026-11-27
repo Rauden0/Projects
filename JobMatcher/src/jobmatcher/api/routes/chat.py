@@ -11,7 +11,7 @@ from jobmatcher.agent.session import chat_events
 from jobmatcher.api.deps import ChatGateDep, EmbedderDep, SessionDep
 from jobmatcher.api.errors import ERROR_RESPONSES
 from jobmatcher.cv.profile import CvProfile
-from jobmatcher.cv.service import create_cv, profile_summary
+from jobmatcher.cv.service import create_cv, delete_cv, profile_summary
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.errors import LLMUnavailable
 from jobmatcher.llm import get_llm
@@ -53,6 +53,11 @@ class ChatIn(BaseModel):
 async def upload_cv(body: CvIn, session: SessionDep, embedder: EmbedderDep) -> CvOut:
     cv_id, profile = await create_cv(session, embedder, body.text)
     return CvOut(cv_id=cv_id, profile=profile)
+
+
+@router.delete("/cv/{cv_id}", status_code=204)
+async def remove_cv(cv_id: uuid.UUID, session: SessionDep) -> None:
+    await delete_cv(session, cv_id)
 
 
 def _sse(event: str, data: dict[str, Any]) -> str:
