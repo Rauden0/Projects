@@ -145,6 +145,11 @@ hard cap: extraction stops at `LLM_EXTRACTION_BUDGET_SHARE` of it (jobs then kee
 facts and are retried later) and chat answers 503 at the full amount. Chat is also limited per
 client (`X-Client-Id` header, otherwise the IP): `CHAT_REQUESTS_PER_MINUTE` and
 `CHAT_DAILY_TOKENS_PER_CLIENT`. Set a spend limit on the workspace in the Claude Console as well.
+The cap is checked before every call, whatever the provider: `LLM_MONTHLY_BUDGET_USD=0` blocks
+all LLM calls, free local models included, so to run on Ollama without a cap leave it at a
+positive value. Only models listed in `budget/pricing.py` have a cost; any other model is
+recorded at $0 (a missing Claude model is logged as `llm_model_unpriced`) and never reaches the
+cap.
 
 ## Tracing
 
