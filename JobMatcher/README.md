@@ -1,6 +1,6 @@
 # Job Matcher
 
-Ingests job postings from public career-site APIs, indexes them for hybrid (semantic +
+Indexes job postings crawled by [JobIngestor](../JobIngestor) for hybrid (semantic +
 full-text) search in PostgreSQL, and exposes an LLM agent that answers questions like
 *"Which remote Python backend roles fit my CV, and what am I missing?"* — citing the
 postings it used.
@@ -15,7 +15,7 @@ pytest · Docker Compose · GitHub Actions
 
 ## What's inside
 
-- **Ingestion** — Greenhouse, Lever, Ashby, Workday and Jobs.cz adapters → RabbitMQ → worker that normalizes,
+- **Ingestion** — `job.discovered` messages from JobIngestor → RabbitMQ → worker that normalizes,
   deduplicates by content hash, extracts structured facts (seniority, years required,
   remote policy, salary, stack) with an LLM validated by Pydantic, chunks by section and
   embeds. Retries via per-delay TTL queues, then a dead-letter queue.
@@ -26,10 +26,17 @@ pytest · Docker Compose · GitHub Actions
 - **Agent** — a plain tool-calling loop (no framework) with `search_jobs`, `get_job` and
   `compare_with_cv`; round and parallelism limits; tool errors fed back to the model;
   answer URLs checked against tool results; events streamed over SSE.
-- **MCP server** — the same tools served over the Model Context Protocol, for Claude
-  Desktop, Claude Code or any MCP client.
-- **Evaluation** — a frozen fixture set and golden questions; hit@5, recall@10 and MRR per
-  search mode.
+- **MCP server** — `search_jobs` and `get_job` served over the Model Context Protocol from the
+  same `Toolbox`, so Claude Desktop, Claude Code or an IDE can search the index directly.
+- **Evaluation** — extraction (35 labelled cs/en postings, IT and non-IT), retrieval
+  (41 golden questions, per search mode), agent (scripted questions, tool use and citation
+  validity) and prompt-injection (13 postings that carry instructions to the model) evals
+  against the local model; see [eval/RESULTS.md](eval/RESULTS.md).
+- **Operations** — one JSON error shape (`{detail, code, request_id}`), `X-Request-ID` on every
+  request and log line, `llm_call` / `chat_turn` log events with latency and tokens
+  (`LOG_FORMAT=json` for log shippers), every LLM call in the `llm_usage` ledger, OpenTelemetry
+  traces of chat turns, LLM and tool calls (Phoenix as the local viewer), settings validated at
+  startup.
 
 ## Run it
 
@@ -49,7 +56,21 @@ ingestion falls back to heuristic extraction; only `/chat` needs the model.
 - API docs: http://localhost:8000/docs
 - RabbitMQ UI: http://localhost:15672 (guest / guest)
 
-Companies to crawl live in [`sources.yaml`](sources.yaml).
+Crawling runs in [JobIngestor](../JobIngestor): a separate service with a source registry, a
+planner and horizontally scaled crawlers. It publishes `job.discovered` (only new or changed
+postings) to the same RabbitMQ, so the worker here indexes them unchanged, and `source.crawled`
+after each crawl, which the worker uses to reopen listed jobs and close missing ones when the
+listing was complete.
+
+```bash
+docker compose up --build                       # JobMatcher: api, worker, relay, RabbitMQ
+cd ../JobIngestor && docker compose up --build  # JobIngestor: registry api, planner, crawlers
+docker compose exec api job-ingestor seed sources.yaml
+```
+
+JobMatcher has no crawler of its own any more: the adapters and the scheduler that used to live
+here were removed once JobIngestor took over, so without JobIngestor nothing new is indexed
+(the API still serves what is already in the database).
 
 ```bash
 # search without the LLM
@@ -61,65 +82,157 @@ curl -N -X POST localhost:8000/chat -H "content-type: application/json" \
      -d '{"cv_id": "<id>", "message": "Remote Python roles that fit me?"}'
 ```
 
-## Use it from Claude (MCP)
+## Use it from an MCP client
 
-The agent's tools (`search_jobs`, `get_job`, `compare_with_cv`) are also an MCP server, so
-an MCP client can search the index itself. With the stack running:
+`jobmatcher-mcp` serves the agent's read-only tools, `search_jobs` and `get_job`, over MCP,
+with the same schemas and code the agent uses. `compare_with_cv` stays with `/chat`, because
+it needs a CV uploaded in that conversation. The server only needs Postgres with indexed jobs;
+it reads `DATABASE_URL` (default: the Compose Postgres on localhost) and loads the embedding
+model at startup.
 
 ```bash
-pip install -e ".[mcp]"
-claude mcp add jobmatcher -- jobmatcher-mcp     # Claude Code, stdio
-jobmatcher-mcp --http                           # or streamable HTTP on :8001/mcp
+pip install -e ".[mcp,embeddings]"
+jobmatcher-mcp                                  # stdio (also: python -m jobmatcher.mcp_server)
+jobmatcher-mcp --http --port 8001               # streamable HTTP at http://127.0.0.1:8001/mcp
 ```
 
-For Claude Desktop, add to `claude_desktop_config.json`:
+The HTTP transport has no authentication, so it binds to `127.0.0.1` unless you pass `--host`.
+
+Claude Desktop starts stdio servers itself, without your shell's virtualenv or `.env`, so
+give the absolute path to the script and the environment it needs. Add this to
+`claude_desktop_config.json` (Windows: `%APPDATA%\Claude\`, macOS:
+`~/Library/Application Support/Claude/`):
 
 ```json
-{"mcpServers": {"jobmatcher": {"command": "jobmatcher-mcp"}}}
+{
+  "mcpServers": {
+    "jobmatcher": {
+      "command": "C:\\path\\to\\JobMatcher\\.venv\\Scripts\\jobmatcher-mcp.exe",
+      "env": {
+        "DATABASE_URL": "postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher"
+      }
+    }
+  }
+}
 ```
 
-It connects to `DATABASE_URL` (default: the Compose Postgres on localhost). To compare jobs
-with your CV, upload it once with `POST /cv` and pass the returned `cv_id`.
+On Linux and macOS the command is `.venv/bin/jobmatcher-mcp`. VS Code takes the same `command`
+and `env` under `"servers"` in `.vscode/mcp.json`. For Claude Code:
+
+```bash
+claude mcp add jobmatcher -e DATABASE_URL=postgresql+asyncpg://... -- /path/to/.venv/bin/jobmatcher-mcp
+claude mcp add --transport http jobmatcher http://127.0.0.1:8001/mcp   # or a running --http server
+```
+
+Each tool call opens its own database session. A missing job, invalid arguments or an
+unreachable database come back as `isError` tool results the client's model can read, and
+every call is logged as `mcp_tool_call` with its duration.
+
+## LLM costs
+
+Crawling never calls an LLM; the ingestor only fetches and publishes, and only postings whose
+fingerprint changed reach extraction. Embeddings run locally.
+
+With `LLM_PROVIDER=anthropic` and `claude-haiku-5-5` ($0.10 / $0.50 per million tokens):
+
+| Step | Tokens | Cost |
+|---|---|---|
+| Extraction, one posting | ~1.4k in (boilerplate dropped, capped at 6,000 chars), ~80 out (short-key JSON) | ~$0.00018, ~$0.00009 with `EXTRACTION_MODE=batch` |
+| Chat, one question | ~10k in, half from the prompt cache, ~1k out | ~$0.001-0.003 |
+
+Every call is written to `llm_usage` with its cost. `LLM_MONTHLY_BUDGET_USD` (default 40) is a
+hard cap: extraction stops at `LLM_EXTRACTION_BUDGET_SHARE` of it (jobs then keep heuristic
+facts and are retried later) and chat answers 503 at the full amount. Chat is also limited per
+client (`X-Client-Id` header, otherwise the IP): `CHAT_REQUESTS_PER_MINUTE` and
+`CHAT_DAILY_TOKENS_PER_CLIENT`. Set a spend limit on the workspace in the Claude Console as well.
+
+## Tracing
+
+Every `/chat` turn is one OpenTelemetry trace: a `chat` root span with a `chat {model}` span per
+LLM call and an `execute_tool {name}` span per tool call. Extraction calls in the worker get
+their own `chat {model}` spans. LLM spans use the GenAI semantic-convention attributes:
+provider, request and response model, finish reason, and input, output, cache-read and
+cache-write tokens. The root span carries the request id, so a trace can be found from a log
+line.
+
+Tracing is off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set; without it no SDK is loaded and
+the spans cost nothing. Export is plain OTLP over HTTP, so any backend that accepts it works
+(Phoenix, Langfuse, Datadog, a Collector). Locally, Phoenix runs as one container:
+
+```bash
+docker compose --profile phoenix up -d phoenix
+# in .env: OTEL_EXPORTER_OTLP_ENDPOINT=http://phoenix:6006 (http://localhost:6006 from the host)
+docker compose up -d api worker                 # recreate them with the new setting
+```
+
+The UI is at http://localhost:6006, without a login: Phoenix 22 turns auth on by default, which
+rejects OTLP without an API key, so the profile turns it off (with Phoenix's own usage telemetry
+and its agent assistant) and publishes the port on localhost only. Traces land in Phoenix's
+`default` project; the API reports as service `jobmatcher`, the worker as `jobmatcher-worker`
+(`OTEL_SERVICE_NAME`). The image installs the `otel` extra (SDK and OTLP exporter); a local
+install needs `.[otel]`, which `dev` includes, and refuses to start with the endpoint set but
+the extra missing.
+
+Spans carry no prompt, completion, CV or posting text by default. `OTEL_CAPTURE_CONTENT=true`
+adds the system prompt, the messages, the model output and tool arguments and results, which
+is meant for local debugging only. The messages are stored in the provider's own format, so
+Phoenix shows them as attributes rather than as a chat view. Message Batches extraction
+(`EXTRACTION_MODE=batch`) is not traced.
+
+## Branches
+
+`dev` for development, `release/x.y` cut from it for staging, `main` for production (tagged on
+merge). Fixes on a release branch are merged back into `dev`.
 
 ## Develop
 
-```bash
-pip install -e ".[dev,mcp]"      # add ,embeddings for the real e5 model
-ruff check src tests eval alembic
-pytest -q                        # integration tests skip without Postgres
-```
-
-Integration tests need a migrated Postgres with pgvector and run in CI against service
-containers.
-
-## Evaluate retrieval
+See [CODING_GUIDELINES.md](CODING_GUIDELINES.md).
 
 ```bash
-alembic upgrade head
-python eval/run_retrieval.py            # configured embedder (e5 if installed)
-python eval/run_retrieval.py --hashing  # dependency-free baseline
+python -m venv .venv && .venv/Scripts/pip install -e ".[dev,embeddings,llm,mcp]"   # bin/ on Linux
+ruff check src tests eval alembic && ruff format --check src tests eval alembic
+mypy src
+pytest -q -m "not integration and not e2e"          # unit tests, no services
 ```
 
-Prints a markdown table of hit@5, recall@10 and MRR for vector, full-text and hybrid search
-over [`eval/golden.yaml`](eval/golden.yaml): 25 questions (15 keyword-style, 10 paraphrased
-or in Czech) against 20 fixture postings, 4 of them deliberate distractors.
+Integration and e2e tests need Postgres and RabbitMQ, and only ever touch a database named
+`*_test` and their own RabbitMQ vhost, because they truncate tables:
 
-Current results with `multilingual-e5-small`:
+```bash
+docker compose up -d postgres rabbitmq ollama
+docker compose exec postgres psql -U jobmatcher -c "CREATE DATABASE jobmatcher_test"
+docker compose exec postgres psql -U jobmatcher -d jobmatcher_test -c "CREATE EXTENSION vector"
+docker compose exec rabbitmq rabbitmqctl add_vhost jobmatcher_test
+docker compose exec rabbitmq rabbitmqctl set_permissions -p jobmatcher_test guest ".*" ".*" ".*"
+DATABASE_URL=postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher_test alembic upgrade head
 
-| mode | hit@5 | recall@10 | MRR |
-|---|---|---|---|
-| vector | 1.00 | 0.98 | 0.90 |
-| full-text | 0.68 | 0.66 | 0.64 |
-| hybrid | 0.96 | 0.98 | 0.87 |
+pytest -q --cov=jobmatcher                          # unit + integration + e2e (scripted model)
+E2E_LLM=local pytest -q -m e2e                      # e2e with the local Ollama model
+```
 
-What the numbers changed:
-- The first version of the set (keyword questions only) scored 1.00 everywhere and could not
-  tell the modes apart, so paraphrased and Czech questions and distractors were added.
-- Stop words ("a", "z", "and") in the full-text query matched every posting and pushed hybrid
-  MRR down to 0.77; dropping them brought it to 0.87.
-- Vector search alone is best on this set; hybrid is kept because the title and full-text
-  lists fix real cases the set does not cover yet, e.g. a "TypeScript Developer" ad that
-  mentions Python once outranking "Python Developer" in pure vector search.
+Override the targets with `TEST_DATABASE_URL` and `TEST_AMQP_URL`. The e2e test publishes a
+gzipped `job.discovered` message, lets the real worker index it, finds it via `/jobs/search`
+and asks `/chat`, which must cite it.
+
+## Evaluate
+
+```bash
+python eval/run_extraction.py --model qwen2.5:7b    # structured extraction, per field
+python eval/run_retrieval.py                        # hit@5 / recall@10 / MRR per search mode
+python eval/run_agent.py --model qwen2.5:7b         # tool use, citations, latency, tokens
+python eval/run_agent.py --model qwen2.5:7b --cases eval/agent/injection.yaml   # prompt injection
+```
+
+They use the `jobmatcher_eval` database (`EVAL_DATABASE_URL`). Commands, numbers and the
+conclusions drawn from them are in [eval/RESULTS.md](eval/RESULTS.md). Headlines with
+qwen2.5:7b on an RTX 3060 Ti:
+
+| | |
+|---|---|
+| Extraction | 95.5% mean field accuracy, 100% valid JSON, 1.4 s per posting (heuristic baseline 59.2%) |
+| Retrieval | hybrid hit@5 0.83, recall@10 0.90, MRR 0.79 over 41 questions; weakest on English queries for Czech postings |
+| Agent | relevant posting cited in 85% of 33 runs, no invented URLs, 3.0 rounds and ~4.6k input tokens per question |
+| Prompt injection | 13 postings with instructions to the model, 6 runs each: payload followed in 9.0% of runs before hardening, 2.6% with tool results as untrusted data without control tokens or links |
 
 ## Roadmap
 

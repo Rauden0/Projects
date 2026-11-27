@@ -73,7 +73,13 @@ def test_free_form_skills_match_cv_tools() -> None:
     profile = CvProfile(skills=["python", "asyncio", "fastapi", "pytest", "postgresql"])
     cv = "Built REST APIs with FastAPI, async workers, pytest, PostgreSQL partitioning."
     result = compare(
-        profile, [], "", "", None, None, None,
+        profile,
+        [],
+        "",
+        "",
+        None,
+        None,
+        None,
         required_skills=["async programming", "rest apis", "testing", "postgres", "graphql"],
         cv_text=cv,
     )
@@ -84,7 +90,13 @@ def test_czech_padded_skills_are_matched() -> None:
     profile = CvProfile(skills=["python", "docker", "rabbitmq", "postgresql"])
     cv = "Python, Docker, RabbitMQ, PostgreSQL, SQLAlchemy."
     result = compare(
-        profile, [], "", "", None, None, None,
+        profile,
+        [],
+        "",
+        "",
+        None,
+        None,
+        None,
         required_skills=[
             "docker a kontejnerizace",
             "message brokery (rabbitmq, sqs)",
@@ -98,7 +110,13 @@ def test_czech_padded_skills_are_matched() -> None:
 
 def test_soft_skills_are_never_reported_missing() -> None:
     result = compare(
-        CvProfile(skills=["python"]), [], "", "", None, None, None,
+        CvProfile(skills=["python"]),
+        [],
+        "",
+        "",
+        None,
+        None,
+        None,
         required_skills=["Python", "Accountability", "problem solving", "C++"],
         cv_text="Python",
     )

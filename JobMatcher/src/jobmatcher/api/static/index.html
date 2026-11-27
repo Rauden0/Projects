@@ -90,7 +90,7 @@ $("cvsave").onclick = async () => {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ text: $("cvtext").value }),
     });
-    if (!r.ok) throw new Error((await r.json()).detail?.[0]?.msg ?? r.statusText);
+    if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText);
     const data = await r.json();
     cvId = data.cv_id;
     store.set("cv_id", cvId);

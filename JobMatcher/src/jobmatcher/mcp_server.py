@@ -1,103 +1,178 @@
-"""MCP server exposing the agent's tools, so any MCP client (Claude Desktop, Claude Code, an
-IDE) can search the index and compare jobs with a CV without going through /chat.
+"""MCP server for the agent's read-only tools, so Claude Desktop, an IDE or any other MCP
+client can search the job index without going through /chat.
 
-The tools are the same Toolbox the built-in agent uses: one implementation, two front ends.
-
-    jobmatcher-mcp                 # stdio, for Claude Desktop / Claude Code
-    jobmatcher-mcp --http          # streamable HTTP on :8001/mcp
+    jobmatcher-mcp                  # stdio
+    jobmatcher-mcp --http           # streamable HTTP on http://127.0.0.1:8001/mcp
 """
 
 import argparse
-import uuid
+import json
+import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from functools import lru_cache
-from typing import Any
+from typing import Any, Protocol
 
-from mcp.server.mcpserver import MCPServer
-from mcp.server.mcpserver.exceptions import ToolError as MCPToolError
-from mcp.types import ToolAnnotations
+import anyio
+import uvicorn
+from mcp.server import Server, ServerRequestContext
+from mcp.server.stdio import stdio_server
+from mcp.shared.exceptions import MCPError
+from mcp.types import (
+    INVALID_PARAMS,
+    CallToolRequestParams,
+    CallToolResult,
+    ListToolsResult,
+    PaginatedRequestParams,
+    TextContent,
+    Tool,
+    ToolAnnotations,
+)
+from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
-from jobmatcher.agent.tools import Toolbox, ToolError
+from jobmatcher.agent.tools import Toolbox
+from jobmatcher.config import configure_logging
 from jobmatcher.db.session import get_sessionmaker
+from jobmatcher.errors import ToolError
+from jobmatcher.observability import Stopwatch
 from jobmatcher.search.embeddings import Embedder, get_embedder
-from jobmatcher.search.hybrid import SearchFilters
 
-ToolboxFactory = Callable[[uuid.UUID | None], AbstractAsyncContextManager[Toolbox]]
+log = logging.getLogger(__name__)
 
-INSTRUCTIONS = """Search open job postings and compare them with a CV.
-Use search_jobs first; filters are only for hard constraints (city, remote, years), skills
-go into the query. Link jobs by the url the tools return, never invent one. To compare with
-a CV, the user needs a cv_id from POST /cv of the Job Matcher API."""
+# compare_with_cv stays with the agent: it needs a CV uploaded through the API in the same
+# conversation, and CV data has no business leaving it.
+EXPOSED = {"search_jobs": "Search jobs", "get_job": "Get job"}
 
-READ_ONLY = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+INSTRUCTIONS = """Search open job postings, most of them in Czech.
+Start with search_jobs and put the occupation and skills into the query; use filters only for
+constraints the user stated. Call get_job only with a job_id from a search result. Link jobs
+by the exact url the tools return, never invent one."""
 
-
-@lru_cache
-def _embedder() -> Embedder:
-    # Loading the e5 model takes seconds; do it once per process, not per call.
-    return get_embedder()
+READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 
 
-@asynccontextmanager
-async def _db_toolbox(cv_id: uuid.UUID | None) -> AsyncIterator[Toolbox]:
-    async with get_sessionmaker()() as session:
-        yield Toolbox(session, _embedder(), cv_id)
+class Tools(Protocol):
+    async def call(self, name: str, raw_input: dict[str, Any]) -> Any: ...
 
 
-def build_server(toolbox_factory: ToolboxFactory = _db_toolbox) -> MCPServer:
-    server = MCPServer("jobmatcher", instructions=INSTRUCTIONS)
+ToolsFactory = Callable[[], AbstractAsyncContextManager[Tools]]
 
-    async def call(cv_id: uuid.UUID | None, name: str, args: dict[str, Any]) -> Any:
-        async with toolbox_factory(cv_id) as toolbox:
-            try:
-                return await toolbox.call(name, args)
-            except ToolError as exc:
-                # Reported to the client as an is_error result, like in the agent loop.
-                raise MCPToolError(str(exc)) from exc
 
-    @server.tool(annotations=READ_ONLY)
-    async def search_jobs(
-        query: str,
-        filters: SearchFilters | None = None,
-        k: int = 5,
-        cv_id: uuid.UUID | None = None,
-    ) -> list[dict[str, Any]]:
-        """Hybrid search over open job postings with optional hard filters. Returns ranked
-        jobs with a snippet; with cv_id each job also gets a short CV fit (missing required
-        skills, years gap)."""
-        args = {"query": query, "k": k, **(filters.model_dump(exclude_none=True) if filters
-                                              else {})}
-        result: list[dict[str, Any]] = await call(cv_id, "search_jobs", args)
+def database_tools(embedder: Embedder) -> ToolsFactory:
+    @asynccontextmanager
+    async def open_tools() -> AsyncIterator[Toolbox]:
+        async with get_sessionmaker()() as session:
+            yield Toolbox(session, embedder, cv_id=None)
+
+    return open_tools
+
+
+def tool_list() -> list[Tool]:
+    return [
+        Tool(
+            name=d["name"],
+            title=EXPOSED[d["name"]],
+            description=d["description"],
+            input_schema=d["input_schema"],
+            annotations=READ_ONLY,
+        )
+        for d in Toolbox.definitions()
+        if d["name"] in EXPOSED
+    ]
+
+
+def build_server(open_tools: ToolsFactory) -> Server:
+    tools = tool_list()
+    schemas = {t.name: t.input_schema for t in tools}
+
+    async def list_tools(
+        _: ServerRequestContext, params: PaginatedRequestParams | None
+    ) -> ListToolsResult:
+        return ListToolsResult(tools=tools)
+
+    async def call_tool(_: ServerRequestContext, params: CallToolRequestParams) -> CallToolResult:
+        if params.name not in schemas:
+            raise MCPError(INVALID_PARAMS, f"unknown tool {params.name!r}")
+        watch = Stopwatch()
+        result = await _call(open_tools, params.name, params.arguments or {})
+        log.info(
+            "mcp_tool_call tool=%s is_error=%s duration_ms=%d",
+            params.name,
+            result.is_error,
+            watch.elapsed_s * 1000,
+            extra={
+                "event": "mcp_tool_call",
+                "tool": params.name,
+                "is_error": result.is_error,
+                "duration_ms": round(watch.elapsed_s * 1000),
+            },
+        )
         return result
 
-    @server.tool(annotations=READ_ONLY)
-    async def get_job(job_id: int) -> dict[str, Any]:
-        """Full posting text and extracted facts (seniority, years, remote policy, salary,
-        skills) for one job."""
-        result: dict[str, Any] = await call(None, "get_job", {"job_id": job_id})
-        return result
+    return Server(
+        "jobmatcher",
+        instructions=INSTRUCTIONS,
+        get_tool_input_schema=schemas.get,
+        on_list_tools=list_tools,
+        on_call_tool=call_tool,
+    )
 
-    @server.tool(annotations=READ_ONLY)
-    async def compare_with_cv(job_id: int, cv_id: uuid.UUID) -> dict[str, Any]:
-        """Compare one job with an uploaded CV: matched skills, missing required and
-        nice-to-have skills, years gap and location fit."""
-        result: dict[str, Any] = await call(cv_id, "compare_with_cv", {"job_id": job_id})
-        return result
 
-    return server
+async def _call(open_tools: ToolsFactory, name: str, args: dict[str, Any]) -> CallToolResult:
+    try:
+        async with open_tools() as tools:
+            return _ok(await tools.call(name, args))
+    except ToolError as exc:
+        return _error(str(exc))
+    except ValidationError as exc:
+        # A tool execution error, not a protocol error, so the model can fix its arguments.
+        return _error(_describe(exc))
+    except (SQLAlchemyError, OSError) as exc:
+        log.warning("mcp_tool_call database unavailable: %s", exc)
+        return _error("the job index is unavailable, try again later")
+
+
+def _ok(output: Any) -> CallToolResult:
+    text = json.dumps(output, default=str, ensure_ascii=False)
+    data = json.loads(text)
+    return CallToolResult(
+        content=[TextContent(type="text", text=text)],
+        structured_content=data if isinstance(data, dict) else {"result": data},
+    )
+
+
+def _error(message: str) -> CallToolResult:
+    return CallToolResult(content=[TextContent(type="text", text=message)], is_error=True)
+
+
+def _describe(exc: ValidationError) -> str:
+    # Field names and messages only: pydantic's default text repeats the rejected input.
+    return "; ".join(
+        f"{'.'.join(str(p) for p in e['loc']) or 'input'}: {e['msg']}" for e in exc.errors()
+    )
+
+
+async def _serve_stdio(server: Server) -> None:
+    async with stdio_server() as (read, write):
+        await server.run(read, write, server.create_initialization_options())
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(
+        prog="jobmatcher-mcp", description="MCP server for the job search tools"
+    )
     parser.add_argument("--http", action="store_true", help="serve streamable HTTP, not stdio")
+    parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8001)
     args = parser.parse_args()
-    server = build_server()
+
+    configure_logging()
+    server = build_server(database_tools(get_embedder()))
     if args.http:
-        server.run("streamable-http", host="0.0.0.0", port=args.port)
+        app = server.streamable_http_app(stateless_http=True, host=args.host)
+        uvicorn.run(app, host=args.host, port=args.port, log_config=None)
     else:
-        server.run("stdio")
+        anyio.run(_serve_stdio, server)
 
 
 if __name__ == "__main__":

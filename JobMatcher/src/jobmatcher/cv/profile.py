@@ -1,5 +1,3 @@
-"""CV profile extraction and deterministic CV-to-job comparison."""
-
 import re
 from datetime import date
 
@@ -59,26 +57,72 @@ def _mentions(text: str, term: str) -> bool:
 # Extracted skills are free-form ("async programming", "rest apis", "testing"), CVs name the
 # tools ("asyncio", "FastAPI", "pytest"). Matching word stems bridges most of that gap.
 _STOPWORDS = {
-    "and", "or", "of", "the", "with", "in", "for", "experience", "knowledge", "skills",
-    "development", "programming", "design", "systems", "system",
+    "and",
+    "or",
+    "of",
+    "the",
+    "with",
+    "in",
+    "for",
+    "experience",
+    "knowledge",
+    "skills",
+    "development",
+    "programming",
+    "design",
+    "systems",
+    "system",
     # Czech postings
-    "pro", "nebo", "jako", "další", "zkušenost", "zkušenosti", "znalost", "znalosti", "práce",
-    "vývoj", "služby",
+    "pro",
+    "nebo",
+    "jako",
+    "další",
+    "zkušenost",
+    "zkušenosti",
+    "znalost",
+    "znalosti",
+    "práce",
+    "vývoj",
+    "služby",
 }
 _ALIASES = {
-    "postgres": "postgresql", "k8s": "kubernetes", "js": "javascript", "ts": "typescript",
-    "rest": "api", "apis": "api", "unit": "test", "testing": "test", "ci/cd": "ci",
-    "message": "rabbitmq", "queues": "rabbitmq", "queue": "rabbitmq",
-    "database": "sql", "databases": "sql", "databáze": "sql", "relational": "sql",
+    "postgres": "postgresql",
+    "k8s": "kubernetes",
+    "js": "javascript",
+    "ts": "typescript",
+    "rest": "api",
+    "apis": "api",
+    "unit": "test",
+    "testing": "test",
+    "ci/cd": "ci",
+    "message": "rabbitmq",
+    "queues": "rabbitmq",
+    "queue": "rabbitmq",
+    "database": "sql",
+    "databases": "sql",
+    "databáze": "sql",
+    "relational": "sql",
     "relační": "sql",
 }
 
 
 # Extraction sometimes returns soft skills despite the prompt; a CV cannot "lack" these.
 _SOFT_SKILLS = {
-    "accountability", "communication", "problem solving", "problem-solving", "teamwork",
-    "team player", "ownership", "proactivity", "curiosity", "english", "software development",
-    "komunikace", "samostatnost", "týmová spolupráce", "angličtina",
+    "accountability",
+    "communication",
+    "problem solving",
+    "problem-solving",
+    "teamwork",
+    "team player",
+    "ownership",
+    "proactivity",
+    "curiosity",
+    "english",
+    "software development",
+    "komunikace",
+    "samostatnost",
+    "týmová spolupráce",
+    "angličtina",
 }
 
 
@@ -111,9 +155,7 @@ def compare(
     nice_to_have_skills: list[str] | None = None,
     cv_text: str = "",
 ) -> Comparison:
-    """Deterministic CV-to-job comparison.
-
-    Uses the skills extracted per section at ingest when available; otherwise attributes the
+    """Uses the skills extracted per section at ingest when available; otherwise attributes the
     job's tech stack to sections by searching the section texts. A skill counts as covered
     when it is in the CV profile or mentioned anywhere in the CV text.
     """

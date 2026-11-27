@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher.db import repository
 from jobmatcher.db.models import EMBEDDING_DIM, Job, JobChunk, Outbox
+from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.extraction import HeuristicExtractor
 from jobmatcher.ingest.indexer import Indexer
 from jobmatcher.search.embeddings import HashingEmbedder
-from jobmatcher.sources import RawPosting
 
 pytestmark = pytest.mark.integration
 
@@ -74,3 +74,17 @@ async def test_close_unseen_jobs(sessionmaker: async_sessionmaker[AsyncSession])
     async with sessionmaker() as session:
         statuses = dict((await session.execute(select(Job.external_id, Job.status))).all())
     assert statuses == {"1": "open", "2": "closed"}
+
+
+async def test_deferred_extraction_stores_pending_heuristic_facts(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    indexer = Indexer(
+        sessionmaker, HeuristicExtractor(), HashingEmbedder(EMBEDDING_DIM), defer_extraction=True
+    )
+    result = await indexer.index(posting())
+    async with sessionmaker() as session:
+        job = await session.get(Job, result.job_id)
+    assert job is not None
+    assert job.extraction_status == "pending"
+    assert "python" in job.tech_stack

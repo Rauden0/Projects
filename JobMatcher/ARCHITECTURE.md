@@ -1,6 +1,6 @@
 # Job Matcher — Architecture
 
-Job Matcher ingests job postings from public career-site APIs, indexes them for hybrid
+Job Matcher indexes job postings crawled by the separate JobIngestor service for hybrid
 (semantic + full-text) search, and exposes an LLM agent that answers questions like
 *"Which remote Python backend roles fit my CV, and what am I missing?"* — always citing
 the concrete postings it used.
@@ -15,15 +15,7 @@ rather than guessed, and an agent loop with explicit tools and limits.
 
 ```mermaid
 flowchart LR
-    subgraph Sources
-        GH[Greenhouse API]
-        LV[Lever API]
-        AS[Ashby API]
-        WD[Workday API]
-    end
-
-    SCH[Scheduler<br/>periodic crawl] -->|fetch| Sources
-    SCH -->|job.discovered| MQ[(RabbitMQ)]
+    ING[JobIngestor<br/>separate service] -->|job.discovered<br/>source.crawled| MQ[(RabbitMQ)]
 
     MQ --> W[Ingest worker<br/>normalize · dedupe · chunk · embed]
     W -->|upsert + outbox row<br/>single transaction| PG[(PostgreSQL<br/>+ pgvector)]
@@ -46,42 +38,26 @@ flowchart LR
 | Service | Responsibility |
 |---|---|
 | `api` | FastAPI app: CV upload, search endpoint, chat endpoint (SSE streaming), health. |
-| `scheduler` | Periodically lists postings from configured sources and publishes `job.discovered` messages. Cheap and stateless. |
+| `worker` (listing sync) | Consumes `source.crawled`: reopens listed jobs and closes missing ones only when the listing was complete. |
 | `worker` | Consumes `job.discovered`; fetches detail, normalizes, deduplicates, chunks, embeds, upserts. |
 | `outbox-relay` | Publishes `job.indexed` / `job.closed` events from the outbox table (same pattern as at work). |
 | `postgres` | System of record, vector index (pgvector) and full-text index (tsvector). |
-| `rabbitmq` | Work queue between scheduler and workers, with retry + dead-letter queues. |
+| `rabbitmq` | Work queue between JobIngestor and the worker, with retry + dead-letter queues. |
 
 ---
 
 ## 2. Data sources
 
-Only **public, documented JSON endpoints** that companies publish for their own job
-boards, plus Jobs.cz as the one exception where a Czech board has no API — never logged-in
-sessions:
+Crawling lives in JobIngestor (source registry, planner, crawlers for Greenhouse, Lever,
+Ashby, Workday, Jobs.cz and others). It publishes two events to the shared `jobs` exchange:
 
-| Source | Endpoint | Notes |
+| Routing key | Body | Consumer here |
 |---|---|---|
-| Greenhouse | `boards-api.greenhouse.io/v1/boards/{company}/jobs?content=true` | Full description in one call. |
-| Lever | `api.lever.co/v0/postings/{company}?mode=json` | |
-| Ashby | `api.ashbyhq.com/posting-api/job-board/{company}` | |
-| Workday | `POST {tenant}.wd{n}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs` | Detail needs a second call. |
-| Jobs.cz | `www.jobs.cz/prace/{locality}/?q[]=…` + `/rpd/{id}/` | No API: server-rendered HTML, only robots.txt-allowed paths, one request per second, capped pages. |
+| `job.discovered` | `RawPosting` (`jobmatcher.domain`): kind, company, source, external_id, url, title, location, description_html | worker → indexer |
+| `source.crawled` | kind, source, external_ids, complete | worker → listing sync (reopen / close) |
 
-The list of companies lives in `sources.yaml` (company slug, ATS type, optional location
-filter). Each source is a small adapter implementing one protocol:
-
-```python
-class SourceAdapter(ABC):
-    kind: str
-    def list_postings(self) -> AsyncIterator[RawPosting]: ...
-```
-
-Greenhouse, Lever and Ashby return full descriptions in the listing call, so the scheduler
-publishes complete postings and the worker never calls the source. A Workday adapter would
-fetch details in `list_postings` the same way.
-
-Crawling is polite: a bounded connection pool per crawl and one request per company per run.
+JobMatcher used to carry its own adapters and a scheduler; they were removed so that one
+service owns crawling and the message contract above is the only coupling.
 
 ---
 
@@ -89,7 +65,7 @@ Crawling is polite: a bounded connection pool per crawl and one request per comp
 
 ```mermaid
 sequenceDiagram
-    participant S as Scheduler
+    participant S as JobIngestor
     participant Q as RabbitMQ
     participant W as Worker
     participant DB as Postgres
@@ -259,16 +235,52 @@ is visible and testable.
 **Loop rules:**
 - System prompt states the user's CV profile summary and that every recommended job must
   come from a tool result and be cited by URL.
-- Max 6 tool-call rounds per question, max 3 parallel tool calls per round; then the
-  model must answer with what it has.
+- Max 4 tool-call rounds per question (`MAX_ROUNDS`), then a fifth call with tools disabled,
+  so the model must answer with what it has. At most 3 tool calls per round
+  (`MAX_CALLS_PER_ROUND`); they run one after another because they share the request's DB
+  session, and extra calls get an error result.
 - Tool errors are returned to the model as structured `is_error` results, not raised.
+- Posting text is scraped from the web, so tool results are untrusted input. Each result
+  reaches the model inside `<untrusted_data>`, with chat-template control tokens
+  (`<|im_start|>`, `[INST]`, …) and tool-protocol tags removed, because Ollama tokenizes those
+  as real turn boundaries even inside message content. Links in posting text become `[link]`;
+  only the jobs' `url` fields keep theirs, the links the agent may cite. The system prompt does
+  not mention the envelope: a rule saying so was measured and only cost tokens.
+  `eval/agent/injection.yaml` measures how often the model obeys a posting anyway.
 - Agent events (tool calls, tool results, final answer) are streamed to the client over
   **SSE**, so the UI can show "searching remote Python roles…" while the agent works.
-- Token usage and latency per request are logged.
+- Every LLM call is logged as `llm_call` (latency, tokens) and written to `llm_usage`; each
+  chat turn ends with one `chat_turn` line (LLM calls, tool calls, tokens, duration). The
+  answer event carries the number of rounds.
+- Each chat turn is one OpenTelemetry trace (`telemetry.py`), exported over OTLP only when
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is set:
 
-`compare_with_cv` is deterministic first (set overlap of normalized skills, years and
-location rules), and only asks the LLM to phrase the explanation — so the important part
-is unit-testable.
+  ```
+  chat                              root, agent/session.py: request id, outcome, call counts
+  ├── chat {model}                  llm.py, per LLM call: gen_ai.* model, finish reason, tokens
+  ├── execute_tool search_jobs      agent/loop.py, per tool call: name, call id, result count
+  └── chat {model}                  the next round
+  ```
+
+  Extraction calls are traced as standalone `chat {model}` spans. Attribute names follow the
+  GenAI semantic conventions, which are still in Development status, so they are all defined
+  in `telemetry.py`. Errors set the span status and `error.type`, never the message, because
+  provider errors can quote the prompt. Prompt, completion and tool content is recorded only
+  with `OTEL_CAPTURE_CONTENT=true`. The root span is made current only while the agent
+  generator runs, never across a `yield`, so the SSE consumer never runs inside it.
+- Client-supplied history is validated as plain `user` / `assistant` text turns, so a client
+  cannot inject tool calls or system messages.
+
+`compare_with_cv` is fully deterministic (set overlap of normalized skills, years and
+location rules), so it is unit-testable and costs no tokens.
+
+**MCP.** The loop calls its tools in process, without MCP
+([ADR 0001](docs/adr/0001-llm-framework.md), option 9). A separate entry point, `jobmatcher-mcp` (`mcp_server.py`, stdio or streamable
+HTTP), serves `search_jobs` and `get_job` to other MCP clients. It uses the SDK's low-level
+server and lists `Toolbox.definitions()` as they are, so the schemas cannot drift from the
+agent's, and each call runs the same `Toolbox` with its own DB session and no CV.
+`ToolError`, Pydantic validation errors and database errors become `isError` results; an
+unknown tool, including `compare_with_cv`, is a protocol error.
 
 The same three tools are also served over **MCP** (`jobmatcher-mcp`, stdio or streamable
 HTTP), so Claude Desktop, Claude Code or any other MCP client can use the index directly.
@@ -281,7 +293,7 @@ the tools are marked read-only, and tool errors become `is_error` results there 
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/cv` | Upload CV (PDF or text) → extracted profile, returns `cv_id` |
+| `POST` | `/cv` | Upload CV text → extracted profile, returns `cv_id` |
 | `GET` | `/jobs/search` | Direct hybrid search with filters (no LLM) |
 | `GET` | `/jobs/{id}` | Job detail |
 | `POST` | `/chat` | `{cv_id, message, history}` → SSE stream of tool events + answer |
@@ -289,33 +301,67 @@ the tools are marked read-only, and tool errors become `is_error` results there 
 
 Request/response models are Pydantic v2; OpenAPI docs come for free from FastAPI.
 
+Every error has one shape, produced in `api/errors.py` from the typed errors in
+`jobmatcher.errors`:
+
+```json
+{"detail": "job 42 not found", "code": "not_found", "request_id": "3f9c0a1b2d4e5f60"}
+```
+
+| Code | Status | Raised by |
+|---|---|---|
+| `validation_error` | 422 | request validation (adds an `errors` list) |
+| `not_found` | 404 | unknown job, CV or route |
+| `rate_limited` | 429 + `Retry-After` | per-client chat limits |
+| `budget_exhausted`, `llm_unavailable` | 503 | monthly LLM budget, no chat model configured |
+| `llm_error` | 502 | provider failure outside the SSE stream |
+| `internal_error` | 500 | anything unexpected (logged, details not exposed) |
+
+Each request gets an `X-Request-ID` (the caller's, if well-formed), echoed in the response and
+attached to every log line written while handling it.
+
 ---
 
 ## 8. Evaluation
 
-Retrieval quality is measured, not eyeballed:
+Quality is measured, not eyeballed; results and commands are in
+[eval/RESULTS.md](eval/RESULTS.md).
 
-- `eval/golden.yaml`: 15 questions (to grow to ~30), each with the set of job ids that a human marked as
-  relevant, e.g. *"remote Python backend, max 3 years, no relocation"*.
-- `eval/run_retrieval.py` computes **hit@5**, **recall@10** and **MRR** for
-  (a) vector only, (b) full-text only, (c) hybrid — so the README can show *why* hybrid
-  was chosen, with numbers.
-- Answer faithfulness is checked on every chat turn: URLs in the final answer that no tool
-  returned are reported as `unverified_urls` in the answer event.
-- Evaluation runs against a frozen fixture snapshot of postings (`eval/fixtures/*.json`)
-  so results are reproducible and CI does not depend on live job boards.
+- **Extraction** (`eval/run_extraction.py`): 35 labelled postings (Czech and English, IT and
+  non-IT) with gold seniority, years, remote policy, city, salary and skills. Per-field
+  accuracy, skills precision/recall/F1, JSON validity, latency and tokens, for any
+  OpenAI-compatible model, the configured chat model or the heuristic baseline; prompt
+  variants in `eval/extraction/prompts/`.
+- **Retrieval** (`eval/run_retrieval.py`): 41 golden questions over 32 frozen postings
+  (`eval/fixtures/postings.yaml`), hit@5, recall@10 and MRR per mode (vector, full-text,
+  hybrid), reported for the original IT set and the added non-IT / cross-language set.
+- **Agent** (`eval/run_agent.py`): 11 scripted questions against the seeded fixtures through
+  the production loop and tools, several runs each: expected tools used, filters, a relevant
+  posting cited, citation validity (every URL in the answer came from a tool), rounds,
+  latency and tokens.
+- **Prompt injection** (`eval/run_agent.py --cases eval/agent/injection.yaml`): 13 postings
+  whose text, title, company or skills carry instructions to the model (recommend another
+  job, fake system and tool messages, attacker URLs and e-mails, injected tool calls, prompt
+  and CV leaks), in Czech and English. Deterministic checks per run: the payload reached the
+  model, the pushed job was not cited, no canary or attacker link in the answer, no tool call
+  the payload asked for, no verbatim system prompt or CV profile, and the user's question
+  still answered.
+- Answer faithfulness is also checked on every production chat turn: URLs in the answer that
+  no tool returned are reported as `unverified_urls` in the answer event.
+
+The eval runners use their own database (`jobmatcher_eval`) because they truncate it.
 
 ---
 
 ## 9. Testing
 
-- **Unit:** source adapters (recorded JSON fixtures), normalization, chunking, RRF fusion,
-  `compare_with_cv` rules, extraction schema validation.
-- **Integration:** pytest against real Postgres + pgvector and RabbitMQ (CI service
-  containers, same approach as the BubuTracker Go CI); LLM and embeddings replaced by
-  deterministic fakes.
-- **Contract:** the agent loop tested with a scripted fake model that issues predefined
-  tool calls — verifies limits, error handling and citations without network.
+| Level | What | Needs |
+|---|---|---|
+| Unit | normalization, chunking, extraction parsing, RRF SQL, budget and limits, LLM client translation and error mapping, agent loop with a scripted model, API error schema | nothing |
+| Integration | indexer, search, toolbox, listing sync, outbox relay, ledger, batch extraction against Postgres + pgvector; the worker against RabbitMQ (retry queue, DLQ, gzip bodies) | `TEST_DATABASE_URL` (`*_test` only), `TEST_AMQP_URL` (own vhost) |
+| E2E | `job.discovered` on the exchange → worker → `/jobs/search` → `/chat` citing the posting; scripted model by default, `E2E_LLM=local` for Ollama | same |
+
+LLM and embeddings are deterministic fakes except in `E2E_LLM=local` runs and the evals.
 
 ---
 
@@ -328,26 +374,34 @@ JobMatcher/
 ├── docker-compose.yml
 ├── pyproject.toml              # uv, ruff, mypy, pytest
 ├── alembic/                    # migrations
-├── sources.yaml
 ├── src/jobmatcher/
 │   ├── config.py               # pydantic-settings
-│   ├── llm.py                  # provider wrapper (Anthropic)
+│   ├── llm.py                  # Anthropic + OpenAI-compatible clients, usage, LLMError
+│   ├── errors.py               # typed errors (JobMatcherError)
+│   ├── observability.py        # logging, request ids, LLM call records
+│   ├── telemetry.py            # OpenTelemetry spans, GenAI attribute names, OTLP setup
 │   ├── messaging.py            # RabbitMQ topology
 │   ├── db/                     # SQLAlchemy models, session, repositories
-│   ├── sources/                # base.py, greenhouse.py, lever.py, ashby.py
-│   ├── ingest/                 # scheduler, worker, indexer, normalize, chunking, extraction
+│   ├── domain.py               # RawPosting, JobFacts, Chunk, enums shared by all modules
+│   ├── ingest/                 # worker, indexer, listing sync, normalize, chunking, extraction
 │   ├── outbox/relay.py
 │   ├── search/                 # embeddings.py, hybrid.py, metrics.py
-│   ├── agent/                  # loop.py, tools.py, prompts.py
-│   ├── cv/                     # profile.py (extraction + comparison)
-│   └── api/                    # main.py, deps.py, routes/, schemas.py
+│   ├── agent/                  # loop.py, tools.py, session.py
+│   ├── cv/                     # profile.py (extraction + comparison), service.py
+│   ├── mcp_server.py           # jobmatcher-mcp: search_jobs / get_job over MCP
+│   └── api/                    # main.py, deps.py, errors.py, middleware.py, routes/, schemas.py
 ├── eval/
+│   ├── RESULTS.md
+│   ├── run_extraction.py, run_retrieval.py, run_agent.py
+│   ├── extraction/             # labelled postings, prompt variants, results
+│   ├── agent/                  # scripted cases, prompt variants, results
 │   ├── golden.yaml
-│   ├── fixtures/
-│   └── run_retrieval.py
+│   └── fixtures/
+├── docs/                       # adr/, ci.md
 └── tests/
     ├── unit/
-    └── integration/
+    ├── integration/
+    └── e2e/
 ```
 
 ---
@@ -356,8 +410,10 @@ JobMatcher/
 
 All configuration via environment variables loaded by `pydantic-settings`
 (`DATABASE_URL`, `AMQP_URL`, `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`,
-`EMBEDDING_MODEL`, crawl intervals). The default LLM is a local Ollama model, so the project
-runs without any paid API.
+`EMBEDDING_MODEL`, budget and limits, `LOG_LEVEL` / `LOG_FORMAT`, `OTEL_EXPORTER_OTLP_ENDPOINT`
+/ `OTEL_SERVICE_NAME` / `OTEL_CAPTURE_CONTENT`), validated at startup (enums, ranges, URL
+schemes, `EMBEDDING_DIM` against the schema). API keys are `SecretStr`.
+The default LLM is a local Ollama model, so the project runs without any paid API.
 `.env.example` is committed; `.env` is git-ignored. No keys in code or in the image.
 
 ---
@@ -365,7 +421,10 @@ runs without any paid API.
 ## 12. Deployment
 
 **Phase 1 — local:** `docker compose up` brings up postgres (pgvector image), rabbitmq
-(management plugin), a one-shot migration, api, worker, scheduler, outbox-relay.
+(management plugin), ollama, a one-shot migration, api, worker, outbox-relay. Optional
+profiles: `batch` (hourly Message Batches extraction) and `phoenix` (one Arize Phoenix
+container on port 6006, the trace viewer the api and worker export to once
+`OTEL_EXPORTER_OTLP_ENDPOINT=http://phoenix:6006` is set).
 `eval/run_retrieval.py` loads the eval fixtures, so the app is usable without crawling.
 
 **Phase 2 — cloud via Terraform** (separate milestone, `infra/`):
@@ -396,7 +455,8 @@ runs without any paid API.
 |---|---|---|
 | Postgres + pgvector | Qdrant, Weaviate | One database for relational filters, full-text and vectors; filtering + fusion in one query; fewer moving parts. |
 | RabbitMQ for ingestion | Celery, plain asyncio tasks | Explicit queues, DLQ and retry topology; matches production experience; async consumer via `aio-pika`. |
-| No agent framework | LangChain, LangGraph | The loop is ~150 lines; full control over limits, errors and streaming; easier to test. |
+| No agent framework ([ADR 0001](docs/adr/0001-llm-framework.md)) | LangChain / LangGraph, Pydantic AI, OpenAI Agents SDK, Claude Agent SDK / tool runner, LlamaIndex | The provider-specific cost features (Message Batches, cache breakpoints, effort, ledger writes on every call) leak through every abstraction; the control flow (final tool-less round, per-round cap, compaction, citation check) stays visible and is tested with a scripted fake model. Pydantic AI is the first candidate if the revisit triggers in the ADR fire. |
+| OpenTelemetry spans in the wrapper and loop ([ADR 0001](docs/adr/0001-llm-framework.md)) | OpenInference instrumentors, Langfuse or LangSmith SDKs, logs only | The two places that see every call (`llm.py`, `agent/loop.py`) emit the spans, so the raw-`httpx` OpenAI-compatible client is covered too, which SDK instrumentors would miss. Plain OTLP keeps the backend swappable; Phoenix is one container, where self-hosted Langfuse needs ClickHouse, Redis and S3. Only `opentelemetry-api` is a core dependency. |
 | Local multilingual embeddings | Hosted embedding API | Free, offline, good Czech support; swappable behind an interface. |
 | LLM structured extraction at ingest | Regex/heuristics | Years required, remote policy and seniority are written in free text in dozens of styles; extraction once at ingest makes filtering cheap at query time. |
 | Outbox for events | Publish directly after commit | No lost or phantom events if the process dies between commit and publish. |

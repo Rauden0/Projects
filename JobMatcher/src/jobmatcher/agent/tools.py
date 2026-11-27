@@ -1,5 +1,3 @@
-"""Tools the agent can call. Each takes validated input and returns JSON-serializable data."""
-
 import uuid
 from typing import Any
 
@@ -9,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobmatcher.cv.profile import CvProfile, compare
 from jobmatcher.db.models import Cv, Job, JobChunk
+from jobmatcher.errors import ToolError
 from jobmatcher.search.embeddings import Embedder
-from jobmatcher.search.hybrid import THIN_DESCRIPTION_CHARS, SearchFilters, search_jobs
+from jobmatcher.search.hybrid import THIN_DESCRIPTION_CHARS, SearchFilters, SearchHit, search_jobs
 
 MAX_K = 6
 REMOTE_POLICIES = ["remote_country", "remote_region", "remote_global"]
@@ -29,10 +28,6 @@ class GetJobInput(BaseModel):
 
 class CompareInput(BaseModel):
     job_id: int
-
-
-class ToolError(Exception):
-    pass
 
 
 class Toolbox:
@@ -91,7 +86,8 @@ class Toolbox:
                 update={
                     "city": None,
                     "remote_policy": [
-                        p for p in (filters.remote_policy or REMOTE_POLICIES)
+                        p
+                        for p in (filters.remote_policy or REMOTE_POLICIES)
                         if p.startswith("remote")
                     ],
                 }
@@ -103,9 +99,9 @@ class Toolbox:
             remote = await search_jobs(
                 self.session, self.embedder, args.query, remote_filters, k=k - len(local)
             )
-            tagged = [(h, "local") for h in local] + [
-                (h, "remote") for h in remote if h.job_id not in {x.job_id for x in local}
-            ]
+            local_ids = {h.job_id for h in local}
+            tagged: list[tuple[SearchHit, str | None]] = [(h, "local") for h in local]
+            tagged += [(h, "remote") for h in remote if h.job_id not in local_ids]
         else:
             hits = await search_jobs(self.session, self.embedder, args.query, filters, k=k)
             tagged = [(h, None) for h in hits]
@@ -141,7 +137,7 @@ class Toolbox:
                 )
             )
         ).all()
-        sections: dict[tuple[int, str], list[str]] = {}
+        sections: dict[tuple[int, str | None], list[str]] = {}
         for job_id, section, content in chunks:
             sections.setdefault((job_id, section), []).append(content)
 
@@ -220,8 +216,10 @@ class Toolbox:
         job = await self._job(CompareInput.model_validate(raw).job_id)
 
         chunks = (
-            await self.session.execute(select(JobChunk).where(JobChunk.job_id == job.id))
-        ).scalars().all()
+            (await self.session.execute(select(JobChunk).where(JobChunk.job_id == job.id)))
+            .scalars()
+            .all()
+        )
         requirements = "\n".join(c.content for c in chunks if c.section == "requirements")
         nice = "\n".join(c.content for c in chunks if c.section == "nice_to_have")
         return {

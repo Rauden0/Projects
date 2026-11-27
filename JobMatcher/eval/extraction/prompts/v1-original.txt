@@ -1,0 +1,12 @@
+Extract facts from a job posting as JSON. Keys:
+sen: seniority from title or experience; "II"/"III" levels are not senior
+yrs: minimum years of experience explicitly required
+rem: onsite | hybrid | remote_country (one country) | remote_region (EU, EMEA, time zone) |
+  remote_global (anywhere)
+city: office city only, e.g. "Brno"
+smin, smax, cur: salary as written, ISO currency
+ct: contract type
+tech: lowercase technologies asked for or used
+req, nice: short lowercase hard skills, must-have vs. plus/bonus/preferred
+lang: spoken languages required
+Use null or [] when the posting does not say.

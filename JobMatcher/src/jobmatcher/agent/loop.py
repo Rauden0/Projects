@@ -6,43 +6,51 @@ import logging
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
-from jobmatcher.agent.tools import Toolbox, ToolError
+from jobmatcher import telemetry
+from jobmatcher.agent.tools import Toolbox
+from jobmatcher.errors import BudgetExceeded, LLMError, ToolError
 from jobmatcher.llm import LLMClient
 
 log = logging.getLogger(__name__)
 
 MAX_ROUNDS = 4
-MAX_PARALLEL_CALLS = 3
+# Calls of one round run one after another: the tools share the request's DB session.
+MAX_CALLS_PER_ROUND = 3
 COMPACT_CHARS = 600
-FINAL_ROUND_NOTE = (
-    "No more tool calls are available. Answer now using only the results above."
-)
+UNTRUSTED_OPEN, UNTRUSTED_CLOSE = "<untrusted_data>\n", "\n</untrusted_data>"
+FINAL_ROUND_NOTE = "No more tool calls are available. Answer now using only the results above."
 
-SYSTEM = """You help a software developer find jobs that fit their CV.
+SYSTEM = """You help a job seeker find jobs that fit their CV, in any occupation.
 CV profile: {profile}
 
 Rules:
-- Only recommend jobs that appeared in tool results in this conversation, and link each one
-  by its exact URL.
-- Use search_jobs with filters only for the user's hard constraints (location, remote,
-  years of experience); put skills into the query text. For "in <city> or remote" set
-  only city. Results then come in two groups ("local" and "remote"); when the user asked
-  for both, recommend the best fitting job from each group. Describe where a job is
-  exactly as its "where" field says. If a search returns nothing, search again with
-  fewer filters before concluding there are no jobs.
-- Search results already include a short "fit" (missing required skills, years gap) for each
-  job; use it to choose. Call compare_with_cv only for the jobs you recommend, to get the full
-  picture. Never invent job ids or URLs.
-- Be explicit about gaps: only skills listed in missing_required / missing_nice_to_have are
-  missing. Never call a skill from cv_skills or matched_skills missing.
-- Answer in the user's language, concisely."""
+- Always start with search_jobs. Call get_job and compare_with_cv only with a job_id that
+  appeared in a search result; never guess ids.
+- Put the occupation and skills into the query text. Use filters only for constraints the
+  user stated: city for a place; max_years_required for experience; remote_policy only when
+  the user asks for remote work, then pass all three remote values. Do not use the tech
+  filter. For "in <city> or remote" set only city: results then come in two groups ("local"
+  and "remote"); recommend the best fitting job from each group.
+- Most postings are written in Czech. If a search finds nothing that fits, search again with
+  the occupation in Czech (e.g. "zdravotní sestra", "řidič", "účetní") and fewer filters
+  before concluding there are no jobs.
+- Search results include a short "fit" (missing required skills, years gap); use it to
+  choose. Call compare_with_cv only when a CV is provided and only for jobs you recommend.
+- Only recommend jobs from tool results, linked by their exact URL, and describe where a job
+  is exactly as its "where" field says. If nothing fits, say so and recommend nothing.
+- Only skills listed in missing_required / missing_nice_to_have are missing.
+- Answer in the user's language and keep it short: at most 5 jobs, one line each with the URL,
+  why it fits and the main gap. No introduction, no closing summary."""
 
 
-@dataclass(frozen=True)
+EventType = Literal["tool_call", "tool_result", "answer", "error"]
+
+
+@dataclass(frozen=True, slots=True)
 class AgentEvent:
-    type: str  # tool_call | tool_result | answer | error
+    type: EventType
     data: dict[str, Any]
 
 
@@ -56,9 +64,10 @@ async def run_agent(
     user_message: str,
     history: list[dict[str, Any]],
     profile_summary: str,
+    system_template: str = SYSTEM,
 ) -> AsyncIterator[AgentEvent]:
     messages = [*history, {"role": "user", "content": user_message}]
-    system = SYSTEM.format(profile=profile_summary or "not provided")
+    system = system_template.format(profile=profile_summary or "not provided")
 
     for round_no in range(MAX_ROUNDS + 1):
         # On the last round tool use is disabled, so the model must answer with what it has.
@@ -70,9 +79,8 @@ async def run_agent(
                 tools=toolbox.definitions(),
                 tool_choice=tool_choice,
             )
-        except Exception as exc:
-            # Surface provider failures to the client instead of cutting the stream.
-            log.exception("LLM call failed")
+        except (LLMError, BudgetExceeded) as exc:
+            log.warning("agent stopped in round %d: %s", round_no, exc)
             yield AgentEvent("error", {"message": f"LLM request failed: {exc}"[:500]})
             return
         content = list(_block(response, "content"))
@@ -80,37 +88,98 @@ async def run_agent(
 
         if not tool_uses:
             answer = "".join(_block(b, "text") for b in content if _block(b, "type") == "text")
-            yield AgentEvent("answer", {"text": answer, "unverified_urls": _unverified(
-                answer, toolbox.seen_urls)})
+            yield AgentEvent(
+                "answer",
+                {
+                    "text": answer,
+                    "unverified_urls": _unverified(answer, toolbox.seen_urls),
+                    "rounds": round_no + 1,
+                },
+            )
             return
 
-        _compact_old_results(messages)
+        if not llm.caches_prompts:
+            _compact_old_results(messages)
         messages.append({"role": "assistant", "content": [_as_dict(b) for b in content]})
         results = []
         for i, use in enumerate(tool_uses):
             name, tool_input, use_id = _block(use, "name"), _block(use, "input"), _block(use, "id")
             yield AgentEvent("tool_call", {"name": name, "input": tool_input})
-            if i >= MAX_PARALLEL_CALLS:
-                output, is_error = "too many parallel tool calls; ask again next turn", True
-            else:
-                try:
-                    output, is_error = await toolbox.call(name, tool_input), False
-                except (ToolError, ValueError) as exc:
-                    output, is_error = str(exc), True
-            yield AgentEvent("tool_result", {"name": name, "is_error": is_error,
-                                             "count": len(output) if isinstance(output, list)
-                                             else None})
-            results.append({
-                "type": "tool_result",
-                "tool_use_id": use_id,
-                "content": output if isinstance(output, str) else json.dumps(output, default=str),
-                "is_error": is_error,
-            })
+            output, is_error = await _call_tool(toolbox, i, name, tool_input, use_id)
+            yield AgentEvent(
+                "tool_result",
+                {
+                    "name": name,
+                    "is_error": is_error,
+                    "count": len(output) if isinstance(output, list) else None,
+                },
+            )
+            results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": use_id,
+                    "content": output if is_error else _untrusted(output),
+                    "is_error": is_error,
+                }
+            )
         if round_no == MAX_ROUNDS - 1:
             results.append({"type": "text", "text": FINAL_ROUND_NOTE})
         messages.append({"role": "user", "content": results})
 
     yield AgentEvent("error", {"message": "agent did not finish"})  # pragma: no cover
+
+
+async def _call_tool(
+    toolbox: Toolbox, index: int, name: str, tool_input: Any, use_id: str
+) -> tuple[Any, bool]:
+    with telemetry.tool_call(name, use_id, tool_input) as span:
+        output, error = await _execute(toolbox, index, name, tool_input)
+        span.result(output, error=error)
+    return output, error is not None
+
+
+async def _execute(
+    toolbox: Toolbox, index: int, name: str, tool_input: Any
+) -> tuple[Any, str | None]:
+    """The tool's output, or the message the model gets instead, and the error type if any."""
+    if index >= MAX_CALLS_PER_ROUND:
+        return "too many tool calls in one round; ask again next turn", "too_many_calls"
+    try:
+        return await toolbox.call(name, tool_input), None
+    except (ToolError, ValueError) as exc:
+        return str(exc), type(exc).__name__
+
+
+# Chat-template control tokens (ChatML, Llama 3, Mistral) and tool-protocol tags. Ollama
+# tokenizes them as real control tokens even inside message content, so a posting containing
+# them could end the tool result and open a fake system or user turn.
+_ROLE_MARKER_RE = re.compile(
+    r"<\|[\w-]{1,30}\|>|\[/?INST\]|<</?SYS>>"
+    r"|</?(?:tool_response|tool_call|tool_result|function_results?|system|assistant|user"
+    r"|untrusted_data)\b[^>]*>",
+    re.IGNORECASE,
+)
+
+
+def _untrusted(output: Any) -> str:
+    """Tool output marked as data: posting text is written by whoever published the ad. Role
+    markers are removed and links in posting text are replaced, so the only links the model
+    sees are the jobs' own `url` fields, the ones it may cite."""
+    text = output if isinstance(output, str) else json.dumps(_without_links(output), default=str)
+    return f"{UNTRUSTED_OPEN}{_ROLE_MARKER_RE.sub(' ', text)}{UNTRUSTED_CLOSE}"
+
+
+_LINK_RE = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
+
+
+def _without_links(value: Any, key: str = "") -> Any:
+    if isinstance(value, dict):
+        return {k: _without_links(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_without_links(v, key) for v in value]
+    if isinstance(value, str) and key != "url":
+        return _LINK_RE.sub("[link]", value)
+    return value
 
 
 def _compact_old_results(messages: list[dict[str, Any]]) -> None:
@@ -123,18 +192,30 @@ def _compact_old_results(messages: list[dict[str, Any]]) -> None:
             continue
         for block in message["content"]:
             if block.get("type") == "tool_result" and len(block["content"]) > COMPACT_CHARS:
-                block["content"] = block["content"][:COMPACT_CHARS] + " ...(truncated)"
+                closing = UNTRUSTED_CLOSE if block["content"].endswith(UNTRUSTED_CLOSE) else ""
+                block["content"] = block["content"][:COMPACT_CHARS] + " ...(truncated)" + closing
 
 
 def _as_dict(block: Any) -> dict[str, Any]:
     if isinstance(block, dict):
         return block
-    if _block(block, "type") == "tool_use":
-        return {"type": "tool_use", "id": block.id, "name": block.name, "input": block.input}
+    match block.type:
+        case "tool_use":
+            return {"type": "tool_use", "id": block.id, "name": block.name, "input": block.input}
+        case "thinking":
+            return {"type": "thinking", "thinking": block.thinking, "signature": block.signature}
+        case "redacted_thinking":
+            return {"type": "redacted_thinking", "data": block.data}
     return {"type": "text", "text": block.text}
+
+
+# Stops at whitespace, brackets and quotes: models also answer in Markdown links or JSON.
+_URL_RE = re.compile(r"https?://[^\s()\[\]<>\"'`]+")
+# Trailing punctuation and Markdown emphasis (**url**, _url_); inside a URL both are legal.
+_URL_TRAILERS = ".,;:!?*_"
 
 
 def _unverified(answer: str, seen: set[str]) -> list[str]:
     """URLs in the answer that no tool returned — a cheap hallucination check."""
-    urls = set(re.findall(r"https?://[^\s)\]>]+", answer))
-    return sorted(u.rstrip(".,") for u in urls if u.rstrip(".,") not in seen)
+    urls = {u.rstrip(_URL_TRAILERS) for u in _URL_RE.findall(answer)}
+    return sorted(u for u in urls if u not in seen)

@@ -1,0 +1,1213 @@
+[
+ {
+  "id": "en-py-backend-brno",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00046359999396372586,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 7,
+  "skills_pred": 7,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": null,
+   "years": 3,
+   "remote": "hybrid",
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "django",
+    "docker",
+    "fastapi",
+    "kubernetes",
+    "postgresql",
+    "python",
+    "rabbitmq"
+   ],
+   "_precise_skills": 7
+  }
+ },
+ {
+  "id": "en-senior-go-remote-eu",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0005116000102134421,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 7,
+  "skills_pred": 7,
+  "skills_gold": 8,
+  "predicted": {
+   "seniority": "senior",
+   "years": 6,
+   "remote": "remote_global",
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "aws",
+    "go",
+    "kafka",
+    "kubernetes",
+    "postgresql",
+    "rust",
+    "terraform"
+   ],
+   "_precise_skills": 7
+  }
+ },
+ {
+  "id": "cs-junior-java-praha",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.000404500009608455,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 1,
+  "skills_pred": 1,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": "junior",
+   "years": 1,
+   "remote": null,
+   "city": "Prague",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "java"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "en-data-engineer-remote-cz",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0002690999972401187,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": false,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 6,
+  "skills_pred": 6,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": null,
+   "years": 3,
+   "remote": "remote_region",
+   "city": "Prague",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "airflow",
+    "databricks",
+    "dbt",
+    "python",
+    "snowflake",
+    "spark"
+   ],
+   "_precise_skills": 6
+  }
+ },
+ {
+  "id": "en-frontend-react-onsite-ostrava",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0002570000069681555,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": false,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 2,
+  "skills_pred": 2,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": null,
+   "years": 2,
+   "remote": null,
+   "city": "Ostrava",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "react",
+    "typescript"
+   ],
+   "_precise_skills": 2
+  }
+ },
+ {
+  "id": "en-staff-ml-global",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00040940000326372683,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 3,
+  "skills_pred": 3,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": "staff",
+   "years": 8,
+   "remote": "remote_global",
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "kubernetes",
+    "python",
+    "pytorch"
+   ],
+   "_precise_skills": 3
+  }
+ },
+ {
+  "id": "cs-devops-brno-hybrid",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00034240000240970403,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 4,
+  "skills_pred": 4,
+  "skills_gold": 10,
+  "predicted": {
+   "seniority": null,
+   "years": 4,
+   "remote": "hybrid",
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "azure",
+    "docker",
+    "kubernetes",
+    "terraform"
+   ],
+   "_precise_skills": 4
+  }
+ },
+ {
+  "id": "en-qa-automation-no-salary",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0002955999952973798,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 2,
+  "skills_pred": 2,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": null,
+   "years": 2,
+   "remote": "hybrid",
+   "city": "Prague",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "java",
+    "python"
+   ],
+   "_precise_skills": 2
+  }
+ },
+ {
+  "id": "cs-net-medior-plzen",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00033960001019295305,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": false,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 1,
+  "skills_pred": 1,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": "medior",
+   "years": 3,
+   "remote": null,
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "azure"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "en-security-engineer-vienna",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0003980000037699938,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 1,
+  "skills_pred": 1,
+  "skills_gold": 6,
+  "predicted": {
+   "seniority": null,
+   "years": 5,
+   "remote": "hybrid",
+   "city": "Vienna",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "aws"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "en-intern-python",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00023609999334439635,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 1,
+  "skills_pred": 1,
+  "skills_gold": 2,
+  "predicted": {
+   "seniority": null,
+   "years": null,
+   "remote": null,
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "python"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "cs-it-support-olomouc",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0003352999920025468,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": false,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": null,
+   "years": 1,
+   "remote": null,
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "en-android-contract",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00032449999707750976,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": "senior",
+   "years": 5,
+   "remote": "remote_region",
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-analytik-dat-praha",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00028199999360367656,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 1,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": null,
+   "years": 2,
+   "remote": null,
+   "city": "Prague",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "python"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "en-embedded-c-brno",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0002889000024879351,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 1,
+  "skills_pred": 1,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": null,
+   "years": 3,
+   "remote": null,
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "c++"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "en-lead-pm-hybrid",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0002570999931776896,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": null,
+   "years": 7,
+   "remote": "hybrid",
+   "city": "Prague",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-php-remote-cz",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00027269999554846436,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 3,
+  "skills_pred": 3,
+  "skills_gold": 6,
+  "predicted": {
+   "seniority": null,
+   "years": 3,
+   "remote": null,
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "docker",
+    "mysql",
+    "postgresql"
+   ],
+   "_precise_skills": 3
+  }
+ },
+ {
+  "id": "en-sre-global-no-years",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00019120000069960952,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 1,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": null,
+   "years": null,
+   "remote": "remote_global",
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "kubernetes"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "cs-ridic-c-brno",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0006428999913623556,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": null,
+   "years": 2,
+   "remote": null,
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-pecovatelka-ostrava",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.000730399988242425,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 2,
+  "predicted": {
+   "seniority": "senior",
+   "years": null,
+   "remote": null,
+   "city": "Ostrava",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "en-registered-nurse-vienna",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0004087999986950308,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": null,
+   "years": 2,
+   "remote": null,
+   "city": "Vienna",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-elektrikar-praha",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0003302999975858256,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": null,
+   "years": 3,
+   "remote": null,
+   "city": "Prague",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-ucetni-brno-hybrid",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00029209999775048345,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": null,
+   "years": 5,
+   "remote": null,
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "en-warehouse-operative-pilsen",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00021579999884124845,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": false,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 1,
+  "predicted": {
+   "seniority": null,
+   "years": null,
+   "remote": null,
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-kuchar-brno",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0002700999903026968,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 2,
+  "predicted": {
+   "seniority": null,
+   "years": 2,
+   "remote": null,
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "en-office-assistant-prague",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0003499000013107434,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": null,
+   "years": 1,
+   "remote": null,
+   "city": "Prague",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-zdravotni-sestra-brno",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00030280000646598637,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 2,
+  "predicted": {
+   "seniority": null,
+   "years": null,
+   "remote": null,
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "en-truck-driver-ce-international",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00028020000900141895,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": null,
+   "years": 3,
+   "remote": null,
+   "city": "Ostrava",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-prodavac-olomouc",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00019880000036209822,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": false,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 1,
+  "predicted": {
+   "seniority": null,
+   "years": null,
+   "remote": null,
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "en-hr-generalist-remote-cz",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0002808999997796491,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": false,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 6,
+  "predicted": {
+   "seniority": null,
+   "years": 3,
+   "remote": "remote_region",
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-instalater-ostrava",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0002491000050213188,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": null,
+   "years": null,
+   "remote": null,
+   "city": "Ostrava",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "en-customer-support-hybrid-german",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0002865999995265156,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": false,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": "senior",
+   "years": 1,
+   "remote": "hybrid",
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-skladnik-brno-bez-praxe",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.00031859999580774456,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 1,
+  "predicted": {
+   "seniority": null,
+   "years": null,
+   "remote": null,
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "en-teacher-english-praha",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0005833000031998381,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": null,
+   "years": 1,
+   "remote": null,
+   "city": "Prague",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "cs-svarec-brno",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 0,
+  "latency_s": 0.0004397000011522323,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": false,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 0,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": null,
+   "years": 2,
+   "remote": null,
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [],
+   "_precise_skills": 0
+  }
+ }
+]

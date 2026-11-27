@@ -1,22 +1,27 @@
+import gzip
 from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
 
 from jobmatcher import messaging
+from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.indexer import IndexResult
 from jobmatcher.ingest.worker import Worker
-from jobmatcher.sources import RawPosting
 
-BODY = RawPosting(
-    kind="greenhouse",
-    company="acme",
-    external_id="1",
-    url="u",
-    title="t",
-    location=None,
-    description_html="",
-).model_dump_json().encode()
+BODY = (
+    RawPosting(
+        kind="greenhouse",
+        company="acme",
+        external_id="1",
+        url="u",
+        title="t",
+        location=None,
+        description_html="",
+    )
+    .model_dump_json()
+    .encode()
+)
 
 
 @dataclass
@@ -42,6 +47,7 @@ class FakeMessage:
     body: bytes
     headers: dict[str, Any]
     acked: bool = False
+    content_encoding: str | None = None
 
     async def ack(self) -> None:
         self.acked = True
@@ -88,5 +94,21 @@ async def test_last_failure_goes_to_dlq() -> None:
 async def test_malformed_message_goes_to_dlq() -> None:
     channel = FakeChannel()
     msg = FakeMessage(b"{not json", {})
+    await Worker(OkIndexer(), channel).handle(msg)  # type: ignore[arg-type]
+    assert channel.default_exchange.published == [(messaging.DLQ, 0)]
+
+
+@pytest.mark.asyncio
+async def test_gzipped_message_is_indexed_and_retried_plain() -> None:
+    channel = FakeChannel()
+    msg = FakeMessage(gzip.compress(BODY), {}, content_encoding="gzip")
+    await Worker(FailingIndexer(), channel).handle(msg)  # type: ignore[arg-type]
+    assert channel.retry.published == [("1", 1)]
+
+
+@pytest.mark.asyncio
+async def test_corrupt_gzip_goes_to_dlq() -> None:
+    channel = FakeChannel()
+    msg = FakeMessage(b"not gzip", {}, content_encoding="gzip")
     await Worker(OkIndexer(), channel).handle(msg)  # type: ignore[arg-type]
     assert channel.default_exchange.published == [(messaging.DLQ, 0)]

@@ -1,0 +1,1424 @@
+[
+ {
+  "id": "remote-python-cv",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Python backend in Brno",
+    "remote_policy": [
+     "remote_global"
+    ],
+    "k": 5,
+    "years_required": 5
+   },
+   {
+    "job_id": 14
+   },
+   {
+    "query": "Python backend in Brno",
+    "remote_policy": [
+     "remote_global"
+    ],
+    "years_required": 4,
+    "k": 5
+   },
+   {
+    "job_id": 7
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "brno-go",
+   "ostrava-py"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 5.445269000003464,
+  "input_tokens": 7236,
+  "output_tokens": 225,
+  "max_prompt_tokens": 2069,
+  "error": null,
+  "answer": "Here are some remote Python backend jobs that might fit your CV:\n\n1. [Python Developer at Ostrava Steelworks IT](https://jobs.example/ostrava-py) - Missing Flask, but you have 5+ years of experience. (Location: Ostrava)\n2. [Golang Developer at Svratka Security](https://jobs.example/brno-go) - No required skills missing, but you lack Golang experience. (Location: Brno)"
+ },
+ {
+  "id": "brno-or-remote-3y",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Python Brno or remote",
+    "max_years_required": 3,
+    "city": "Brno"
+   },
+   {
+    "job_id": 1
+   },
+   {
+    "city": "Brno",
+    "max_years_required": 3,
+    "query": "Python Brno or remote",
+    "remote_policy": [
+     "remote_country"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "remote-cz-ai"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 3.890782600006787,
+  "input_tokens": 6085,
+  "output_tokens": 215,
+  "max_prompt_tokens": 2114,
+  "error": null,
+  "answer": "Here are some job recommendations:\n\n1. [Python Backend Developer](https://jobs.example/brno-py-backend) - Brno, Czechia · hybrid  \n   *Missing: sqlalchemy*  \n   *Years gap: 0.0*\n\n1. [AI Developer](https://jobs.example/remote-cz-ai) - Brno, Czechia · remote within a region  \n   *Skills match: python, postgresql, rabbitmq, docker*  \n   *Years gap: 0.0*"
+ },
+ {
+  "id": "gap-data-engineer",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "compare_with_cv",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Brno",
+    "k": 5,
+    "remote_policy": null,
+    "years_required_min": 5,
+    "query": "python django postgresql rabbitmq docker"
+   },
+   {
+    "job_id": 16
+   },
+   {
+    "job_id": 1
+   },
+   {
+    "job_id": 6
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "remote-contract-py"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 6.597183699996094,
+  "input_tokens": 6764,
+  "output_tokens": 237,
+  "max_prompt_tokens": 1682,
+  "error": null,
+  "answer": "https://jobs.example/remote-contract-py - Hlásí se na vaše vzdělání a dovednosti, ale vyžaduje 3+ let zkušeností, takže to je výzva v oblasti zkušeností.\n\nhttps://jobs.example/brno-py-backend - Hlásí se na vaše vzdělání a dovednosti, ale chybí SQLAlchemy. Vaše zkušenosti jsou v jiné oblasti Pythonu."
+ },
+ {
+  "id": "golang-details",
+  "tools": [
+   "get_job",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "job_id": 47653
+   },
+   {
+    "query": "Golang Developer",
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_global"
+    ]
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-fullstack-ts",
+   "brno-go",
+   "brno-py-backend"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 3.6035738000064157,
+  "input_tokens": 3258,
+  "output_tokens": 260,
+  "max_prompt_tokens": 1464,
+  "error": null,
+  "answer": "Here are some Golang Developer positions that might fit your CV:\n\n- [Golang Developer at Svratka Security in Brno](https://jobs.example/brno-go) (local, on-site): 3+ years of experience required.\n- [Python Backend Developer at Moravia Data in Brno](https://jobs.example/brno-py-backend) (remote or hybrid): 2+ years of Python experience with SQLAlchemy, Docker, and pytest.\n- [Full-stack Developer (TypeScript) at Lesna Labs in Brno](https://jobs.example/brno-fullstack-ts) (remote or hybrid): 2+ years of experience, but the role is more diverse than Golang.\n\nThe Golang Developer position at Svratka Security seems to be the best match in Brno, but it requires 3+ years of experience, which might be a gap. The Python Backend Developer position could be a good alternative if you have the relevant experience."
+ },
+ {
+  "id": "senior-lead",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "senior python mentor lead team brno",
+    "city": "Brno",
+    "k": 5,
+    "remote_policy": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-senior-py",
+   "remote-contract-py"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.254144200007431,
+  "input_tokens": 2602,
+  "output_tokens": 140,
+  "max_prompt_tokens": 1683,
+  "error": null,
+  "answer": "Here are some jobs that might fit your profile:\n\n- [Senior Python Engineer at Moravia Data](https://jobs.example/brno-senior-py) - Hybrid, in Brno. Missing required: kafka. Years gap: 0.9 years.\n- [Python Engineer (B2B contract) at Atlas Staffing](https://jobs.example/remote-contract-py) - Remote within EU. No missing skills, no years gap."
+ },
+ {
+  "id": "cs-truck-driver",
+  "tools": [
+   "search_jobs",
+   "search_jobs",
+   "compare_with_cv",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "řidič kamionu",
+    "remote_policy": [
+     "onsite"
+    ],
+    "seniority": [
+     "junior",
+     "medior",
+     "senior",
+     "staff"
+    ]
+   },
+   {
+    "query": "řidič kamionu",
+    "remote_policy": [
+     "onsite",
+     "remote_global"
+    ],
+    "seniority": [
+     "junior",
+     "medior",
+     "senior",
+     "staff"
+    ]
+   },
+   {
+    "job_id": 21
+   },
+   {
+    "job_id": 22
+   }
+  ],
+  "tool_errors": 2,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-ridic-c",
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 5.689227499999106,
+  "input_tokens": 5798,
+  "output_tokens": 314,
+  "max_prompt_tokens": 3237,
+  "error": null,
+  "answer": "Zde jsou dva postupující způsoby řidiče kamionu nebo nákladního auta, které by vám mohly vyhovět:\n\n1. [Řidič sk. C](https://jobs.example/brno-ridic-c) – Jihomoravská doprava, Brno. Požaduje aspoň 2 roky zkušeností.\n2. [Kurýr – řidič dodávky](https://jobs.example/ostrava-kuryr) – Rychlé balíky, Ostrava. Zkušenosti nejsou požadovány."
+ },
+ {
+  "id": "cs-care-worker",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "pečovatelka domov pro seniory",
+    "remote_policy": [
+     "onsite"
+    ]
+   },
+   {
+    "job_id": 23
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 2.551442299998598,
+  "input_tokens": 4249,
+  "output_tokens": 115,
+  "max_prompt_tokens": 2094,
+  "error": null,
+  "answer": "Nebyl v této konverzaci nahrán žádný CV. Můžete mi prosím nahrát své CV, abych vám mohl doporučit vhodnější práce?"
+ },
+ {
+  "id": "cs-accountant",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Účetní v Brně Pohodu",
+    "city": "Brno"
+   },
+   {
+    "job_id": 25
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 1.6437789999909,
+  "input_tokens": 4025,
+  "output_tokens": 105,
+  "max_prompt_tokens": 1881,
+  "error": null,
+  "answer": "longleftrightarrow\n{\"name\": \"search_jobs\", \"arguments\": {\"city\": \"Brno\", \"remote_policy\": [\"hybrid\"], \"query\": \"Účetní v Brně Pohodu\"}}\n</tool_call>"
+ },
+ {
+  "id": "en-nurse-prague",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "k": 5,
+    "query": "nursing",
+    "city": "Prague"
+   },
+   {
+    "job_id": 24
+   },
+   {
+    "city": "Prague",
+    "query": "nursing",
+    "remote_policy": [
+     "onsite"
+    ]
+   },
+   {
+    "job_id": 24
+   }
+  ],
+  "tool_errors": 2,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "prague-sales-ai",
+   "praha-zdravotni-sestra"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 3.425772800008417,
+  "input_tokens": 6646,
+  "output_tokens": 191,
+  "max_prompt_tokens": 1920,
+  "error": null,
+  "answer": "https://jobs.example/praha-zdravotni-sestra, Večerní sestra – chirurgie at Nemocnice Vinohrady Sever, no years of experience required.\n\nhttps://jobs.example/prague-sales-ai, Account Executive, AI Solutions at Granite Industrial, needs 3+ years of B2B sales experience."
+ },
+ {
+  "id": "cs-courier-ostrava",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "k": 5,
+    "query": "kurýrní práce s řidičákem B v ostravě",
+    "city": "Ostrava"
+   },
+   {
+    "job_id": 22
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 2.618639299995266,
+  "input_tokens": 4108,
+  "output_tokens": 159,
+  "max_prompt_tokens": 1920,
+  "error": null,
+  "answer": "V Ostravě pro kurýra s řidičákem B je práce na pozici Kurýr - řidič dodávek s oplaceni 32 000 Kč + bonus za doručené zásilky. [Zde](https://jobs.example/ostrava-kuryr) je více informací."
+ },
+ {
+  "id": "nothing-fits",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "commercial airline pilot",
+    "k": 5
+   },
+   {
+    "job_id": 1
+   },
+   {
+    "query": "commercial airline pilot",
+    "city": "Brno",
+    "remote_policy": [
+     "hybrid",
+     "remote_country",
+     "remote_global"
+    ]
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "remote-global-scraping"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 2.9072958000033395,
+  "input_tokens": 5047,
+  "output_tokens": 211,
+  "max_prompt_tokens": 1620,
+  "error": null,
+  "answer": "Here are some jobs that might interest you:\n\n1. [Python Backend Developer at Moravia Data](https://jobs.example/brno-py-backend) - In Brno, Czechia (hybrid). Missing required: 2+ years of commercial Python experience, SQLAlchemy, Docker, pytest.\n2. [Web Scraping Engineer at Crawlr](https://jobs.example/remote-global-scraping) - Remote from anywhere. Missing required: Python, Playwright, proxies, parsing HTML at scale, Redis, PostgreSQL.\n\nNo commercial airline pilot positions were found."
+ },
+ {
+  "id": "remote-python-cv",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Python backend Brno",
+    "city": "Brno",
+    "remote_policy": [
+     "remote_global"
+    ],
+    "k": 5,
+    "tech": [
+     "python",
+     "django",
+     "fastapi"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "ostrava-py",
+   "remote-global-scraping"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.111235799995484,
+  "input_tokens": 2573,
+  "output_tokens": 136,
+  "max_prompt_tokens": 1658,
+  "error": null,
+  "answer": "Here are some remote Python backend roles that fit your CV:\n\n1. [Python Developer](https://jobs.example/ostrava-py) at Ostrava Steelworks IT - Missing Flask, otherwise a good fit.\n\n2. [Web Scraping Engineer](https://jobs.example/remote-global-scraping) at Crawlr - Missing Redis, but has other skills you possess."
+ },
+ {
+  "id": "brno-or-remote-3y",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "compare_with_cv",
+   "get_job"
+  ],
+  "tool_inputs": [
+   {
+    "query": "python django fastapi rabbitmq",
+    "city": "Brno",
+    "max_years_required": 3,
+    "remote_policy": [
+     "remote_global"
+    ]
+   },
+   {
+    "job_id": 5
+   },
+   {
+    "job_id": 1
+   },
+   {
+    "job_id": 5
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "remote-cz-ai"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 3.1628601999982493,
+  "input_tokens": 6723,
+  "output_tokens": 183,
+  "max_prompt_tokens": 1699,
+  "error": null,
+  "answer": "https://jobs.example/remote-cz-ai - AI Developer at Granite Industrial (Brno, Czechia; remote within a region) - Missing required skill: SQL.\n\nhttps://jobs.example/brno-py-backend - Python Backend Developer at Moravia Data (Brno, Czechia; hybrid) - Missing required skill: sqlalchemy."
+ },
+ {
+  "id": "gap-data-engineer",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "max_years_required": 7,
+    "query": "python django postgresql rabbitmq docker",
+    "city": "Brno",
+    "k": 5
+   },
+   {
+    "job_id": 1
+   },
+   {
+    "k": 5,
+    "max_years_required": 7,
+    "query": "data engineer python django postgresql rabbitmq docker",
+    "city": "Brno"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "brno-senior-py",
+   "remote-contract-py",
+   "remote-eu-data-platform",
+   "remote-eu-py-platform"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 4.986219700003858,
+  "input_tokens": 6105,
+  "output_tokens": 339,
+  "max_prompt_tokens": 2148,
+  "error": null,
+  "answer": "Here are some recommendations for you:\n\n1. [Python Backend Developer](https://jobs.example/brno-py-backend) - Brno, Czechia · hybrid  \n   * Missing: sqlalchemy. Years gap: 0.\n\n2. [Senior Python Engineer](https://jobs.example/brno-senior-py) - Brno, Czechia · hybrid  \n   * Missing: kafka. Years gap: 0.9.\n\n3. [Python Engineer (B2B contract)](https://jobs.example/remote-contract-py) - Remote within a region  \n   * No missing required skills. Years gap: 0.\n\nFor remote options:\n\n4. [Python Platform Engineer](https://jobs.example/remote-eu-py-platform) - Remote within a region  \n   * Missing: asyncio, kubernetes, terraform. Years gap: 0.\n\n5. [Data Platform Engineer](https://jobs.example/remote-eu-data-platform) - Remote within EMEA  \n   * Missing: databricks, spark, terraform. Years gap: 0."
+ },
+ {
+  "id": "golang-details",
+  "tools": [
+   "get_job"
+  ],
+  "tool_inputs": [
+   {
+    "job_id": 12345
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": false,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.3771257000043988,
+  "input_tokens": 1794,
+  "output_tokens": 49,
+  "max_prompt_tokens": 923,
+  "error": null,
+  "answer": "There are no Golang Developer positions available at this time. I'll continue searching for jobs that match your profile."
+ },
+ {
+  "id": "senior-lead",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Senior Python mentor lead Brno",
+    "remote_policy": [
+     "onsite",
+     "hybrid"
+    ],
+    "seniority": [
+     "senior"
+    ]
+   },
+   {
+    "job_id": 6
+   },
+   {
+    "job_id": 1
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "brno-senior-py"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 3.562718000001041,
+  "input_tokens": 5466,
+  "output_tokens": 239,
+  "max_prompt_tokens": 1627,
+  "error": null,
+  "answer": "Recomендováno:\n\n1. [Senior Python Engineer](https://jobs.example/brno-senior-py) - Brno, Česká republika · hybrid. Hovorí o vedení týmu. Nechytnoucí: `kafka` (0,9 let zkušeností výše).\n2. [Python Backend Developer](https://jobs.example/brno-py-backend) - Brno, Česká republika · hybrid. Hovorí o dockeru, fastapi, postgresu a pythonu. Nechytnoucí: `sqlalchemy` (rovné zkušenosti)."
+ },
+ {
+  "id": "cs-truck-driver",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "seniority": [
+     "junior",
+     "medior",
+     "senior"
+    ],
+    "query": "řidič kamionu",
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_country"
+    ]
+   },
+   {
+    "job_id": 21
+   },
+   {
+    "query": "řidič kamionu",
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_country"
+    ],
+    "seniority": [
+     "junior",
+     "medior",
+     "senior"
+    ],
+    "k": 3
+   },
+   {
+    "job_id": 21
+   }
+  ],
+  "tool_errors": 2,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-ridic-c",
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 4.450431999997818,
+  "input_tokens": 7338,
+  "output_tokens": 243,
+  "max_prompt_tokens": 2043,
+  "error": null,
+  "answer": "https://jobs.example/brno-ridic-c, potřebuje 2+ let zkušeností s řízením strojového vozidla sk. C.\n\nhttps://jobs.example/ostrava-kuryr, potřebuje 2+ let zkušeností s řízením nákladního auta."
+ },
+ {
+  "id": "cs-care-worker",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "k": 5,
+    "query": "pečovatelka domov pro seniory",
+    "remote_policy": [
+     "remote_global"
+    ]
+   },
+   {
+    "job_id": 23
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-pecovatelka"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 3.604067699998268,
+  "input_tokens": 4257,
+  "output_tokens": 242,
+  "max_prompt_tokens": 2098,
+  "error": null,
+  "answer": "bralová, zde je návrh práce, kterou by mohla zaujmout:\n\n- [Pečovatelka v domově pro seniory](https://jobs.example/brno-pecovatelka) v Brně, Czechia. Zadání práce se soustředí na pomoc klientům s hygienou, oblečením a jídelím a doprovod na procházky. Pro tento post nemusíte pracovat na místě. Pokud byste CV nahrála, mohli bychom si to zjistit přesněji.\n\nProsím, nahravte své CV, abychom mohli podat lepší doporučení."
+ },
+ {
+  "id": "cs-accountant",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Účetní v Brně Pohodu",
+    "city": "Brno"
+   },
+   {
+    "job_id": 25
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-ucetni"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 2.901399100010167,
+  "input_tokens": 4025,
+  "output_tokens": 202,
+  "max_prompt_tokens": 1881,
+  "error": null,
+  "answer": "Lze doporučit práci účetního v Brně v hybridním pracovním modelu u společnosti Účetnictví Morava. [Zde je odkaz](https://jobs.example/brno-ucetni). Vyžaduje alespoň 5 let zkušeností, což bylo vaše jediné omezení.Pokuste se nainstalovat CV nebo označit další kvalifikace, abychom mohli zvážit větší spektrum možností."
+ },
+ {
+  "id": "en-nurse-prague",
+  "tools": [
+   "search_jobs",
+   "search_jobs",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "registered nurse",
+    "city": "Prague",
+    "seniority": [
+     "junior",
+     "medior",
+     "senior",
+     "staff"
+    ]
+   },
+   {
+    "city": "Prague",
+    "query": "nurse",
+    "seniority": [
+     "junior",
+     "medior",
+     "senior",
+     "staff"
+    ]
+   },
+   {
+    "city": "Prague",
+    "query": "nurse registered",
+    "seniority": [
+     "junior",
+     "medior",
+     "senior",
+     "staff"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "prague-sales-ai",
+   "remote-recruiter"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 4.279153200011933,
+  "input_tokens": 5884,
+  "output_tokens": 277,
+  "max_prompt_tokens": 1974,
+  "error": null,
+  "answer": "Here are some job recommendations for you:\n\n1. [Nurse in Prague](https://jobs.example/prague-sales-ai): The job description seems to be for a sales position, not nursing. It requires 3+ years of B2B sales experience.\n\n2. [Remote Technical Recruiter](https://jobs.example/remote-recruiter): This role requires 2+ years of technical recruiting experience. It's a good fit if you're looking for a remote position.\n\nGiven the current search results, there are no direct nursing positions in Prague or remote options. You might want to expand your search criteria or check back later."
+ },
+ {
+  "id": "cs-courier-ostrava",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "kurýrní práce s řidičákem B v ostravě",
+    "city": "Ostrava",
+    "k": 5
+   },
+   {
+    "job_id": 22
+   },
+   {
+    "city": "Ostrava",
+    "k": 5,
+    "query": "kurýrní práce s řidičákem B v ostravě",
+    "remote_policy": [
+     "onsite"
+    ]
+   },
+   {
+    "job_id": 22
+   }
+  ],
+  "tool_errors": 2,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 4.729938800010132,
+  "input_tokens": 7273,
+  "output_tokens": 210,
+  "max_prompt_tokens": 1956,
+  "error": null,
+  "answer": "https://jobs.example/ostrava-kuryr - Kurýr s řidičákem B v Ostravě, vyžaduje znalost města, ale sbonus za doručené zásilky."
+ },
+ {
+  "id": "nothing-fits",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "commercial airline pilot",
+    "k": 5
+   },
+   {
+    "job_id": 1
+   },
+   {
+    "query": "commercial airline pilot",
+    "remote_policy": [
+     "hybrid",
+     "remote_global"
+    ]
+   },
+   {
+    "query": "commercial airline pilot",
+    "remote_policy": [
+     "hybrid",
+     "remote_global"
+    ]
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "brno-senior-py"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 4.065144899999723,
+  "input_tokens": 6506,
+  "output_tokens": 189,
+  "max_prompt_tokens": 1691,
+  "error": null,
+  "answer": "Brno, Czechia - Python Backend Developer at Moravia Data (https://jobs.example/brno-py-backend) - 2+ years of commercial Python experience required.\n\nPrague, Czechia - Senior Python Engineer at Moravia Data (https://jobs.example/brno-senior-py) - 6+ years of experience required."
+ },
+ {
+  "id": "remote-python-cv",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "compare_with_cv",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Python backend remote Brno",
+    "city": "Brno",
+    "remote_policy": [
+     "remote_global"
+    ],
+    "k": 5,
+    "tech": [
+     "python",
+     "django",
+     "fastapi",
+     "postgresql"
+    ]
+   },
+   {
+    "job_id": 14
+   },
+   {
+    "job_id": 6
+   },
+   {
+    "job_id": 1
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "brno-senior-py"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 3.810490600008052,
+  "input_tokens": 6728,
+  "output_tokens": 196,
+  "max_prompt_tokens": 1650,
+  "error": null,
+  "answer": "https://jobs.example/brno-py-backend - Python Backend Developer at Moravia Data in Brno (hybrid), needs 2 years experience and sqlalchemy.\n\nhttps://jobs.example/brno-senior-py - Senior Python Engineer at Moravia Data in Brno (hybrid), needs 6 years experience and kafka."
+ },
+ {
+  "id": "brno-or-remote-3y",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Brno",
+    "query": "Python Brno or remote",
+    "max_years_required": 3
+   },
+   {
+    "job_id": 1
+   },
+   {
+    "query": "Python Brno or remote",
+    "remote_policy": [
+     "hybrid"
+    ],
+    "city": "Brno",
+    "max_years_required": 3
+   },
+   {
+    "job_id": 1
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 3.528381199997966,
+  "input_tokens": 7279,
+  "output_tokens": 166,
+  "max_prompt_tokens": 2040,
+  "error": null,
+  "answer": "https://jobs.example/brno-py-backend - Python Backend Developer at Moravia Data in Brno, Czechia (hybrid). Main gap: missing SQLAlchemy experience."
+ },
+ {
+  "id": "gap-data-engineer",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "data engineer python fastapi django postgresql rabbitmq docker",
+    "city": "Brno",
+    "k": 5
+   },
+   {
+    "job_id": 16
+   },
+   {
+    "job_id": 6
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "brno-senior-py",
+   "remote-contract-py"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 2.7136926999955904,
+  "input_tokens": 5542,
+  "output_tokens": 169,
+  "max_prompt_tokens": 1702,
+  "error": null,
+  "answer": "Here are the recommendations:\n\n1. [Python Engineer (B2B contract)](https://jobs.example/remote-contract-py) - Fits well, no missing required skills, remote within a region.\n2. [Senior Python Engineer at Moravia Data](https://jobs.example/brno-senior-py) - Missing Kafka, 9 months experience gap, located in Brno."
+ },
+ {
+  "id": "golang-details",
+  "tools": [
+   "get_job",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "job_id": 5342
+   },
+   {
+    "query": "Golang Developer",
+    "k": 5
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-go",
+   "remote-cz-ai"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 2.6873480000067502,
+  "input_tokens": 3252,
+  "output_tokens": 177,
+  "max_prompt_tokens": 1460,
+  "error": null,
+  "answer": "Here are some Golang Developer job opportunities:\n\n1. [Golang Developer at Svratka Security](https://jobs.example/brno-go) - In Brno, Czechia. Requires 3+ years of experience.\n2. [AI Developer at Granite Industrial](https://jobs.example/remote-cz-ai) - Fully remote within the Czech Republic. No specific years required.\n\nThe Golang Developer position in Brno requires more experience than you currently have based on the snippet provided. The remote AI Developer role might be a better fit for you, as it doesn't have a strict requirement for years of experience."
+ },
+ {
+  "id": "senior-lead",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "compare_with_cv",
+   "get_job"
+  ],
+  "tool_inputs": [
+   {
+    "seniority": [
+     "senior"
+    ],
+    "k": 5,
+    "remote_policy": [
+     "onsite",
+     "hybrid"
+    ],
+    "query": "Python mentor lead team",
+    "city": "Brno"
+   },
+   {
+    "job_id": 6
+   },
+   {
+    "job_id": 1
+   },
+   {
+    "job_id": 6
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "brno-senior-py"
+  ],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 3.782254499994451,
+  "input_tokens": 6711,
+  "output_tokens": 221,
+  "max_prompt_tokens": 1634,
+  "error": null,
+  "answer": "https://jobs.example/brno-senior-py - Senior Python Engineer at Moravia Data in Brno, Czechia (hybrid). Needs 6+ years of Python experience and mentoring skills; you have 5.1 years, so there's a slight gap. Missing Kafka.\n\nhttps://jobs.example/brno-py-backend - Python Backend Developer at Moravia Data in Brno, Czechia (hybrid). Your skills match well, but it requires SQLAlchemy."
+ },
+ {
+  "id": "cs-truck-driver",
+  "tools": [
+   "search_jobs",
+   "search_jobs",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "řidič kamionu",
+    "city": "Praha",
+    "seniority": [
+     "junior",
+     "medior",
+     "senior"
+    ]
+   },
+   {
+    "city": "Praha",
+    "query": "řidič kamionu",
+    "seniority": [
+     "junior",
+     "medior",
+     "senior"
+    ]
+   },
+   {
+    "seniority": [
+     "junior",
+     "medior",
+     "senior"
+    ],
+    "city": "Praha",
+    "query": "řidič kamionu"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-ridic-c",
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 4.802683100002469,
+  "input_tokens": 8222,
+  "output_tokens": 266,
+  "max_prompt_tokens": 2801,
+  "error": null,
+  "answer": "Here are some job recommendations for you:\n\n1. [Řidič sk. C](https://jobs.example/brno-ridic-c) - Jihomoravská doprava, Brno. Requires 2 years of experience. Fit: Good, main gap: Experience.\n2. [Kurier – řidič dodávky](https://jobs.example/ostrava-kuryr) - Rychlé balíky, Ostrava. No experience required. Fit: Good, main gap: Experience."
+ },
+ {
+  "id": "cs-care-worker",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "pečovatelka domov pro seniory",
+    "remote_policy": [
+     "remote_global"
+    ],
+    "k": 5
+   },
+   {
+    "job_id": 23
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-pecovatelka"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 3.843682999999146,
+  "input_tokens": 4257,
+  "output_tokens": 260,
+  "max_prompt_tokens": 2098,
+  "error": null,
+  "answer": "Nebyl vám našel vhodnou práci pečovatelky v domovu pro seniory. Pokud byste nahrál svůj curriculum vitae, mohl bych prohlédnout, zda by vám nějaká z nabízených prací vyhovovala. Zatím byl nalezen práce pečovatelka v domovu pro seniory v Brně na adrese [https://jobs.example/brno-pecovatelka](https://jobs.example/brno-pecovatelka). Základní povinnosti zahrnují pomoci klientům s hygienou, oblečením a jídlem, a doprovod na procházky. Prozatímně se nejedná o dálkovou práci."
+ },
+ {
+  "id": "cs-accountant",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Brno",
+    "query": "Účetní v Brně Pohodu"
+   },
+   {
+    "job_id": 25
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-ucetni"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 2.672989200000302,
+  "input_tokens": 4025,
+  "output_tokens": 195,
+  "max_prompt_tokens": 1881,
+  "error": null,
+  "answer": "Lze doporučit pouze jeden účetní postup v Brně, ale vaše CV nebylo nahráno. Zkus nahrát CV a zopakujte dotaz.\n\n[https://jobs.example/brno-ucetni] Samostatné vedení podvojnýho účetnictví pro malé firmy, daňová přiznání, DPH. Vyžaduje alespoň 5 let zkušeností, což je výzva pro vaše aktuální zkušenosti."
+ },
+ {
+  "id": "en-nurse-prague",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "sестринская практика",
+    "city": "Prague",
+    "seniority": [
+     "junior"
+    ],
+    "contract_type": [
+     "employment"
+    ],
+    "remote_policy": [
+     "onsite"
+    ]
+   },
+   {
+    "job_id": 24
+   },
+   {
+    "query": "sестринская практика",
+    "remote_policy": [
+     "onsite"
+    ],
+    "seniority": [
+     "junior"
+    ],
+    "city": "Prague",
+    "contract_type": [
+     "employment"
+    ]
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "praha-recepcni",
+   "praha-zdravotni-sestra"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 3.218910199997481,
+  "input_tokens": 5824,
+  "output_tokens": 227,
+  "max_prompt_tokens": 2044,
+  "error": null,
+  "answer": "Here are some nursing and related jobs in Prague:\n\n1. [Všeobecná sestra – chirurgie](https://jobs.example/praha-zdravotni-sestra) at Nemocnice Vinohrady Sever - Suitable for nursing graduates.\n2. [Office Receptionist](https://jobs.example/praha-recepcni) at Vltava Legal - Requires fluent Czech and English, basic office skills."
+ },
+ {
+  "id": "cs-courier-ostrava",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Ostrava",
+    "contract_type": [
+     "employment"
+    ],
+    "seniority": [
+     "medior"
+    ],
+    "k": 5,
+    "query": "kurýr práce řidičák B"
+   },
+   {
+    "job_id": 22
+   },
+   {
+    "query": "kurýr práce řidičák B",
+    "seniority": [
+     "medior"
+    ],
+    "remote_policy": [
+     "onsite"
+    ],
+    "city": "Ostrava",
+    "contract_type": [
+     "employment"
+    ],
+    "k": 5
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "ostrava-instalater",
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 4.0237943999964045,
+  "input_tokens": 6042,
+  "output_tokens": 247,
+  "max_prompt_tokens": 1949,
+  "error": null,
+  "answer": "Here are some job recommendations:\n\n1. [Kurýr – řidič dodávky](https://jobs.example/ostrava-kuryr) - In Ostrava, Czechia. Missing required skills, no years experience gap.\n2. [Instalátér – topenář](https://jobs.example/ostrava-instalater) - In Ostrava, Czechia. Requires a vydůvědní list and gas work permit, no years experience gap."
+ },
+ {
+  "id": "nothing-fits",
+  "tools": [
+   "search_jobs",
+   "search_jobs",
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "query": "commercial airline pilot",
+    "k": 5
+   },
+   {
+    "query": "commercial airline pilot",
+    "city": "Brno",
+    "remote_policy": [
+     "onsite",
+     "hybrid"
+    ]
+   },
+   {
+    "remote_policy": [
+     "onsite",
+     "hybrid"
+    ],
+    "query": "commercial airline pilot",
+    "city": "Brno"
+   },
+   {
+    "job_id": 1
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 4.126850200002082,
+  "input_tokens": 6855,
+  "output_tokens": 214,
+  "max_prompt_tokens": 1863,
+  "error": null,
+  "answer": "None of the jobs recommended fit a commercial airline pilot role. The closest matches were for a Python Backend Developer at Moravia Data in Brno, Czechia (hybrid) and an Integration Engineer position at Jobs Partner, also in Brno, which is mostly remote. Both positions require at least 2 years of experience, which might be a gap for a commercial airline pilot. Consider uploading your CV to get more relevant results."
+ }
+]

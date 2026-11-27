@@ -1,0 +1,384 @@
+[
+ {
+  "id": "remote-python-cv",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "city": null,
+    "k": 10,
+    "query": "python backend fastapi django postgresql rabbitmq docker",
+    "remote_policy": [
+     "remote_country",
+     "remote_region",
+     "remote_global"
+    ]
+   },
+   {
+    "job_id": 16
+   },
+   {
+    "city": null,
+    "k": 10,
+    "query": "python backend fastapi django postgresql rabbitmq docker",
+    "remote_policy": [
+     "remote_country",
+     "remote_region",
+     "remote_global"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "remote-contract-py",
+   "remote-cz-ai",
+   "remote-eu-py-platform",
+   "remote-global-scraping",
+   "remote-recruiter"
+  ],
+  "unverified": [],
+  "rounds": 4,
+  "latency_s": 3.0366540999966674,
+  "input_tokens": 5752,
+  "output_tokens": 462,
+  "max_prompt_tokens": 2079,
+  "error": null,
+  "answer": "https://jobs.example/remote-contract-py – perfektní shoda, žádné chybějící požadavky, 0 let rozdíl   \nhttps://jobs.example/remote-eu-py-platform – dobrá shoda, chybí async / kubernetes / terraform, 0 let rozdíl   \nhttps://jobs.example/remote-global-scraping – shoda na Pythonu, chybí Redis, 0 let rozdíl   \nhttps://jobs.example/remote-cz-ai – shoda na Pythonu a SQL, žádné chybějící požadavky, 0 let rozdíl   \nhttps://jobs.example/remote-recruiter – shoda na Pythonu, chybí Kubernetes, 0 let rozdíl"
+ },
+ {
+  "id": "brno-or-remote-3y",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Brno",
+    "k": 10,
+    "max_years_required": 3,
+    "query": "Python",
+    "remote_policy": [
+     "remote_country",
+     "remote_region",
+     "remote_global"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "remote-contract-py",
+   "remote-cz-ai"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.4710844999935944,
+  "input_tokens": 2533,
+  "output_tokens": 263,
+  "max_prompt_tokens": 1728,
+  "error": null,
+  "answer": "https://jobs.example/remote-cz-ai – AI Developer, remote (Brno) ✅ fits, no missing required skills.  \nhttps://jobs.example/remote-contract-py – Python Engineer (B2B), remote EU ✅ fits, no missing required skills."
+ },
+ {
+  "id": "gap-data-engineer",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Brno",
+    "k": 5,
+    "max_years_required": null,
+    "query": "Data Engineer",
+    "remote_policy": null,
+    "seniority": null,
+    "tech": null
+   },
+   {
+    "job_id": 2
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-data-eng"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 2.322643199993763,
+  "input_tokens": 3541,
+  "output_tokens": 229,
+  "max_prompt_tokens": 1500,
+  "error": null,
+  "answer": "https://jobs.example/brno-data-eng – pasuje na úroveň zkušeností (3 let požadováno, máte 5 let), chybí požadované dovednosti airflow, dbt, timescaledb. Doporučuji doplnit tyto technologie a podívat se do detailu nabídky."
+ },
+ {
+  "id": "golang-details",
+  "tools": [
+   "search_jobs",
+   "get_job"
+  ],
+  "tool_inputs": [
+   {
+    "k": 5,
+    "query": "Golang Developer"
+   },
+   {
+    "job_id": 7
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-go"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 1.5615294000017457,
+  "input_tokens": 3156,
+  "output_tokens": 206,
+  "max_prompt_tokens": 1258,
+  "error": null,
+  "answer": "**Golang Developer – Svratka Security**  \nURL: https://jobs.example/brno-go  \nLocation: Brno, Czechia (on‑site)  \nSeniority: –   \nRequired experience: 3 years (Go, gRPC, DNS security)  \nRemote: none – on‑site only."
+ },
+ {
+  "id": "senior-lead",
+  "tools": [
+   "search_jobs",
+   "compare_with_cv"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Brno",
+    "k": 10,
+    "max_years_required": 6,
+    "query": "senior python lead mentor team",
+    "remote_policy": null,
+    "seniority": [
+     "senior"
+    ]
+   },
+   {
+    "job_id": 6
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-senior-py"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 2.0577260999998543,
+  "input_tokens": 3722,
+  "output_tokens": 236,
+  "max_prompt_tokens": 1679,
+  "error": null,
+  "answer": "https://jobs.example/brno-senior-py – senior Python engineer, hybrid Brno, fits backend stack; chybí požadovaná znalost Kafka, roční mezera 0,9 roku."
+ },
+ {
+  "id": "cs-truck-driver",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "k": 5,
+    "query": "řidič kamionu"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-ridic-c"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.3522278999880655,
+  "input_tokens": 2388,
+  "output_tokens": 169,
+  "max_prompt_tokens": 1631,
+  "error": null,
+  "answer": "https://jobs.example/brno-ridic-c – řidič sk. C, 2 let praxe, lokální pozice v Brně; chybí jen požadavek na řidičský průkaz sk. C (předpokládaný hlavní gap)."
+ },
+ {
+  "id": "cs-care-worker",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "city": null,
+    "contract_type": null,
+    "k": 5,
+    "max_years_required": null,
+    "query": "pečovatelka domov seniorů",
+    "remote_policy": null,
+    "seniority": null,
+    "tech": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-pecovatelka"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.255622399999993,
+  "input_tokens": 2522,
+  "output_tokens": 189,
+  "max_prompt_tokens": 1764,
+  "error": null,
+  "answer": "https://jobs.example/brno-pecovatelka – vhodná pozice pečovatelky v domově pro seniory v Brně, požadavky na zkušenosti nejsou specifikovány (žádná mezera)."
+ },
+ {
+  "id": "cs-accountant",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Brno",
+    "k": 5,
+    "query": "účetní Pohoda"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-ucetni"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.2697941000078572,
+  "input_tokens": 2499,
+  "output_tokens": 210,
+  "max_prompt_tokens": 1747,
+  "error": null,
+  "answer": "https://jobs.example/brno-ucetni – Účetní v Brně, požadována znalost Pohody a 5 let praxe; hlavní mezera: chybí požadované roky zkušeností (5 let)."
+ },
+ {
+  "id": "en-nurse-prague",
+  "tools": [
+   "search_jobs",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Prague",
+    "k": 5,
+    "query": "nurse"
+   },
+   {
+    "city": "Prague",
+    "k": 5,
+    "query": "zdravotní sestra"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "praha-zdravotni-sestra"
+  ],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 1.8836590999999316,
+  "input_tokens": 3809,
+  "output_tokens": 202,
+  "max_prompt_tokens": 1788,
+  "error": null,
+  "answer": "https://jobs.example/praha-zdravotni-sestra – Všeobecná sestra – chirurgie, Praha; žádné požadované dovednosti chybí (žádná specifikace požadavků)."
+ },
+ {
+  "id": "cs-courier-ostrava",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Ostrava",
+    "k": 10,
+    "query": "kurýr řidič B"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.241023700000369,
+  "input_tokens": 2430,
+  "output_tokens": 156,
+  "max_prompt_tokens": 1674,
+  "error": null,
+  "answer": "https://jobs.example/ostrava-kuryr – kurýr / řidič dodávky v Ostravě, požadavek na řidičák B; žádné další dovednosti chybí."
+ },
+ {
+  "id": "nothing-fits",
+  "tools": [
+   "search_jobs",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "k": 5,
+    "query": "commercial airline pilot"
+   },
+   {
+    "k": 5,
+    "query": "pilota komerční letadlo"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 1.4938123000029009,
+  "input_tokens": 3860,
+  "output_tokens": 167,
+  "max_prompt_tokens": 1848,
+  "error": null,
+  "answer": "Žádné relevantní nabídky pro pozici komerčního pilotu nebyly nalezeny. Nedoporučuji žádné pozice."
+ }
+]

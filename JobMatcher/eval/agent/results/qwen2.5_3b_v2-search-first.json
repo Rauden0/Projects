@@ -1,0 +1,1264 @@
+[
+ {
+  "id": "remote-python-cv",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "tech": [
+     "python",
+     "django",
+     "postgresql",
+     "docker"
+    ],
+    "city": "Brno",
+    "max_years_required": 5,
+    "remote_policy": [
+     "remote_region",
+     "remote_country",
+     "remote_global"
+    ],
+    "query": "Python backend",
+    "seniority": [
+     "medior"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "remote-contract-py",
+   "remote-eu-py-platform"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 46.17480560000695,
+  "input_tokens": 2751,
+  "output_tokens": 186,
+  "max_prompt_tokens": 1776,
+  "error": null,
+  "answer": "For the remote Python backend roles that fit your CV, I recommend the following:\n\n1. [Python Platform Engineer](https://jobs.example/remote-eu-py-platform) at Northwind Cloud:\n   - Missing required skills: asyncio, Kubernetes, Terraform\n   - Fit note: requirements unknown\n\n2. [Python Engineer (B2B contract)](https://jobs.example/remote-contract-py) at Atlas Staffing:\n   - Missing required skills: FastAPI, RabbitMQ\n   - Fit note: requirements unknown"
+ },
+ {
+  "id": "brno-or-remote-3y",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "max_years_required": 3,
+    "query": "python",
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_region",
+     "remote_global"
+    ],
+    "seniority": null,
+    "city": "Brno",
+    "contract_type": null,
+    "k": 3
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "ostrava-py",
+   "remote-contract-py"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.275250499995309,
+  "input_tokens": 2481,
+  "output_tokens": 305,
+  "max_prompt_tokens": 1498,
+  "error": null,
+  "answer": "None of the found jobs exactly match your profile. Here are some jobs that might fit, though:\n\n1. [Python Backend Developer](https://jobs.example/brno-py-backend) at Moravia Data. The job requires experience with SQLAlchemy, Docker, and pytest. It is a hybrid role in Brno, and your CV lacks SQLAlchemy knowledge. The years gap is 0.0.\n\n2. [Python Developer](https://jobs.example/ostrava-py) at Ostrava Steelworks IT. The role requires Python, Flask, and MSSQL, with 1+ years of experience. The job is in Ostrava, but the job mode is not specified. Your CV lacks Flask knowledge. The years gap is 0.0.\n\n3. [Python Engineer (B2B contract)](https://jobs.example/remote-contract-py) at Atlas Staffing. This is a remote contract position that requires Python, FastAPI, async programming, RabbitMQ, PostgreSQL, and Docker. The job has no years gap and your CV lacks required skills. The job is in a remote region within the EU."
+ },
+ {
+  "id": "gap-data-engineer",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Brno",
+    "max_years_required": 5,
+    "query": "Data Engineer",
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_region",
+     "remote_global"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": false,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-data-eng"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.30232000000251,
+  "input_tokens": 2692,
+  "output_tokens": 167,
+  "max_prompt_tokens": 1713,
+  "error": null,
+  "answer": "For the Data Engineer job in Brno, you are missing the following skills required for the job:\n- airflow\n- dbt\n- timescaledb\n\nBased on the fit, the best recommended job from the local group is from Spilberk Analytics:\n- [URL](https://jobs.example/brno-data-eng)\n- Why it fits: It matches the required skills and the company is in the same city, offering a hybrid work option. The years gap is 0.0, indicating there is no required experience gap."
+ },
+ {
+  "id": "golang-details",
+  "tools": [
+   "get_job",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "job_id": 123456
+   },
+   {
+    "contract_type": null,
+    "k": 5,
+    "max_years_required": null,
+    "remote_policy": null,
+    "seniority": null,
+    "tech": [
+     "golang"
+    ],
+    "query": "Golang Developer",
+    "city": null
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 1.1624568999977782,
+  "input_tokens": 2976,
+  "output_tokens": 105,
+  "max_prompt_tokens": 1060,
+  "error": null,
+  "answer": "There are no job postings that match your search criteria. Please check your query or provide more detailed filters."
+ },
+ {
+  "id": "senior-lead",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "city": "Brno",
+    "max_years_required": 5,
+    "remote_policy": [],
+    "seniority": [
+     "senior"
+    ],
+    "tech": [
+     "python"
+    ],
+    "query": "Senior Python roles mentor lead team"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "ostrava-py",
+   "remote-contract-py"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.122952500008978,
+  "input_tokens": 2784,
+  "output_tokens": 250,
+  "max_prompt_tokens": 1805,
+  "error": null,
+  "answer": "For a Senior Python role with mentoring and leading a team, I recommend the following jobs:\n\n- [Python Developer at Ostrava Steelworks IT](https://jobs.example/ostrava-py): This job requires less experience than you have, so it could be a good fit for mentorship and leadership roles.\n- [Python Engineer (B2B contract) at Atlas Staffing](https://jobs.example/remote-contract-py): This job matches your skills well and has no skill gaps, and it's a remote position, which fits your preference.\n\nBased on the fit, I recommend the [Python Developer at Ostrava Steelworks IT] job first, as it's closer to your current skill set and you might still have the opportunity to mentor and lead a team. If you need more experience, the [Python Engineer (B2B contract) at Atlas Staffing] is also a good fit for your skills."
+ },
+ {
+  "id": "cs-truck-driver",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "k": 5,
+    "max_years_required": null,
+    "remote_policy": null,
+    "seniority": null,
+    "tech": null,
+    "query": "řidič kamion nákladní auto",
+    "city": null,
+    "contract_type": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-elektrikar",
+   "brno-kuchar",
+   "brno-qa",
+   "brno-ridic-c",
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.701387799999793,
+  "input_tokens": 2967,
+  "output_tokens": 335,
+  "max_prompt_tokens": 2023,
+  "error": null,
+  "answer": "1. [https://jobs.example/ostrava-kuryr](Kurír - Řidič dodávky) - Potřebujete znalosti řízení a můžete pracovat jen v Brně.\n2. [https://jobs.example/brno-ridic-c](Řidič sk. C) - Místo pracovního místa je Brno. Požaduje 2 roky zkušeností.\n3. [https://jobs.example/brno-elektrikar](Elektrikár) - Místo pracovního místa je Brno. Bez ohledu na zkušenosti.\n4. [https://jobs.example/brno-kuchar](Kuchař / kuchařka) - Místo pracovního místa je Brno. Požaduje 2 roky zkušeností a dovolenou.\n5. [https://jobs.example/brno-qa](QA Automation Engineer) - Místo pracovního místa je Brno. Bydlíte v Brně a chcete se účastnit hybridní práce."
+ },
+ {
+  "id": "cs-care-worker",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "k": 5,
+    "max_years_required": null,
+    "remote_policy": null,
+    "seniority": [
+     "senior"
+    ],
+    "query": "pečovatelka domov seniory",
+    "city": null,
+    "contract_type": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-kuchar",
+   "brno-pecovatelka"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 3.232250800007023,
+  "input_tokens": 3074,
+  "output_tokens": 322,
+  "max_prompt_tokens": 2131,
+  "error": null,
+  "answer": "1. [Pečovatelka v domově pro seniory](https://jobs.example/brno-pecovatelka) - Tato pracovní příležitost se ukazuje jako vhodná pro pečovatelku pro seniory, zde specifizuje se tolik jako v týlu pracovního místa. Pro tyto úkoly se tedy týká úpravy odlehlého nebo porušeného věku.\n2. [Kuchař/a](https://jobs.example/brno-kuchar) - Tato práce je pro vyšší úroveň a požaduje několik roků zkušeností v oboru kuchařství, což se v mnoha případech zdá být pro seniory příliš vyšší úroveň.\n\nJe tedy možné, že práce v domovu pro seniory nebo kuchařství by byla lepší odpovědí na vaši požadovanou práci."
+ },
+ {
+  "id": "cs-accountant",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "účetní Brno",
+    "city": "Brno",
+    "max_years_required": 0,
+    "remote_policy": null,
+    "seniority": null,
+    "tech": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "brno-embedded",
+   "brno-pecovatelka",
+   "ostrava-instalater",
+   "remote-zakaznicka-podpora"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.563865900010569,
+  "input_tokens": 2727,
+  "output_tokens": 324,
+  "max_prompt_tokens": 1792,
+  "error": null,
+  "answer": "Here are some job opportunities for an accountant in Brno:\n\n1. [Embedded Software Developer](https://jobs.example/brno-embedded) at Turany Instruments: This job is available on-site in Brno.\n\n2. [Pe\\v{z}ovatelka v domov\\v{u} pro seniory](https://jobs.example/brno-pecovatelka) at Domov Slunce: This position requires senior level experience. The job is available in Brno with a flexible work mode.\n\n3. [Instalat\\v{e}r \\u2013 topen\\v{a}\\u0159](https://jobs.example/ostrava-instalater) at Teplo Ostrava: This job is available as an on-site installation installer in Ostrava.\n\n4. [Oper\\u00e1tor/ka z\\u00e1kaznick\\u00e9 linky \\u2013 home office](https://jobs.example/remote-zakaznicka-podpora) at Telefonica Slu\\u017eby: This position is available as a remote operator in a home office environment in the Czech Republic.\n\nPlease review these options and let me know if you need further assistance."
+ },
+ {
+  "id": "en-nurse-prague",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "max_years_required": 0,
+    "seniority": [
+     "junior",
+     "medior",
+     "senior"
+    ],
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_region",
+     "remote_global"
+    ],
+    "k": 5,
+    "city": "Prague",
+    "query": "zdravotní sestra"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-pecovatelka",
+   "praha-zdravotni-sestra",
+   "remote-zakaznicka-podpora"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.7716911000024993,
+  "input_tokens": 2736,
+  "output_tokens": 350,
+  "max_prompt_tokens": 1808,
+  "error": null,
+  "answer": "I found some nursing-related jobs in Prague:\n\n1. [Všeobecná sestra – chirurgie](https://jobs.example/praha-zdravotni-sestra) - Local job\n   - Missing required skills: None\n   - Missing nice-to-have skills: None\n   - Why it fits: It is a nursing position in the surgical department.\n\n2. [Operátor/ka zákaznické linky – home office](https://jobs.example/remote-zakaznicka-podpora) - Remote job (within Czechia)\n   - Missing required skills: None\n   - Missing nice-to-have skills: None\n   - Why it fits: It is a customer service operator role, which might require some communication skills.\n\n3. [Pe\\v{z}ovatelka v domov\\u011b pro seniory](https://jobs.example/brno-pecovatelka) - Remote job in Brno\n   - Missing required skills: Seniority required (junior, medior, senior)\n   - Missing nice-to-have skills: None\n   - Why it fits: It is a nursing position that requires seniority, though the location is Brno. \n\nPlease let me know if you need further assistance."
+ },
+ {
+  "id": "cs-courier-ostrava",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "seniority": [
+     "junior"
+    ],
+    "remote_policy": [
+     "onsite"
+    ],
+    "contract_type": [
+     "employment"
+    ],
+    "city": "Ostrava",
+    "query": "kurýrní práce řidičák",
+    "max_years_required": 5
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.287761400002637,
+  "input_tokens": 2547,
+  "output_tokens": 114,
+  "max_prompt_tokens": 1606,
+  "error": null,
+  "answer": "None of the found jobs match the criteria of being a kurýrní práce (freight driver) with experience level B in Ostrava. Let's try again with a more specific job description."
+ },
+ {
+  "id": "nothing-fits",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "seniority": [
+     "senior"
+    ],
+    "tech": null,
+    "query": "commercial airline pilot",
+    "city": null,
+    "max_years_required": null,
+    "remote_policy": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 0.802680099994177,
+  "input_tokens": 2433,
+  "output_tokens": 92,
+  "max_prompt_tokens": 1505,
+  "error": null,
+  "answer": "None of the found jobs exactly match the role of \"commercial airline pilot\". Please check if you have any additional requirements or consider jobs for related roles such as Software Developer or Sales positions."
+ },
+ {
+  "id": "remote-python-cv",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "remote Python backend",
+    "city": null,
+    "max_years_required": null,
+    "remote_policy": [
+     "remote_region",
+     "remote_country",
+     "remote_global"
+    ],
+    "seniority": null,
+    "tech": [
+     "python",
+     "backend"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "remote-contract-py",
+   "remote-eu-py-platform",
+   "remote-recruiter"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.6331524000124773,
+  "input_tokens": 2734,
+  "output_tokens": 309,
+  "max_prompt_tokens": 1759,
+  "error": null,
+  "answer": "Here are some remote Python backend roles that fit your CV:\n\n1. [Python Platform Engineer](https://jobs.example/remote-eu-py-platform) at Northwind Cloud: This role requires Python, asyncio, distributed processing, Kubernetes, Terraform, and CI/CD. Your CV is a good fit as you have experience with Python and PostgreSQL. The fit is okay as you have a gap in requirements like asyncio, Kubernetes, and Terraform.\n\n2. [Python Engineer (B2B contract)](https://jobs.example/remote-contract-py) at Atlas Staffing: You're a good match with a gap in requirements like Flask. Your CV is a strong fit for this role as it has experience with Python, and the years gap is 0.\n\n3. [Technical Recruiter (Engineering)](https://jobs.example/remote-recruiter) at Northwind Cloud: A good fit as your years gap is 0 and you have experience with Python, Kubernetes, and Python engineers across Europe. The role requires knowledge of Databricks, Spark, Delta Lake, and Terraform.\n\nI recommend checking these out and applying for the ones where you have the least gaps."
+ },
+ {
+  "id": "brno-or-remote-3y",
+  "tools": [
+   "search_jobs",
+   "search_jobs",
+   "search_jobs",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_region",
+     "remote_global"
+    ],
+    "seniority": null,
+    "tech": [
+     "python"
+    ],
+    "city": "Brno",
+    "contract_type": null,
+    "k": 3,
+    "max_years_required": 3
+   },
+   {
+    "tech": [
+     "python"
+    ],
+    "city": "Brno",
+    "contract_type": null,
+    "k": 3,
+    "max_years_required": 3,
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_region"
+    ],
+    "seniority": null
+   },
+   {
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_region"
+    ],
+    "seniority": null,
+    "tech": [
+     "python",
+     "fastapi",
+     "django",
+     "postgresql",
+     "rabbitmq",
+     "docker"
+    ],
+    "city": "Brno",
+    "contract_type": null,
+    "k": 3,
+    "max_years_required": 3
+   },
+   {
+    "city": "Brno",
+    "contract_type": null,
+    "k": 3,
+    "max_years_required": 3,
+    "remote_policy": [
+     "onsite",
+     "hybrid"
+    ],
+    "seniority": null,
+    "tech": [
+     "python",
+     "fastapi",
+     "django",
+     "postgresql",
+     "rabbitmq",
+     "docker"
+    ]
+   }
+  ],
+  "tool_errors": 4,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 5,
+  "latency_s": 2.4200322999968193,
+  "input_tokens": 5791,
+  "output_tokens": 292,
+  "max_prompt_tokens": 1406,
+  "error": null,
+  "answer": "No suitable jobs found based on the provided criteria. Please adjust the filters or search for a different occupation."
+ },
+ {
+  "id": "gap-data-engineer",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Data Engineer",
+    "max_years_required": 5,
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_region",
+     "remote_country",
+     "remote_global"
+    ],
+    "city": "Brno"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": false,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-data-eng",
+   "remote-eu-data-platform"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.72355019999668,
+  "input_tokens": 2695,
+  "output_tokens": 192,
+  "max_prompt_tokens": 1716,
+  "error": null,
+  "answer": "For the Data Engineer job in Brno, you are missing skills like airflow, dbt, and timescaledb. Here are some jobs that might fit your profile:\n\n1. [Data Engineer](https://jobs.example/brno-data-eng) - Hybrid. They build pipelines that ingest telemetry from machines. This job is in Brno, Czechia and is a hybrid role.\n2. [Data Platform Engineer](https://jobs.example/remote-eu-data-platform) - Fully remote within EMEA. They handle data platform engineering tasks. This job is in the remote region.\n\nYou can consider applying to these jobs to gain the required skills."
+ },
+ {
+  "id": "golang-details",
+  "tools": [
+   "get_job",
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "job_id": 12345
+   },
+   {
+    "k": 5,
+    "max_years_required": null,
+    "remote_policy": null,
+    "seniority": null,
+    "tech": [
+     "golang"
+    ],
+    "query": "Golang Developer",
+    "city": null,
+    "contract_type": null
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 3,
+  "latency_s": 1.2761834999982966,
+  "input_tokens": 2938,
+  "output_tokens": 135,
+  "max_prompt_tokens": 1024,
+  "error": null,
+  "answer": "There are no open positions matching the criteria for a Golang Developer. Please adjust your search or check back later."
+ },
+ {
+  "id": "senior-lead",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "tech": [
+     "python"
+    ],
+    "query": "Senior Python roles mentor lead team",
+    "city": "Brno",
+    "max_years_required": 5,
+    "remote_policy": null,
+    "seniority": [
+     "senior"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "remote-contract-py",
+   "remote-eu-py-platform"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.8380181000102311,
+  "input_tokens": 2785,
+  "output_tokens": 229,
+  "max_prompt_tokens": 1806,
+  "error": null,
+  "answer": "Here are some Python Developer roles that fit your criteria:\n\n- [Northwind Cloud - Python Platform Engineer](https://jobs.example/remote-eu-py-platform): This job requires a good mix of skills including asyncio, Kubernetes, Terraform, and CI/CD, which aligns well with your interests. The fit is good with no skills missing and a zero-year gap. This is a remote job in a specific region.\n  \n- [Atlas Staffing - Python Engineer (B2B contract)](https://jobs.example/remote-contract-py): This is a contract Python Engineer position that matches your skills and experience level. There are no required skills missing and the years gap is also zero. This is a remote job in the European Union.\n\nIf you need more options, I can search again with fewer filters."
+ },
+ {
+  "id": "cs-truck-driver",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "řidič kamion nebo nákladní auta",
+    "city": null,
+    "contract_type": null,
+    "k": 5,
+    "max_years_required": null,
+    "remote_policy": null,
+    "seniority": null,
+    "tech": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-elektrikar",
+   "brno-kuchar",
+   "brno-ridic-c",
+   "brno-skladnik",
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 3.6077157000108855,
+  "input_tokens": 3139,
+  "output_tokens": 473,
+  "max_prompt_tokens": 2195,
+  "error": null,
+  "answer": "- [https://jobs.example/brno-ridic-c](Rozvoz zboží nákladným vozidlem po Jihomoravském krají, jednosmýný provoz.) - Potřebuješ zkušenosti s sk. C.\n- [https://jobs.example/ostrava-kuryr](Kuryr - řidič dodávky - Rychlá balíky) - Poznamenává se znalostí Ostravy a může být výhodou mimo koupi.\n- [https://jobs.example/brno-elektrikar](Elektrikár - Elektro Kužim) - Poznamenává se vyhovovacími znalostmi v oboru elektřiny a mimo koupi.\n- [https://jobs.example/brno-kuchar](Kuchař / kuchařka - Restaurace U Zelného trhu) - Potřebuješ zkušenosti s kuchařským oborem.\n- [https://jobs.example/brno-skladnik](Skladník - VZV - Logistika Modřice) - Potřebuje se znalost VZV, bez potřeby předpokladu práce.\n\nJe zde nejlepší pro vás: \n\n- [https://jobs.example/brno-ridic-c](Rozvoz zboží nákladným vozidlem po Jihomoravském krají, jednosmýný provoz.) - Požaduje sk. C, brno, a nemá lokální místní podmínky."
+ },
+ {
+  "id": "cs-care-worker",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "seniority": [
+     "senior"
+    ],
+    "query": "pečovatelka v domově pro seniory",
+    "city": null,
+    "contract_type": null,
+    "k": 5,
+    "max_years_required": null,
+    "remote_policy": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-kuchar",
+   "brno-pecovatelka"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.044737800009898,
+  "input_tokens": 3077,
+  "output_tokens": 255,
+  "max_prompt_tokens": 2134,
+  "error": null,
+  "answer": "1. [Pečovatelka v domově pro seniory](https://jobs.example/brno-pecovatelka) - Fyzicky na místě, dostupné jen Brno. Náročné požadavky na kvalifikace, ale fyzicky na místě.\n2. [Kuchař](https://jobs.example/brno-kuchar) - Fyzicky na místě, dostupné jen Brno. Omezene požadavky na zkušenosti (2 roky).\n\nFyzicky na místě přístup v Brně nebo v okolí. Podobná činnost kuchařství nemá jisté požadavky, jak je v minulých nabídkách evidentní."
+ },
+ {
+  "id": "cs-accountant",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "účetní Pohoda Brno",
+    "city": "Brno",
+    "max_years_required": 0,
+    "remote_policy": null,
+    "seniority": null,
+    "tech": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 3.0433339000010164,
+  "input_tokens": 2730,
+  "output_tokens": 376,
+  "max_prompt_tokens": 1795,
+  "error": null,
+  "answer": "Here are some job options that fit your profile as an accountant in Brno:\n\n1. Embedded Software Developer at Turany Instruments (in Brno, full-time)\n   - Why it fits: The job requires no seniority and no required years of experience. \n   - Why it doesn't fit: You may need to learn about embedded software development, which is not related to accounting.\n\n2. Caregiver for Seniors at Domov Slunce (in Brno, full-time)\n   - Why it fits: The job requires no seniority and no required years of experience.\n   - Why it doesn't fit: You may need to learn the specific skills required for working with seniors in a home care setting.\n\n3. Remote Customer Service Representative at Telefonica Služby (remote within Czechia, part-time)\n   - Why it fits: The job requires no seniority and no required years of experience.\n   - Why it doesn't fit: You may need to learn the specific skills required for customer service, such as customer interaction and problem-solving.\n\n4. Home Installer at Teplo Ostrava (remote within Czechia, part-time)\n   - Why it fits: The job requires no seniority and no required years of experience.\n   - Why it doesn't fit: You may need to learn the specific skills required for plumbing work, such as safety procedures and equipment operation.\n\nBased on the available jobs, none of them directly match the requirements of an accountant. Please consider looking for jobs in accounting or related fields in Brno."
+ },
+ {
+  "id": "en-nurse-prague",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "zdravotní sestra",
+    "k": 5,
+    "city": "Prague"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-kuchar",
+   "praha-mzdova-ucetni",
+   "praha-zdravotni-sestra"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.51197890000185,
+  "input_tokens": 2827,
+  "output_tokens": 306,
+  "max_prompt_tokens": 1899,
+  "error": null,
+  "answer": "There are jobs available for nursing in Prague. Here are the first three:\n\n1. [Všeobecná sestra - chirurgie](https://jobs.example/praha-zdravotni-sestra) at Nemocnice Vinohrady Sever:\n   - The job requires a general nurse for the surgery department.\n   - Best fit: Missing required skills include years of experience, which can be addressed by applying for roles with lower experience requirements.\n\n2. [Mzdová učetní](https://jobs.example/praha-mzdova-ucetni) at Stavby Praha:\n   - The job requires 3 years of experience.\n   - Best fit: Missing required skills are 3 years of experience and knowledge of employment law.\n\n3. [Kuchař / kuchařka](https://jobs.example/brno-kuchar) at Restaurace U Zelného trhu:\n   - The job requires a 2-year training period and a valid health certificate.\n   - Best fit: Missing required skills are 2 years of training and a valid health certificate.\n\nIf you do not need any specific years of experience or a health certificate, the general nurse position at Nemocnice Vinohrady Sever could be a good fit for you."
+ },
+ {
+  "id": "cs-courier-ostrava",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "kurýrní práce řidičák B",
+    "seniority": [
+     "junior"
+    ],
+    "city": "Ostrava",
+    "max_years_required": 2
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-elektrikar",
+   "brno-ridic-c",
+   "ostrava-instalater",
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.8139270000101533,
+  "input_tokens": 2925,
+  "output_tokens": 344,
+  "max_prompt_tokens": 1984,
+  "error": null,
+  "answer": "I found some jobs that might fit your requirements. Here are the top options:\n\n1. [Kurýr \\u2013 Řidič dodávky](https://jobs.example/ostrava-kuryr) - Company: Rychlé balíky. This job requires a driver license (B). It's a local job and the main gap is lack of experience.\n\n2. [Instalátř \\u2013 Topená\\u0159](https://jobs.example/ostrava-instalater) - Company: Teplo Ostrava. This job requires a driver license (B) and is local. The main gap is lack of experience. \n\n3. [Řidič sk. C](https://jobs.example/brno-ridic-c) - Company: Jihomoravská doprava. This job requires a driver license (C) and requires 2 years of experience. It's a remote job.\n\n4. [Elektrikár](https://jobs.example/brno-elektrikar) - Company: Elektro Kužim. This job requires a driver license (B) and does not require experience. It's a remote job. \n\nPlease review these options and let me know if you need more information or if you have a CV to compare with these jobs."
+ },
+ {
+  "id": "nothing-fits",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "commercial airline pilot",
+    "city": null,
+    "max_years_required": null,
+    "remote_policy": null,
+    "seniority": [
+     "senior"
+    ],
+    "tech": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 0.9342279999982566,
+  "input_tokens": 2433,
+  "output_tokens": 80,
+  "max_prompt_tokens": 1505,
+  "error": null,
+  "answer": "None of the found jobs exactly match the requirements of a commercial airline pilot. Please provide more details or search for different occupations."
+ },
+ {
+  "id": "remote-python-cv",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "remote_policy": [
+     "remote_region",
+     "remote_global"
+    ],
+    "query": "Python backend",
+    "seniority": [
+     "senior"
+    ],
+    "tech": [
+     "python",
+     "fastapi",
+     "django"
+    ],
+    "city": "Brno",
+    "max_years_required": 5
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "remote-contract-py",
+   "remote-eu-py-platform"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.9406888000085019,
+  "input_tokens": 2758,
+  "output_tokens": 235,
+  "max_prompt_tokens": 1783,
+  "error": null,
+  "answer": "For your Python backend skills, here are some remote roles that fit your CV:\n\n- [Python Platform Engineer at Northwind Cloud](https://jobs.example/remote-eu-py-platform) - This role requires 3+ years of experience with Python, asyncio, distributed processing, Kubernetes, Terraform, and CI/CD. It's a remote role within the European Union.\n- [Python Engineer (B2B contract) at Atlas Staffing](https://jobs.example/remote-contract-py) - This role requires 3+ years of experience with Python, FastAPI, async programming, RabbitMQ, PostgreSQL, and Docker. It's also a remote role within the European Union.\n\nI recommend checking out the Northwind Cloud Python Platform Engineer role as it aligns closely with your skills and experience."
+ },
+ {
+  "id": "brno-or-remote-3y",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Python Brno or remote",
+    "city": "Brno",
+    "max_years_required": 3,
+    "k": 3
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-py-backend",
+   "ostrava-py"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.5290669000096386,
+  "input_tokens": 2444,
+  "output_tokens": 193,
+  "max_prompt_tokens": 1461,
+  "error": null,
+  "answer": "For your skills and experience, here are some job recommendations:\n\n1. [Python Backend Developer](https://jobs.example/brno-py-backend) at Moravia Data in Brno. The job requires 2+ years of commercial Python experience, and you are missing required skills like SQLAlchemy. This job is in Brno and is a hybrid role.\n\n2. [Python Developer](https://jobs.example/ostrava-py) at Ostrava Steelworks IT. The job requires Python and Flask and 1+ year of experience. You are missing required skills like Flask. This job is in Ostrava, Czechia, with an unknown work mode.\n\nI recommend applying to these jobs as they fit your profile well."
+ },
+ {
+  "id": "gap-data-engineer",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "max_years_required": 5,
+    "remote_policy": [],
+    "seniority": [
+     "senior"
+    ],
+    "tech": [
+     "python",
+     "fastapi",
+     "django",
+     "postgresql",
+     "rabbitmq",
+     "docker"
+    ],
+    "city": "Brno",
+    "query": "Data Engineer"
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": false,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-data-eng",
+   "remote-eu-data-platform"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.9391119999927469,
+  "input_tokens": 2704,
+  "output_tokens": 270,
+  "max_prompt_tokens": 1725,
+  "error": null,
+  "answer": "For the Data Engineer job in Brno, you are missing skills like airflow, dbt, and timescaledb. Here are some job options that might fit your profile:\n\n1. [Data Engineer](https://jobs.example/brno-data-eng) - Spilberk Analytics: This job is a hybrid role, but they require more experience (3 years) than you have (5.1 years). Missing skills are: airflow, dbt, timescaledb.\n2. [Data Platform Engineer](https://jobs.example/remote-eu-data-platform) - Danube Fintech: This is a remote job within the EMEA region. You are missing skills like databricks, spark, and terraform. The years required are 4, which is higher than what you have.\n\nYou might consider applying to the Data Platform Engineer role at Danube Fintech or exploring the Data Engineer role at Spilberk Analytics for a more suitable match."
+ },
+ {
+  "id": "golang-details",
+  "tools": [
+   "get_job"
+  ],
+  "tool_inputs": [
+   {
+    "job_id": 12345
+   }
+  ],
+  "tool_errors": 1,
+  "expected_tools": false,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 0.5721485999965807,
+  "input_tokens": 1914,
+  "output_tokens": 55,
+  "max_prompt_tokens": 983,
+  "error": null,
+  "answer": "I couldn't find job 12345. Could you please provide the correct job ID or search for Golang Developer positions instead?"
+ },
+ {
+  "id": "senior-lead",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "Senior Python roles mentor lead team",
+    "city": "Brno",
+    "max_years_required": 5,
+    "remote_policy": null,
+    "seniority": [
+     "senior"
+    ],
+    "tech": [
+     "python"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "remote-contract-py",
+   "remote-eu-py-platform"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.9614326000009896,
+  "input_tokens": 2767,
+  "output_tokens": 251,
+  "max_prompt_tokens": 1788,
+  "error": null,
+  "answer": "For your role as a Senior Python Developer with mentorship responsibilities, I found the following options:\n\n1. [Python Developer](https://jobs.example/remote-contract-py) at Atlas Staffing in Ostrava, Czechia. This role requires Python, FastAPI, RabbitMQ, PostgreSQL, and Docker. Your skills in Python, FastAPI, and Docker are a good match. The years gap is 0.0 and there are no missing required skills.\n\n2. [Python Platform Engineer](https://jobs.example/remote-eu-py-platform) at Northwind Cloud in Europe. This role requires Python, FastAPI, async programming, RabbitMQ, PostgreSQL, Docker, and Kubernetes. Your skills in Python and FastAPI align well. The years gap is 0.0 and there are no missing required skills.\n\nBoth positions are remote within a region, aligning with your preference. Consider applying to these roles."
+ },
+ {
+  "id": "cs-truck-driver",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "max_years_required": null,
+    "remote_policy": null,
+    "seniority": null,
+    "tech": null,
+    "query": "řidič kamion auta or nákladní auto",
+    "city": null,
+    "contract_type": null,
+    "k": 5
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-ridic-c",
+   "ostrava-kuryr"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 2.1590091999969445,
+  "input_tokens": 2970,
+  "output_tokens": 258,
+  "max_prompt_tokens": 2026,
+  "error": null,
+  "answer": "1. [Řidič sk. C](https://jobs.example/brno-ridic-c) - Naučte se řídit sk. C. Bez požadovaného počtu let.\n2. [Řidič kamionu](https://jobs.example/ostrava-kuryr) - Řidič dodávek. Bez požadovaného počtu let.\n\nVítejte v Brně. Bez specifického zákazníka nebo konkrétního města, tím si pomůžete vybrat, co se vyplétá spíše do místnosti. Pro vás nejlepší je řidič dodávek, protože ho vyplýváte místní případ."
+ },
+ {
+  "id": "cs-care-worker",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "tech": null,
+    "query": "pečovatelka domov pro seniory",
+    "city": null,
+    "max_years_required": 0,
+    "remote_policy": null,
+    "seniority": [
+     "senior"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-elektrikar",
+   "brno-pecovatelka",
+   "ostrava-instalater",
+   "praha-zdravotni-sestra",
+   "remote-zakaznicka-podpora"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 3.1756169000000227,
+  "input_tokens": 3139,
+  "output_tokens": 420,
+  "max_prompt_tokens": 2196,
+  "error": null,
+  "answer": "I found some jobs that might be a good fit for you. Here are the first few:\n\n- [Pečovatelka v domovu pro seniory](https://jobs.example/brno-pecovatelka) - Senior position in Brno. The job involves helping seniors with hygiene, dressing, and eating. This fits your need for a role in a care home for seniors.\n\n- [Operátor/ka zákaznické linky - home office](https://jobs.example/remote-zakaznicka-podpora) - Remote position in Czechia, home office. This job requires a friendly and patient nature to handle customer inquiries. It might be a good fit if you enjoy working remotely and have a friendly nature.\n\n- [Instalatér - topenáš](https://jobs.example/ostrava-instalater) - Installation job in Ostrava. The job requires technical skills for installing heating systems. This might be suitable if you are interested in home improvement and working with heating systems.\n\n- [Elektrikár](https://jobs.example/brno-elektrikar) - Electrician job in Brno. The job involves installing and repairing electrical equipment in new housing. This might fit if you have the technical skills and enjoy working on installations.\n\n- [Všeobecná sestra - chirurgie](https://jobs.example/praha-zdravotni-sestra) - General care nurse in Prague. This job fits if you enjoy working with people and have the skills to assist in healthcare settings.\n\nPlease review these and let me know which one seems most suitable. If you have more details about your skills and experience, I can recommend a more specific job."
+ },
+ {
+  "id": "cs-accountant",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "remote_policy": [
+     "onsite",
+     "hybrid",
+     "remote_region",
+     "remote_country",
+     "remote_global"
+    ],
+    "query": "Účetní v Brně",
+    "city": "Brno",
+    "max_years_required": 0,
+    "seniority": [
+     "junior",
+     "medior",
+     "senior"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": false,
+  "citations_valid": true,
+  "cited": [
+   "brno-pecovatelka",
+   "remote-zakaznicka-podpora"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.8762066999915987,
+  "input_tokens": 2746,
+  "output_tokens": 220,
+  "max_prompt_tokens": 1811,
+  "error": null,
+  "answer": "- [**[https://jobs.example/brno-pecovatelka](https://jobs.example/brno-pecovatelka)**] – Je to účetnická práce v domově pro staré lidí, což vám líší se vaším uměním Pohodu.\n- [**[https://jobs.example/remote-zakaznicka-podpora](https://jobs.example/remote-zakaznicka-podpora)**] – Je to práce jako operátor/ka žákařské linky, což je typicky dálkem."
+ },
+ {
+  "id": "en-nurse-prague",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "remote_policy": null,
+    "query": "zdravotní sestra in Prague",
+    "city": "Prague",
+    "max_years_required": 0,
+    "seniority": [
+     "junior",
+     "medior",
+     "senior",
+     "staff"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "brno-pecovatelka",
+   "praha-zdravotni-sestra",
+   "remote-zakaznicka-podpora"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.8972016999905463,
+  "input_tokens": 2752,
+  "output_tokens": 245,
+  "max_prompt_tokens": 1824,
+  "error": null,
+  "answer": "Here are some nursing-related jobs in Prague:\n\n1. [Všeobecná sestra – chirurgie](https://jobs.example/praha-zdravotni-sestra) at Nemocnice Vinohrady Sever: This position requires knowledge in general nursing and is in a local job.\n\n2. [Operátor/ka zákaznické linky – home office](https://jobs.example/remote-zakaznicka-podpora) at Telefonica Služby: This is a remote position in a local region, fitting your requirement for remote work.\n\n3. [Pevatelka v domovu pro seniory](https://jobs.example/brno-pecovatelka) at Domov Slunce: This is a local job for a senior position, fitting your need for local work."
+ },
+ {
+  "id": "cs-courier-ostrava",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "query": "kurýrní práce řidičák B Ostrava",
+    "city": "Ostrava",
+    "max_years_required": 5,
+    "remote_policy": [
+     "onsite",
+     "hybrid"
+    ],
+    "seniority": [
+     "junior"
+    ]
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [
+   "ostrava-instalater",
+   "ostrava-kuryr",
+   "ostrava-py"
+  ],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 3.257183299996541,
+  "input_tokens": 2540,
+  "output_tokens": 434,
+  "max_prompt_tokens": 1599,
+  "error": null,
+  "answer": "I found a few job options for you related to driving and logistics in Ostrava. Here they are:\n\n1. [Python Developer](https://jobs.example/ostrava-py) at Ostrava Steelworks IT - On-site in Ostrava.\n   - Missing Required: Years of Experience, Skills\n   - Missing Nice-to-Have: Specific Tech Skills\n   - Fit: The job requires a Python Developer position, which might fit your skills and requirements, though there are no specific skills mentioned in the job description.\n\n2. [Instalatér - topenáž](https://jobs.example/ostrava-instalater) at Teplo Ostrava - Pořádáme - výdavný list instalatér, oprávněný na plyn výhodou.\n   - Missing Required: Specific Skills, Years of Experience\n   - Fit: The job is for a utility installer with the required skills to work in Ostrava. The job might be suitable given your B driving license and the need for local knowledge.\n\n3. [Kurýr - zídi dodávky](https://jobs.example/ostrava-kuryr) at Rychlý balíky - Pořádáme - zídi sk. B - znalost Ostravy výhodou Odmána 32 000 Kč + bonus za doručená zásilky.\n   - Missing Required: Specific Skills, Years of Experience\n   - Fit: This job is for a delivery driver, which seems to be in line with your B driving license.\n\nPlease review these job opportunities and let me know if you need any more information."
+ },
+ {
+  "id": "nothing-fits",
+  "tools": [
+   "search_jobs"
+  ],
+  "tool_inputs": [
+   {
+    "seniority": null,
+    "tech": null,
+    "query": "commercial airline pilot",
+    "city": null,
+    "max_years_required": null,
+    "remote_policy": null
+   }
+  ],
+  "tool_errors": 0,
+  "expected_tools": true,
+  "filters_ok": true,
+  "relevant_cited": true,
+  "citations_valid": true,
+  "cited": [],
+  "unverified": [],
+  "rounds": 2,
+  "latency_s": 1.2360399000026518,
+  "input_tokens": 2432,
+  "output_tokens": 79,
+  "max_prompt_tokens": 1504,
+  "error": null,
+  "answer": "None of the found jobs match the requirements of a commercial airline pilot. Please provide more details or search again with a different occupation."
+ }
+]

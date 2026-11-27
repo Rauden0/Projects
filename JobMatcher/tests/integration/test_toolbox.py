@@ -3,13 +3,14 @@ from datetime import date
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from jobmatcher.agent.tools import Toolbox, ToolError
+from jobmatcher.agent.tools import Toolbox
 from jobmatcher.cv.profile import build_profile
 from jobmatcher.db.models import EMBEDDING_DIM, Cv
+from jobmatcher.domain import RawPosting
+from jobmatcher.errors import ToolError
 from jobmatcher.ingest.extraction import HeuristicExtractor
 from jobmatcher.ingest.indexer import Indexer
 from jobmatcher.search.embeddings import HashingEmbedder
-from jobmatcher.sources import RawPosting
 
 pytestmark = pytest.mark.integration
 
@@ -37,8 +38,11 @@ async def test_search_then_compare(sessionmaker: async_sessionmaker[AsyncSession
 
     async with sessionmaker() as session:
         profile = await build_profile(CV_TEXT, today=date(2026, 10, 1))
-        cv = Cv(raw_text=CV_TEXT, profile=profile.model_dump(),
-                embedding=await EMBEDDER.embed_query(CV_TEXT))
+        cv = Cv(
+            raw_text=CV_TEXT,
+            profile=profile.model_dump(),
+            embedding=await EMBEDDER.embed_query(CV_TEXT),
+        )
         session.add(cv)
         await session.commit()
 

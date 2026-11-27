@@ -1,9 +1,12 @@
+from typing import Any
+
 import pytest
 
+from jobmatcher.domain import JobFacts
+from jobmatcher.errors import ExtractionError
 from jobmatcher.ingest.extraction import (
-    ExtractionError,
+    COMPACT_SCHEMA,
     HeuristicExtractor,
-    JobFacts,
     LLMExtractor,
 )
 
@@ -15,12 +18,21 @@ TEXT = """We are a hybrid team in Brno.
 
 
 class ScriptedLLM:
+    caches_prompts = False
+
     def __init__(self, *outputs: str) -> None:
         self.outputs = list(outputs)
         self.prompts: list[str] = []
+        self.schemas: list[dict[str, Any]] = []
 
     async def complete(self, *, system: str, user: str, max_tokens: int = 1024) -> str:
+        raise NotImplementedError
+
+    async def complete_json(
+        self, *, system: str, user: str, schema: dict[str, Any], max_tokens: int = 512
+    ) -> str:
         self.prompts.append(user)
+        self.schemas.append(schema)
         return self.outputs.pop(0)
 
     async def create_message(self, **_: object) -> None:
@@ -41,8 +53,8 @@ async def test_heuristic_extractor() -> None:
 @pytest.mark.asyncio
 async def test_llm_extractor_retries_with_validation_error() -> None:
     llm = ScriptedLLM(
-        '{"seniority": "lead"}',
-        '```json\n{"seniority": "senior", "years_required_min": 5}\n```',
+        '{"sen": "lead"}',
+        '```json\n{"sen": "senior", "yrs": 5}\n```',
     )
     facts = await LLMExtractor(llm).extract("Senior Dev", None, "text")
     assert facts == JobFacts(seniority="senior", years_required_min=5)
@@ -61,3 +73,35 @@ async def test_heuristic_reads_singular_year() -> None:
     facts = await HeuristicExtractor().extract("Junior Dev", "Prague", "1 year of Go")
     assert facts.seniority == "junior"
     assert facts.years_required_min == 1
+
+
+@pytest.mark.asyncio
+async def test_compact_keys_map_to_job_facts() -> None:
+    llm = ScriptedLLM(
+        '{"sen": "medior", "yrs": 3, "rem": "hybrid", "city": "Brno", "smin": 80000,'
+        ' "smax": 100000, "cur": "CZK", "ct": "employment", "tech": ["python"],'
+        ' "req": ["python"], "nice": ["go"], "lang": ["english"]}'
+    )
+    facts = await LLMExtractor(llm).extract("Dev", "Brno", "text")
+    assert facts.salary_max == 100000 and facts.currency == "CZK"
+    assert facts.nice_to_have_skills == ["go"]
+    assert llm.schemas[0] is COMPACT_SCHEMA
+
+
+def test_compact_schema_requires_every_key() -> None:
+    assert set(COMPACT_SCHEMA["required"]) == set(COMPACT_SCHEMA["properties"])
+    assert COMPACT_SCHEMA["additionalProperties"] is False
+
+
+@pytest.mark.parametrize(
+    ("written", "iso"),
+    [("Kč", "CZK"), ("czk", "CZK"), ("€", "EUR"), ("£", "GBP"), ("usd", "USD"), ("k", None)],
+)
+def test_currency_symbols_become_iso_codes_instead_of_failing(
+    written: str, iso: str | None
+) -> None:
+    from jobmatcher.ingest.extraction import parse_compact
+
+    facts = parse_compact(f'{{"smin": 38000, "cur": "{written}", "yrs": 2}}')
+    assert facts.currency == iso
+    assert facts.years_required_min == 2

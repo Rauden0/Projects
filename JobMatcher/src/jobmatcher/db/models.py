@@ -1,13 +1,16 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Computed,
+    DateTime,
     ForeignKey,
     Index,
     LargeBinary,
+    Numeric,
     SmallInteger,
     String,
     Text,
@@ -32,7 +35,7 @@ class Source(Base):
     id: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
     kind: Mapped[str] = mapped_column(Text)
     company: Mapped[str] = mapped_column(Text)
-    config: Mapped[dict] = mapped_column(JSONB, server_default=text("'{}'"))
+    config: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'"))
 
 
 class Job(Base):
@@ -69,9 +72,7 @@ class Job(Base):
     contract_type: Mapped[str | None] = mapped_column(Text)
     tech_stack: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
     required_skills: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
-    nice_to_have_skills: Mapped[list[str]] = mapped_column(
-        ARRAY(Text), server_default=text("'{}'")
-    )
+    nice_to_have_skills: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
     extraction_status: Mapped[str] = mapped_column(Text, server_default="pending")
 
     status: Mapped[str] = mapped_column(Text, server_default="open")
@@ -116,7 +117,7 @@ class Cv(Base):
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
     )
     raw_text: Mapped[str] = mapped_column(Text)
-    profile: Mapped[dict] = mapped_column(JSONB)
+    profile: Mapped[dict[str, Any]] = mapped_column(JSONB)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
@@ -129,6 +130,26 @@ class Outbox(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     topic: Mapped[str] = mapped_column(Text)
-    payload: Mapped[dict] = mapped_column(JSONB)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     published_at: Mapped[datetime | None]
+
+
+class LlmUsage(Base):
+    __tablename__ = "llm_usage"
+    __table_args__ = (
+        Index("llm_usage_created", "created_at"),
+        Index("llm_usage_client_created", "client_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    purpose: Mapped[str] = mapped_column(Text)
+    client_id: Mapped[str | None] = mapped_column(Text)
+    model: Mapped[str] = mapped_column(Text)
+    batch: Mapped[bool] = mapped_column(server_default=text("false"))
+    input_tokens: Mapped[int]
+    output_tokens: Mapped[int]
+    cache_read_tokens: Mapped[int] = mapped_column(server_default=text("0"))
+    cache_write_tokens: Mapped[int] = mapped_column(server_default=text("0"))
+    cost_usd: Mapped[float] = mapped_column(Numeric(12, 6))

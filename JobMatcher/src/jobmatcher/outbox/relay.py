@@ -31,14 +31,18 @@ async def relay_batch(
 ) -> int:
     async with sessionmaker() as session, session.begin():
         rows = (
-            await session.execute(
-                select(Outbox)
-                .where(Outbox.published_at.is_(None))
-                .order_by(Outbox.id)
-                .limit(BATCH_SIZE)
-                .with_for_update(skip_locked=True)
+            (
+                await session.execute(
+                    select(Outbox)
+                    .where(Outbox.published_at.is_(None))
+                    .order_by(Outbox.id)
+                    .limit(BATCH_SIZE)
+                    .with_for_update(skip_locked=True)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         for row in rows:
             await exchange.publish(

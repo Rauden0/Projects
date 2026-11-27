@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobmatcher.ingest.extraction import ContractType, RemotePolicy, Seniority
+from jobmatcher.domain import ContractType, RemotePolicy, Seniority
 from jobmatcher.search.embeddings import Embedder
 
 RRF_K = 60
@@ -118,9 +118,38 @@ def _filter_sql(
 # The 'simple' text-search config keeps every word, so stop words would match almost every
 # posting and turn the keyword lists into noise (Czech "a", "z", "na", English "and", "with").
 _QUERY_STOPWORDS = {
-    "and", "the", "with", "for", "from", "that", "this", "jobs", "job", "work", "role",
-    "pro", "nebo", "jako", "které", "který", "která", "práce", "práci", "pozice", "chci",
-    "hledám", "najdi", "mám", "jsem", "být", "jen", "jak", "aby", "při", "přes", "pod",
+    "and",
+    "the",
+    "with",
+    "for",
+    "from",
+    "that",
+    "this",
+    "jobs",
+    "job",
+    "work",
+    "role",
+    "pro",
+    "nebo",
+    "jako",
+    "které",
+    "který",
+    "která",
+    "práce",
+    "práci",
+    "pozice",
+    "chci",
+    "hledám",
+    "najdi",
+    "mám",
+    "jsem",
+    "být",
+    "jen",
+    "jak",
+    "aby",
+    "při",
+    "přes",
+    "pod",
 }
 
 
