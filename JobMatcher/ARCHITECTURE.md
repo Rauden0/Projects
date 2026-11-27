@@ -208,7 +208,7 @@ CREATE TABLE cv (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     raw_text    text NOT NULL,
     profile     jsonb NOT NULL,             -- extracted: years, skills, languages, location prefs
-    embedding   vector(384) NOT NULL,
+    embedding   vector(384) NOT NULL,       -- of the profile; not read yet
     created_at  timestamptz NOT NULL DEFAULT now()
 );
 
@@ -321,6 +321,25 @@ the collaborators come in as the run's context, so a checkpointer can be added l
 
 `compare_with_cv` is fully deterministic (set overlap of normalized skills, years and
 location rules), so it is unit-testable and costs no tokens.
+
+**CV profile.** `POST /cv` builds the profile once, at upload (`cv/profile.build_profile`).
+With `CV_LLM_EXTRACTION=true` (default) and an extraction LLM configured, `cv/extraction`
+sends the CV (first 12,000 characters) to `get_llm("extraction")` with a small JSON schema:
+lowercase skills (tools, frameworks, methods, domain and trade skills), total years, spoken
+languages with level, city, seniority and up to three desired roles. The CV is user input, so
+the prompt wraps it in `<cv>…</cv>` (tags inside the text are removed) and tells the model to
+treat it as data only. Output is validated like job extraction: one retry on invalid JSON, and
+a bad field becomes empty without discarding the rest. The result is merged with the
+heuristic profile (regex keywords, `MM/YYYY` ranges): LLM fields win, the heuristic fills the
+gaps and its skills are added to the LLM's. No LLM, the setting off, `LLMError`,
+`BudgetExceeded` (the call counts against the extraction budget) or invalid output twice give
+the heuristic profile alone; `profile.source` records `llm` or `heuristic`, and stored profiles
+from before have `heuristic` by default. Measured in `eval/run_cv.py` (`eval/RESULTS.md` §6).
+
+The CV embedding (`cv.embedding`, `NOT NULL`) is not read by anything yet. It is kept rather
+than dropped to avoid a migration, and is computed from the profile (desired roles, seniority,
+skills) as an e5 *query*, which is what a future "jobs like my CV" search over job passages
+would send, instead of from the CV's opening characters (name and contacts).
 
 **MCP.** The agent calls its tools in process, without MCP
 ([ADR 0001](docs/adr/0001-llm-framework.md), option 9). A separate entry point,
@@ -461,7 +480,7 @@ JobMatcher/
 │   ├── outbox/relay.py
 │   ├── search/                 # embeddings.py, hybrid.py, metrics.py
 │   ├── agent/                  # loop.py (entry, prompt), graph.py (LangGraph), tools.py, session.py
-│   ├── cv/                     # profile.py (extraction + comparison), service.py
+│   ├── cv/                     # extraction.py (LLM profile), profile.py (heuristic, merge, comparison), service.py
 │   ├── mcp_server.py           # jobmatcher-mcp: search_jobs / get_job over MCP
 │   └── api/                    # main.py, deps.py, errors.py, middleware.py, routes/, schemas.py
 ├── eval/

@@ -122,9 +122,12 @@ and are only removed by retention.
 (the "Smazat CV" button in the UI) removes them at once; otherwise the `retention` service
 deletes CVs `CV_RETENTION_DAYS` (default 30) after upload. Chat limits store the client IP (in
 `AUTH_MODE=oidc` the token subject) on `llm_usage` rows, and the same service clears it after
-two days. The session cookie holds a random id and nothing else. Chat messages and the CV
-profile (skills, years, languages, city, not the CV text) are sent to the configured LLM
-provider; with a hosted provider that provider is a processor of that data.
+two days. The session cookie holds a random id and nothing else. At upload the CV text (its
+first 12,000 characters) is sent once to the configured extraction LLM to build the profile;
+set `CV_LLM_EXTRACTION=false` to keep the CV text local and use the keyword-based profile
+instead. Chat messages and the CV profile (skills, years, languages, city, seniority, desired
+roles) are sent to the configured chat LLM. With a hosted provider that provider is a
+processor of that data.
 
 ## Use it from an MCP client
 
