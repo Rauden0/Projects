@@ -26,6 +26,8 @@ if not (make_url(TEST_DATABASE_URL).database or "").endswith("_test"):
     raise pytest.UsageError(f"TEST_DATABASE_URL must name a *_test database: {TEST_DATABASE_URL}")
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["AMQP_URL"] = TEST_AMQP_URL
+# Tests install their own in-memory tracer; never export to whatever .env points at.
+os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
 for cached in (get_settings, get_engine, get_sessionmaker):
     cached.cache_clear()
 

@@ -26,6 +26,9 @@ def test_defaults_are_valid_and_hide_secrets() -> None:
         {"embedding_dim": 1024},
         {"extraction_mode": "batch"},
         {"log_format": "xml"},
+        {"otel_exporter_otlp_endpoint": "phoenix:6006"},
+        {"otel_service_name": ""},
+        {"otel_capture_content": "sometimes"},
     ],
 )
 def test_invalid_settings_are_rejected(overrides: dict[str, object]) -> None:
@@ -35,3 +38,14 @@ def test_invalid_settings_are_rejected(overrides: dict[str, object]) -> None:
 
 def test_batch_extraction_with_anthropic_is_valid() -> None:
     assert make(extraction_mode="batch", llm_provider="anthropic").extraction_mode == "batch"
+
+
+def test_tracing_is_off_and_without_content_by_default() -> None:
+    settings = make()
+    assert settings.otel_exporter_otlp_endpoint == ""
+    assert settings.otel_capture_content is False
+
+
+def test_otlp_endpoint_accepts_http_urls() -> None:
+    endpoint = make(otel_exporter_otlp_endpoint="http://phoenix:6006").otel_exporter_otlp_endpoint
+    assert endpoint == "http://phoenix:6006"
