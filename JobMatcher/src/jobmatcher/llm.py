@@ -291,11 +291,12 @@ def from_openai_message(message: dict[str, Any]) -> dict[str, Any]:
 
 def get_llm(purpose: Purpose = "extraction", client_id: str | None = None) -> LLMClient | None:
     s = get_settings()
-    provider, base_url, api_key, model = s.llm_provider, s.llm_base_url, s.llm_api_key, s.llm_model
+    provider, base_url, model = s.llm_provider, s.llm_base_url, s.llm_model
+    api_key = s.llm_api_key.get_secret_value()
     if purpose == "chat":
         provider = s.chat_llm_provider or provider
         base_url = s.chat_llm_base_url or base_url
-        api_key = s.chat_llm_api_key or api_key
+        api_key = s.chat_llm_api_key.get_secret_value() or api_key
         model = s.chat_llm_model or model
 
     if provider == "openai_compat":

@@ -167,13 +167,14 @@ class BatchExtraction:
 def build(settings: Settings) -> BatchExtraction:
     from anthropic import AsyncAnthropic
 
-    if settings.llm_provider != "anthropic" or not settings.llm_api_key:
+    api_key = settings.llm_api_key.get_secret_value()
+    if settings.llm_provider != "anthropic" or not api_key:
         raise SystemExit("batch extraction needs LLM_PROVIDER=anthropic and LLM_API_KEY")
     sessionmaker = get_sessionmaker()
     ledger = UsageLedger(sessionmaker)
     policy = BudgetPolicy(settings.llm_monthly_budget_usd, settings.llm_extraction_budget_share)
     return BatchExtraction(
-        AsyncAnthropic(api_key=settings.llm_api_key),
+        AsyncAnthropic(api_key=api_key),
         sessionmaker,
         ledger,
         BudgetGuard(ledger, policy),
