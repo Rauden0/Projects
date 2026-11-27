@@ -162,10 +162,24 @@ _ROLE_MARKER_RE = re.compile(
 
 
 def _untrusted(output: Any) -> str:
-    """Tool output with role markers removed, wrapped in the envelope SYSTEM tells the model
-    never to take instructions from: posting text is written by whoever published the ad."""
-    text = output if isinstance(output, str) else json.dumps(output, default=str)
+    """Tool output marked as data: posting text is written by whoever published the ad. Role
+    markers are removed and links in posting text are replaced, so the only links the model
+    sees are the jobs' own `url` fields, the ones it may cite."""
+    text = output if isinstance(output, str) else json.dumps(_without_links(output), default=str)
     return f"{UNTRUSTED_OPEN}{_ROLE_MARKER_RE.sub(' ', text)}{UNTRUSTED_CLOSE}"
+
+
+_LINK_RE = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
+
+
+def _without_links(value: Any, key: str = "") -> Any:
+    if isinstance(value, dict):
+        return {k: _without_links(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_without_links(v, key) for v in value]
+    if isinstance(value, str) and key != "url":
+        return _LINK_RE.sub("[link]", value)
+    return value
 
 
 def _compact_old_results(messages: list[dict[str, Any]]) -> None:
