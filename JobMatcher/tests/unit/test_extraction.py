@@ -53,7 +53,7 @@ async def test_heuristic_extractor() -> None:
 @pytest.mark.asyncio
 async def test_llm_extractor_retries_with_validation_error() -> None:
     llm = ScriptedLLM(
-        '{"sen": "lead"}',
+        '{"tech": "go"}',
         '```json\n{"sen": "senior", "yrs": 5}\n```',
     )
     facts = await LLMExtractor(llm).extract("Senior Dev", None, "text")
@@ -120,6 +120,24 @@ def test_out_of_range_number_drops_only_that_field(bad: str) -> None:
     assert facts.currency == "EUR"
     assert facts.years_required_min is None
     assert facts.salary_min is None and facts.salary_max is None
+
+
+@pytest.mark.parametrize(
+    "bad",
+    ['"sen": "lead"', '"rem": "flexible"', '"ct": "internship"', '"sen": 3', '"rem": ["remote"]'],
+)
+def test_unknown_enum_value_drops_only_that_field(bad: str) -> None:
+    from jobmatcher.ingest.extraction import parse_compact
+
+    facts = parse_compact(
+        f'{{"sen": "senior", "rem": "hybrid", "ct": "contract", "yrs": 3, {bad}}}'
+    )
+    assert facts.years_required_min == 3
+    field = {"sen": "seniority", "rem": "remote_policy", "ct": "contract_type"}[bad[1:4].strip('"')]
+    assert getattr(facts, field) is None
+    kept = {"seniority": "senior", "remote_policy": "hybrid", "contract_type": "contract"}
+    del kept[field]
+    assert {name: getattr(facts, name) for name in kept} == kept
 
 
 def test_salary_above_int4_is_rejected_by_job_facts() -> None:

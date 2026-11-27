@@ -214,6 +214,15 @@ class CompactFacts(BaseModel):
         code = _CURRENCY_ALIASES.get(value.strip().casefold(), value.strip().upper())
         return code if re.fullmatch(r"[A-Z]{3}", code) else None
 
+    @field_validator("sen", "rem", "ct", mode="wrap")
+    @classmethod
+    def _known_enum(cls, value: object, handler: ValidatorFunctionWrapHandler) -> str | None:
+        try:
+            known: str | None = handler(value)
+        except ValidationError:
+            return None
+        return known
+
     @field_validator("yrs", mode="wrap")
     @classmethod
     def _years_in_range(cls, value: object, handler: ValidatorFunctionWrapHandler) -> int | None:
