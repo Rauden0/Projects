@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from jobmatcher.config import get_settings
@@ -14,7 +15,7 @@ async def sessionmaker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
     try:
         async with engine.begin() as conn:
             await conn.execute(text("TRUNCATE outbox, cv, job_chunk, job, source RESTART IDENTITY"))
-    except Exception as exc:  # pragma: no cover - only when no database is available
+    except (OSError, SQLAlchemyError) as exc:  # pragma: no cover - no database available
         await engine.dispose()
         pytest.skip(f"database not available: {exc}")
     yield async_sessionmaker(engine, expire_on_commit=False)

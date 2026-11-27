@@ -43,7 +43,7 @@ class Worker:
                 result.job_id,
                 result.changed,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 - consumer boundary: any failure is retried, then DLQ'd
             next_attempt = attempt + 1
             if next_attempt <= len(messaging.RETRY_DELAYS_S):
                 log.exception("indexing failed, retry %d scheduled", next_attempt)

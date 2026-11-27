@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from jobmatcher.agent.tools import Toolbox
-from jobmatcher.errors import ToolError
+from jobmatcher.errors import BudgetExceeded, LLMError, ToolError
 from jobmatcher.llm import LLMClient
 
 log = logging.getLogger(__name__)
@@ -70,9 +70,8 @@ async def run_agent(
                 tools=toolbox.definitions(),
                 tool_choice=tool_choice,
             )
-        except Exception as exc:
-            # Surface provider failures to the client instead of cutting the stream.
-            log.exception("LLM call failed")
+        except (LLMError, BudgetExceeded) as exc:
+            log.warning("agent stopped in round %d: %s", round_no, exc)
             yield AgentEvent("error", {"message": f"LLM request failed: {exc}"[:500]})
             return
         content = list(_block(response, "content"))

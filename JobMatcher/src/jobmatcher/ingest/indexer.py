@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher.db import repository
 from jobmatcher.domain import RawPosting
+from jobmatcher.errors import BudgetExceeded, ExtractionError, LLMError
 from jobmatcher.ingest.chunking import chunk_posting
 from jobmatcher.ingest.extraction import Extractor, HeuristicExtractor
 from jobmatcher.ingest.normalize import content_hash, html_to_text
@@ -55,8 +56,13 @@ class Indexer:
                 facts = await HeuristicExtractor().extract(posting.title, posting.location, text)
             else:
                 facts = await self.extractor.extract(posting.title, posting.location, text)
-        except Exception:
-            log.exception("extraction failed for %s/%s", posting.company, posting.external_id)
+        except (LLMError, ExtractionError, BudgetExceeded) as exc:
+            log.warning(
+                "extraction failed for %s/%s, using heuristics: %s",
+                posting.company,
+                posting.external_id,
+                exc,
+            )
             facts = await HeuristicExtractor().extract(posting.title, posting.location, text)
             status = "fallback"
 

@@ -17,6 +17,7 @@ from jobmatcher.config import configure_logging
 from jobmatcher.db.models import Job
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.domain import JobFacts
+from jobmatcher.errors import ExtractionError, LLMError
 from jobmatcher.ingest.extraction import LLMExtractor
 from jobmatcher.llm import get_llm
 
@@ -46,7 +47,7 @@ async def reextract(include_empty: bool) -> tuple[int, int]:
     for job_id, title, location, description in jobs:
         try:
             facts: JobFacts = await extractor.extract(title, location, description)
-        except Exception as exc:
+        except (LLMError, ExtractionError) as exc:
             log.warning("job %s still failing: %s", job_id, exc)
             continue
         values = facts.model_dump(exclude={"languages_required"})

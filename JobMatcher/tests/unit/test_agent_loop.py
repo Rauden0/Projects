@@ -5,7 +5,7 @@ import pytest
 
 from jobmatcher.agent import loop
 from jobmatcher.agent.loop import run_agent
-from jobmatcher.errors import ToolError
+from jobmatcher.errors import LLMError, ToolError
 
 
 class ScriptedModel:
@@ -107,7 +107,7 @@ async def test_last_round_disables_tools(monkeypatch: pytest.MonkeyPatch) -> Non
 async def test_llm_failure_becomes_error_event() -> None:
     class FailingModel(ScriptedModel):
         async def create_message(self, **kwargs: Any) -> dict[str, Any]:
-            raise RuntimeError("400 from LLM")
+            raise LLMError("400 from LLM", 400)
 
     events = await collect(FailingModel(), FakeToolbox())
     assert [e.type for e in events] == ["error"]

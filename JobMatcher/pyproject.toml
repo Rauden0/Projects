@@ -45,7 +45,7 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "ASYNC"]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "BLE"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["jobmatcher"]
