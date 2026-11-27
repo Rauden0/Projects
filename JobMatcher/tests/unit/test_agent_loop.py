@@ -148,7 +148,8 @@ async def test_history_is_not_compacted_when_prompts_are_cached() -> None:
     )
     model.caches_prompts = True
     events = [
-        e async for e in run_agent(model, CachingToolbox(), "q", [], "")  # type: ignore[arg-type]
+        e
+        async for e in run_agent(model, CachingToolbox(), "q", [], "")  # type: ignore[arg-type]
     ]
     assert events[-1].type == "answer"
     first_result = model.calls[-1]["messages"][2]["content"][0]["content"]

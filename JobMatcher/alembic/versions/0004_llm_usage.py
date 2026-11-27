@@ -4,6 +4,7 @@ Revision ID: 0004
 Revises: 0003
 Create Date: 2026-11-26
 """
+
 from alembic import op
 
 revision = "0004"

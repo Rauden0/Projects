@@ -71,9 +71,7 @@ class Job(Base):
     contract_type: Mapped[str | None] = mapped_column(Text)
     tech_stack: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
     required_skills: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
-    nice_to_have_skills: Mapped[list[str]] = mapped_column(
-        ARRAY(Text), server_default=text("'{}'")
-    )
+    nice_to_have_skills: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
     extraction_status: Mapped[str] = mapped_column(Text, server_default="pending")
 
     status: Mapped[str] = mapped_column(Text, server_default="open")
@@ -144,9 +142,7 @@ class LlmUsage(Base):
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     purpose: Mapped[str] = mapped_column(Text)
     client_id: Mapped[str | None] = mapped_column(Text)
     model: Mapped[str] = mapped_column(Text)

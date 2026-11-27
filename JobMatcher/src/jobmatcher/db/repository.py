@@ -91,9 +91,7 @@ async def upsert_job(
 
     await session.execute(JobChunk.__table__.delete().where(JobChunk.job_id == job_id))
     session.add_all(
-        JobChunk(
-            job_id=job_id, ord=c.ord, section=c.section, content=c.content, embedding=e
-        )
+        JobChunk(job_id=job_id, ord=c.ord, section=c.section, content=c.content, embedding=e)
         for c, e in zip(chunks, embeddings, strict=True)
     )
     session.add(

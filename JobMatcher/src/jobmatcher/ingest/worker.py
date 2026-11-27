@@ -38,7 +38,10 @@ class Worker:
             result = await self.indexer.index(posting)
             log.info(
                 "indexed %s/%s job_id=%s changed=%s",
-                posting.company, posting.external_id, result.job_id, result.changed,
+                posting.company,
+                posting.external_id,
+                result.job_id,
+                result.changed,
             )
         except Exception:
             next_attempt = attempt + 1

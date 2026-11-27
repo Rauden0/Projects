@@ -25,9 +25,7 @@ class ListingSyncConsumer:
         async with msg.process(requeue=True):
             await self.sync(msg.body, msg.content_encoding)
 
-    async def sync(
-        self, body: bytes, encoding: str | None = None
-    ) -> repository.ListingSync | None:
+    async def sync(self, body: bytes, encoding: str | None = None) -> repository.ListingSync | None:
         try:
             event = SourceCrawled.model_validate_json(messaging.decode_body(body, encoding))
         except (ValidationError, messaging.UndecodableBody):

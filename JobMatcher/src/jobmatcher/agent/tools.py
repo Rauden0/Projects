@@ -91,7 +91,8 @@ class Toolbox:
                 update={
                     "city": None,
                     "remote_policy": [
-                        p for p in (filters.remote_policy or REMOTE_POLICIES)
+                        p
+                        for p in (filters.remote_policy or REMOTE_POLICIES)
                         if p.startswith("remote")
                     ],
                 }
@@ -220,8 +221,10 @@ class Toolbox:
         job = await self._job(CompareInput.model_validate(raw).job_id)
 
         chunks = (
-            await self.session.execute(select(JobChunk).where(JobChunk.job_id == job.id))
-        ).scalars().all()
+            (await self.session.execute(select(JobChunk).where(JobChunk.job_id == job.id)))
+            .scalars()
+            .all()
+        )
         requirements = "\n".join(c.content for c in chunks if c.section == "requirements")
         nice = "\n".join(c.content for c in chunks if c.section == "nice_to_have")
         return {

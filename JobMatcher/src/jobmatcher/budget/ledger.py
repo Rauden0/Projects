@@ -68,4 +68,3 @@ class UsageLedger:
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
-

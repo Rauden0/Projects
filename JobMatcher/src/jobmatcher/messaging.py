@@ -31,9 +31,7 @@ RETRY_DELAYS_S = (30, 300, 1800)
 
 
 async def declare_topology(channel: AbstractChannel) -> AbstractExchange:
-    exchange = await channel.declare_exchange(
-        EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True
-    )
+    exchange = await channel.declare_exchange(EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True)
     retry_exchange = await channel.declare_exchange(
         RETRY_EXCHANGE, aio_pika.ExchangeType.DIRECT, durable=True
     )

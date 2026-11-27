@@ -111,7 +111,8 @@ def test_chat_overrides_only_the_chat_client(monkeypatch: pytest.MonkeyPatch) ->
     chat = llm_module.get_llm("chat")
     assert isinstance(extraction, OpenAICompatClient) and isinstance(chat, OpenAICompatClient)
     assert (extraction.model, str(extraction._http.base_url)) == (
-        "qwen2.5:7b", "http://ollama:11434/v1/"
+        "qwen2.5:7b",
+        "http://ollama:11434/v1/",
     )
     assert chat.model == "llama-3.3-70b-versatile"
     assert chat._http.headers["Authorization"] == "Bearer gsk_test"

@@ -14,9 +14,16 @@ def test_search_passes_filters(monkeypatch) -> None:  # type: ignore[no-untyped-
         captured.update(q=q, filters=filters, k=k, mode=mode)
         return [
             SearchHit(
-                job_id=1, title="Python Dev", company="acme", location="Brno", url="u",
-                seniority="medior", years_required_min=2, remote_policy="hybrid",
-                snippet="...", score=0.03,
+                job_id=1,
+                title="Python Dev",
+                company="acme",
+                location="Brno",
+                url="u",
+                seniority="medior",
+                years_required_min=2,
+                remote_policy="hybrid",
+                snippet="...",
+                score=0.03,
             )
         ]
 

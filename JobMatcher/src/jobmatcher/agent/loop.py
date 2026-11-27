@@ -16,9 +16,7 @@ log = logging.getLogger(__name__)
 MAX_ROUNDS = 4
 MAX_PARALLEL_CALLS = 3
 COMPACT_CHARS = 600
-FINAL_ROUND_NOTE = (
-    "No more tool calls are available. Answer now using only the results above."
-)
+FINAL_ROUND_NOTE = "No more tool calls are available. Answer now using only the results above."
 
 SYSTEM = """You help a software developer find jobs that fit their CV.
 CV profile: {profile}
@@ -81,8 +79,10 @@ async def run_agent(
 
         if not tool_uses:
             answer = "".join(_block(b, "text") for b in content if _block(b, "type") == "text")
-            yield AgentEvent("answer", {"text": answer, "unverified_urls": _unverified(
-                answer, toolbox.seen_urls)})
+            yield AgentEvent(
+                "answer",
+                {"text": answer, "unverified_urls": _unverified(answer, toolbox.seen_urls)},
+            )
             return
 
         if not llm.caches_prompts:
@@ -99,15 +99,24 @@ async def run_agent(
                     output, is_error = await toolbox.call(name, tool_input), False
                 except (ToolError, ValueError) as exc:
                     output, is_error = str(exc), True
-            yield AgentEvent("tool_result", {"name": name, "is_error": is_error,
-                                             "count": len(output) if isinstance(output, list)
-                                             else None})
-            results.append({
-                "type": "tool_result",
-                "tool_use_id": use_id,
-                "content": output if isinstance(output, str) else json.dumps(output, default=str),
-                "is_error": is_error,
-            })
+            yield AgentEvent(
+                "tool_result",
+                {
+                    "name": name,
+                    "is_error": is_error,
+                    "count": len(output) if isinstance(output, list) else None,
+                },
+            )
+            results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": use_id,
+                    "content": output
+                    if isinstance(output, str)
+                    else json.dumps(output, default=str),
+                    "is_error": is_error,
+                }
+            )
         if round_no == MAX_ROUNDS - 1:
             results.append({"type": "text", "text": FINAL_ROUND_NOTE})
         messages.append({"role": "user", "content": results})

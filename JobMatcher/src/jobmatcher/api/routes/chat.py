@@ -95,9 +95,7 @@ async def chat(
         # relying on the dependency's lifetime.
         async with get_sessionmaker()() as stream_session:
             toolbox = Toolbox(stream_session, embedder, body.cv_id)
-            async for event in run_agent(
-                llm, toolbox, body.message, body.history, profile_summary
-            ):
+            async for event in run_agent(llm, toolbox, body.message, body.history, profile_summary):
                 yield _sse(event.type, event.data)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
