@@ -43,12 +43,24 @@
              border-top: 1px solid var(--line); padding: 12px 16px; }
   form#ask > div { max-width: 860px; margin: 0 auto; display: flex; gap: 8px; }
   form#ask textarea { min-height: 44px; height: 44px; resize: vertical; }
+  input { font: inherit; color: inherit; background: transparent; flex: 1;
+          border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 </style>
 </head>
 <body>
 <main>
   <h1>Job Matcher</h1>
   <p class="sub">Najde nabídky, které sedí na tvoje CV, a řekne, co ti chybí.</p>
+
+  <details id="authbox" hidden open>
+    <summary>Přihlášení</summary>
+    <p class="profile">Server vyžaduje přístupový token (OIDC). Vlož ho sem; zůstane jen v této
+      záložce prohlížeče.</p>
+    <div class="row">
+      <input id="token" type="password" autocomplete="off" aria-label="Přístupový token">
+      <button id="tokensave" type="button">Použít</button>
+    </div>
+  </details>
 
   <details id="cvbox">
     <summary>CV <span id="cvstate" class="profile"></span></summary>
@@ -79,6 +91,29 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
 let cvId = store.get("cv_id");
+const tokenStore = {
+  get() { try { return sessionStorage.getItem("token") || ""; } catch { return ""; } },
+  set(v) { try { sessionStorage.setItem("token", v); } catch {} },
+};
+
+// Session mode needs nothing: the server sets an HttpOnly cookie. OIDC mode needs a bearer token.
+async function api(path, init = {}) {
+  const headers = { ...(init.headers ?? {}) };
+  const token = tokenStore.get();
+  if (token) headers.authorization = `Bearer ${token}`;
+  const r = await fetch(path, { ...init, headers, credentials: "same-origin" });
+  if (r.status === 401) {
+    $("authbox").hidden = false;
+    throw new Error(token ? "token byl odmítnut, vlož platný" : "nejdřív vlož přístupový token");
+  }
+  return r;
+}
+
+$("tokensave").onclick = () => {
+  tokenStore.set($("token").value.trim());
+  $("token").value = "";
+  $("authbox").hidden = true;
+};
 const history = [];
 // Server caps the history at 24,000 chars in total; 10 turns of 2,000 stay under it.
 const HISTORY_TURNS = 10;
@@ -101,7 +136,7 @@ showProfile(JSON.parse(store.get("cv_profile") || "null"));
 $("cvsave").onclick = async () => {
   $("cvsave").disabled = true;
   try {
-    const r = await fetch("/cv", {
+    const r = await api("/cv", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ text: $("cvtext").value }),
     });
@@ -134,7 +169,7 @@ $("cvdelete").onclick = async () => {
   if (!cvId) return;
   $("cvdelete").disabled = true;
   try {
-    const r = await fetch(`/cv/${encodeURIComponent(cvId)}`, { method: "DELETE" });
+    const r = await api(`/cv/${encodeURIComponent(cvId)}`, { method: "DELETE" });
     if (!r.ok && r.status !== 404) throw new Error((await r.json()).detail ?? r.statusText);
     forgetCv("· smazáno");
   } catch (e) {
@@ -182,7 +217,7 @@ $("ask").onsubmit = async (ev) => {
   add("msg user", escapeHtml(message));
 
   try {
-    const r = await fetch("/chat", {
+    const r = await api("/chat", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ message, cv_id: cvId, history }),
     });
