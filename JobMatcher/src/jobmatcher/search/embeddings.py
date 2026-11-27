@@ -25,6 +25,12 @@ class E5Embedder:
         from sentence_transformers import SentenceTransformer  # optional dependency
 
         self._model = SentenceTransformer(model_name)
+        model_dim = self._model.get_sentence_embedding_dimension()
+        if model_dim != dim:
+            raise ValueError(
+                f"EMBEDDING_MODEL={model_name} produces {model_dim}-dimensional vectors, "
+                f"but EMBEDDING_DIM is {dim}"
+            )
         self.dim = dim
 
     def _encode(self, texts: list[str]) -> list[list[float]]:
