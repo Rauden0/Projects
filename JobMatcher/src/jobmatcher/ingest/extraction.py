@@ -8,7 +8,7 @@ fails validation twice (``extraction_status = 'fallback'``, retried by ``reextra
 import re
 from typing import Any, Protocol, get_args
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from jobmatcher.domain import ContractType, JobFacts, RemotePolicy, Seniority
 from jobmatcher.errors import ExtractionError
@@ -146,12 +146,28 @@ yrs: minimum years of experience explicitly required
 rem: onsite | hybrid | remote_country (one country) | remote_region (EU, EMEA, time zone) |
   remote_global (anywhere)
 city: office city only, e.g. "Brno"
-smin, smax, cur: salary as written, ISO currency
+smin, smax, cur: salary numbers as written; cur is the ISO 4217 code (Kč -> CZK, € -> EUR)
 ct: contract type
 tech: lowercase technologies asked for or used
 req, nice: short lowercase hard skills, must-have vs. plus/bonus/preferred
 lang: spoken languages required
 Use null or [] when the posting does not say."""
+
+
+_CURRENCY_ALIASES = {
+    "kč": "CZK",
+    "kc": "CZK",
+    ",-": "CZK",
+    "€": "EUR",
+    "eur": "EUR",
+    "euro": "EUR",
+    "$": "USD",
+    "us$": "USD",
+    "£": "GBP",
+    "zł": "PLN",
+    "zl": "PLN",
+    "ft": "HUF",
+}
 
 
 class CompactFacts(BaseModel):
@@ -167,6 +183,16 @@ class CompactFacts(BaseModel):
     req: list[str] = Field(default_factory=list)
     nice: list[str] = Field(default_factory=list)
     lang: list[str] = Field(default_factory=list)
+
+    @field_validator("cur", mode="before")
+    @classmethod
+    def _iso_currency(cls, value: object) -> str | None:
+        # Models copy the symbol from the ad ("Kč", "€"); one bad currency must not throw
+        # away every other extracted fact.
+        if not isinstance(value, str):
+            return None
+        code = _CURRENCY_ALIASES.get(value.strip().casefold(), value.strip().upper())
+        return code if re.fullmatch(r"[A-Z]{3}", code) else None
 
     def to_facts(self) -> JobFacts:
         return JobFacts(

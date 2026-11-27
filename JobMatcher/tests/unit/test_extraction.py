@@ -91,3 +91,17 @@ async def test_compact_keys_map_to_job_facts() -> None:
 def test_compact_schema_requires_every_key() -> None:
     assert set(COMPACT_SCHEMA["required"]) == set(COMPACT_SCHEMA["properties"])
     assert COMPACT_SCHEMA["additionalProperties"] is False
+
+
+@pytest.mark.parametrize(
+    ("written", "iso"),
+    [("Kč", "CZK"), ("czk", "CZK"), ("€", "EUR"), ("£", "GBP"), ("usd", "USD"), ("k", None)],
+)
+def test_currency_symbols_become_iso_codes_instead_of_failing(
+    written: str, iso: str | None
+) -> None:
+    from jobmatcher.ingest.extraction import parse_compact
+
+    facts = parse_compact(f'{{"smin": 38000, "cur": "{written}", "yrs": 2}}')
+    assert facts.currency == iso
+    assert facts.years_required_min == 2
