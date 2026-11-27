@@ -27,9 +27,14 @@ BODY = (
 @dataclass
 class FakeExchange:
     published: list[tuple[str, int]] = field(default_factory=list)
+    messages: list[Any] = field(default_factory=list)
+    fail: bool = False
 
     async def publish(self, message: Any, routing_key: str) -> None:
+        if self.fail:
+            raise ConnectionError("broker gone")
         self.published.append((routing_key, message.headers["x-attempt"]))
+        self.messages.append(message)
 
 
 @dataclass
@@ -48,9 +53,13 @@ class FakeMessage:
     headers: dict[str, Any]
     acked: bool = False
     content_encoding: str | None = None
+    requeued: bool = False
 
     async def ack(self) -> None:
         self.acked = True
+
+    async def nack(self, requeue: bool = True) -> None:
+        self.requeued = requeue
 
 
 class FailingIndexer:
@@ -112,3 +121,40 @@ async def test_corrupt_gzip_goes_to_dlq() -> None:
     msg = FakeMessage(b"not gzip", {}, content_encoding="gzip")
     await Worker(OkIndexer(), channel).handle(msg)  # type: ignore[arg-type]
     assert channel.default_exchange.published == [(messaging.DLQ, 0)]
+
+
+@pytest.mark.asyncio
+async def test_corrupt_gzip_keeps_encoding_and_headers_in_dlq() -> None:
+    channel = FakeChannel()
+    msg = FakeMessage(b"not gzip", {"source": "ingestor"}, content_encoding="gzip")
+    await Worker(OkIndexer(), channel).handle(msg)  # type: ignore[arg-type]
+    [dead] = channel.default_exchange.messages
+    assert dead.body == b"not gzip"
+    assert dead.content_encoding == "gzip"
+    assert dead.headers["source"] == "ingestor"
+    assert dead.headers["x-error"] == "UndecodableBody"
+
+
+@pytest.mark.asyncio
+async def test_permanent_failure_records_error_in_dlq() -> None:
+    channel = FakeChannel()
+    msg = FakeMessage(BODY, {"x-attempt": len(messaging.RETRY_DELAYS_S)})
+    await Worker(FailingIndexer(), channel).handle(msg)  # type: ignore[arg-type]
+    [dead] = channel.default_exchange.messages
+    assert dead.headers["x-error"] == "RuntimeError"
+
+
+@pytest.mark.asyncio
+async def test_failed_retry_publish_requeues_message() -> None:
+    channel = FakeChannel(retry=FakeExchange(fail=True))
+    msg = FakeMessage(BODY, {})
+    await Worker(FailingIndexer(), channel).handle(msg)  # type: ignore[arg-type]
+    assert msg.requeued and not msg.acked
+
+
+@pytest.mark.asyncio
+async def test_failed_dlq_publish_requeues_message() -> None:
+    channel = FakeChannel(default_exchange=FakeExchange(fail=True))
+    msg = FakeMessage(b"{not json", {})
+    await Worker(OkIndexer(), channel).handle(msg)  # type: ignore[arg-type]
+    assert msg.requeued and not msg.acked

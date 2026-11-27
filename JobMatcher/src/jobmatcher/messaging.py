@@ -19,7 +19,7 @@ import zlib
 from collections.abc import Mapping
 
 import aio_pika
-from aio_pika.abc import AbstractChannel, AbstractExchange
+from aio_pika.abc import AbstractChannel, AbstractExchange, FieldValue
 
 EXCHANGE = "jobs"
 RETRY_EXCHANGE = "jobs.retry"
@@ -59,12 +59,19 @@ async def declare_topology(channel: AbstractChannel) -> AbstractExchange:
     return exchange
 
 
-def message(body: bytes, attempt: int = 0) -> aio_pika.Message:
+def message(
+    body: bytes,
+    attempt: int = 0,
+    *,
+    content_encoding: str | None = None,
+    headers: Mapping[str, FieldValue] | None = None,
+) -> aio_pika.Message:
     return aio_pika.Message(
         body,
         content_type="application/json",
+        content_encoding=content_encoding,
         delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
-        headers={"x-attempt": attempt},
+        headers={**(headers or {}), "x-attempt": attempt},
     )
 
 

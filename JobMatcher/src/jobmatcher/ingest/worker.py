@@ -3,6 +3,7 @@ import logging
 
 import aio_pika
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
+from aio_pika.exceptions import AMQPError, ChannelInvalidStateError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -25,13 +26,22 @@ class Worker:
         self.channel = channel
 
     async def handle(self, msg: AbstractIncomingMessage) -> None:
+        try:
+            await self._handle(msg)
+        except Exception:  # noqa: BLE001 - consumer boundary: an unsettled message pins a prefetch slot
+            log.exception("could not settle message, requeueing")
+            await _requeue(msg)
+
+    async def _handle(self, msg: AbstractIncomingMessage) -> None:
         attempt = messaging.attempt_of(msg.headers)
         try:
             body = messaging.decode_body(msg.body, msg.content_encoding)
             posting = RawPosting.model_validate_json(body)
-        except (ValidationError, messaging.UndecodableBody):
+        except (ValidationError, messaging.UndecodableBody) as exc:
             log.error("malformed message, sending to DLQ")
-            await self._publish(messaging.DLQ, msg.body, attempt, default_exchange=True)
+            await self._dead_letter(
+                msg, msg.body, msg.content_encoding, attempt, type(exc).__name__
+            )
             await msg.ack()
             return
 
@@ -44,27 +54,39 @@ class Worker:
                 result.job_id,
                 result.changed,
             )
-        except Exception:  # noqa: BLE001 - consumer boundary: any failure is retried, then DLQ'd
+        except Exception as exc:  # noqa: BLE001 - consumer boundary: any failure is retried, then DLQ'd
             next_attempt = attempt + 1
             if next_attempt <= len(messaging.RETRY_DELAYS_S):
                 log.exception("indexing failed, retry %d scheduled", next_attempt)
-                await self._publish(str(next_attempt), body, next_attempt)
+                exchange = await self.channel.get_exchange(messaging.RETRY_EXCHANGE)
+                retry = messaging.message(body, next_attempt)
+                await exchange.publish(retry, routing_key=str(next_attempt))
             else:
                 log.exception("indexing failed permanently, sending to DLQ")
-                await self._publish(messaging.DLQ, body, attempt, default_exchange=True)
+                await self._dead_letter(msg, body, None, attempt, type(exc).__name__)
         # Ack only after the retry/DLQ publish succeeded; if that publish raises, the
-        # message is redelivered instead of lost.
+        # message is requeued instead of lost.
         await msg.ack()
 
-    async def _publish(
-        self, routing_key: str, body: bytes, attempt: int, default_exchange: bool = False
+    async def _dead_letter(
+        self,
+        msg: AbstractIncomingMessage,
+        body: bytes,
+        encoding: str | None,
+        attempt: int,
+        error: str,
     ) -> None:
-        exchange = (
-            self.channel.default_exchange
-            if default_exchange
-            else await self.channel.get_exchange(messaging.RETRY_EXCHANGE)
+        dead = messaging.message(
+            body, attempt, content_encoding=encoding, headers={**msg.headers, "x-error": error}
         )
-        await exchange.publish(messaging.message(body, attempt), routing_key=routing_key)
+        await self.channel.default_exchange.publish(dead, routing_key=messaging.DLQ)
+
+
+async def _requeue(msg: AbstractIncomingMessage) -> None:
+    try:
+        await msg.nack(requeue=True)
+    except (AMQPError, ChannelInvalidStateError, OSError):
+        log.exception("could not requeue message; the broker redelivers it when the channel closes")
 
 
 def build_extractor() -> Extractor:
