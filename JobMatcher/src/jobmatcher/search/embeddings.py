@@ -11,6 +11,7 @@ from jobmatcher.config import get_settings
 
 class Embedder(Protocol):
     dim: int
+    model_name: str
 
     async def embed_documents(self, texts: list[str]) -> list[list[float]]: ...
 
@@ -32,6 +33,7 @@ class E5Embedder:
                 f"but EMBEDDING_DIM is {dim}"
             )
         self.dim = dim
+        self.model_name = model_name
 
     def _encode(self, texts: list[str]) -> list[list[float]]:
         vectors = self._model.encode(texts, normalize_embeddings=True, batch_size=16)
@@ -51,6 +53,7 @@ class HashingEmbedder:
 
     def __init__(self, dim: int) -> None:
         self.dim = dim
+        self.model_name = f"hashing-{dim}"
 
     def _embed(self, text: str) -> list[float]:
         vector = [0.0] * self.dim

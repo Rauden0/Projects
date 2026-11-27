@@ -26,6 +26,12 @@ Both carry the optional envelope fields of `InboundEvent`:
 | `event_id` | string | `null` | producer's id of the event, for logs and deduplication |
 | `crawled_at` | RFC 3339 timestamp | `null` | when the data was fetched; a naive timestamp is read as UTC |
 
+`crawled_at` orders events. A `job.discovered` crawled before the stored posting's
+`crawled_at` (a stale retry from `job.discovered.retry.*`) changes nothing, and a complete
+`source.crawled` closes only jobs whose `crawled_at` (else `last_seen_at`) is before its own
+`crawled_at`, so it cannot close a posting crawled after the listing. When either side has
+no `crawled_at` the old behaviour applies: last write wins, and everything not listed closes.
+
 ### Compatibility rules
 
 - Version 1 is the current contract. Messages without the envelope fields are version 1.

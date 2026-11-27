@@ -26,6 +26,7 @@ from jobmatcher.ingest.extraction import (
     COMPACT_SCHEMA,
     EXTRACTION_MAX_TOKENS,
     EXTRACTION_SYSTEM,
+    EXTRACTION_VERSION,
     extraction_prompt,
     parse_compact,
 )
@@ -171,7 +172,8 @@ class BatchExtraction:
             await self.mark(outcome.job_id, content_hash, {"extraction_status": "batch_failed"})
             return 0
         values = outcome.facts.model_dump(exclude={"languages_required"})
-        return await self.mark(outcome.job_id, content_hash, {**values, "extraction_status": "ok"})
+        values |= {"extraction_status": "ok", "extraction_version": EXTRACTION_VERSION}
+        return await self.mark(outcome.job_id, content_hash, values)
 
     async def mark(self, job_id: int, content_hash: bytes, values: dict[str, Any]) -> int:
         stmt = (

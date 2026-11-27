@@ -37,7 +37,7 @@ class ListingSyncConsumer:
         async with self.sessionmaker() as session, session.begin():
             source_id = await repository.get_or_create_source(session, event.kind, event.source)
             result = await repository.sync_listing(
-                session, source_id, set(event.external_ids), event.complete
+                session, source_id, set(event.external_ids), event.complete, event.crawled_at
             )
         log.info("%s/%s: %d reopened, %d closed", event.kind, event.source, *_counts(result))
         return result

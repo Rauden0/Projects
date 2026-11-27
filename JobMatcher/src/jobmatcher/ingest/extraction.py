@@ -269,6 +269,9 @@ def extraction_prompt(title: str, location: str | None, text: str) -> str:
 # The JSON itself is ~120 tokens; reasoning models (gpt-oss) think first and need headroom,
 # otherwise the answer is cut off and every posting falls back to heuristics.
 EXTRACTION_MAX_TOKENS = 1024
+# Stored per job; bump it when EXTRACTION_SYSTEM or the schema changes so that
+# `reextract --outdated` redoes the jobs extracted with an older version.
+EXTRACTION_VERSION = 1
 
 
 class LLMExtractor:

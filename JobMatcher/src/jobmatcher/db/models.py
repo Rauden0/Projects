@@ -74,6 +74,7 @@ class Job(Base):
     required_skills: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
     nice_to_have_skills: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
     extraction_status: Mapped[str] = mapped_column(Text, server_default="pending")
+    extraction_version: Mapped[int | None] = mapped_column(SmallInteger)
 
     status: Mapped[str] = mapped_column(Text, server_default="open")
     first_seen_at: Mapped[datetime] = mapped_column(
@@ -82,6 +83,7 @@ class Job(Base):
     last_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    crawled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     chunks: Mapped[list["JobChunk"]] = relationship(
         back_populates="job", cascade="all, delete-orphan", order_by="JobChunk.ord"
@@ -107,6 +109,7 @@ class JobChunk(Base):
     section: Mapped[str | None] = mapped_column(Text)
     content: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+    embedding_model: Mapped[str | None] = mapped_column(Text)
     tsv: Mapped[str] = mapped_column(
         TSVECTOR, Computed("to_tsvector('simple', content)", persisted=True)
     )
