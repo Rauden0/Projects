@@ -55,3 +55,9 @@ def test_search_passes_filters(monkeypatch) -> None:  # type: ignore[no-untyped-
 def test_search_validates_query() -> None:
     app = create_app()
     assert TestClient(app).get("/jobs/search", params={"q": "x"}).status_code == 422
+
+
+def test_job_id_outside_bigint_is_422() -> None:
+    app = create_app()
+    assert TestClient(app).get("/jobs/99999999999999999999").status_code == 422
+    assert TestClient(app).get("/jobs/0").status_code == 422

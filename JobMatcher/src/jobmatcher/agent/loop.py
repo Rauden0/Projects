@@ -8,6 +8,8 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from jobmatcher import telemetry
 from jobmatcher.agent.tools import Toolbox
 from jobmatcher.errors import BudgetExceeded, LLMError, ToolError
@@ -21,6 +23,7 @@ MAX_CALLS_PER_ROUND = 3
 COMPACT_CHARS = 600
 UNTRUSTED_OPEN, UNTRUSTED_CLOSE = "<untrusted_data>\n", "\n</untrusted_data>"
 LLM_ERROR_MESSAGE = "The language model request failed, try again later."
+TOOL_FAILURE_MESSAGE = "The job index is unavailable, try again later."
 BUDGET_MESSAGE = "The chat budget is used up, try again later."
 FINAL_ROUND_NOTE = "No more tool calls are available. Answer now using only the results above."
 
@@ -111,7 +114,12 @@ async def run_agent(
         for i, use in enumerate(tool_uses):
             name, tool_input, use_id = _block(use, "name"), _block(use, "input"), _block(use, "id")
             yield AgentEvent("tool_call", {"name": name, "input": tool_input})
-            output, is_error = await _call_tool(toolbox, i, name, tool_input, use_id)
+            try:
+                output, is_error = await _call_tool(toolbox, i, name, tool_input, use_id)
+            except (SQLAlchemyError, OSError) as exc:
+                log.warning("agent stopped in round %d: tool %s failed: %s", round_no, name, exc)
+                yield AgentEvent("error", {"message": TOOL_FAILURE_MESSAGE})
+                return
             yield AgentEvent(
                 "tool_result",
                 {

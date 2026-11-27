@@ -3,9 +3,12 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
+from sqlalchemy.exc import DBAPIError
 
 from jobmatcher.agent import loop
 from jobmatcher.agent.loop import run_agent
+from jobmatcher.agent.tools import CompareInput, GetJobInput
 from jobmatcher.errors import BudgetExceeded, LLMError, ToolError
 
 
@@ -124,6 +127,27 @@ async def test_exhausted_budget_error_event_hides_the_numbers() -> None:
 
     events = await collect(BrokeModel(), FakeToolbox())
     assert events[0].data == {"message": loop.BUDGET_MESSAGE}
+
+
+@pytest.mark.asyncio
+async def test_database_failure_in_a_tool_ends_the_turn_with_an_error_event() -> None:
+    class BrokenToolbox(FakeToolbox):
+        async def call(self, name: str, raw: dict[str, Any]) -> Any:
+            raise DBAPIError("SELECT", {}, OverflowError("value out of int64 range"))
+
+    model = ScriptedModel([tool_use("t1", "get_job", job_id=1)])
+    events = await collect(model, BrokenToolbox())
+
+    assert [e.type for e in events] == ["tool_call", "error"]
+    assert events[-1].data == {"message": loop.TOOL_FAILURE_MESSAGE}
+
+
+@pytest.mark.parametrize("job_id", [0, 2**63, 99999999999999999999])
+def test_job_id_outside_bigint_is_rejected(job_id: int) -> None:
+    with pytest.raises(ValidationError):
+        GetJobInput.model_validate({"job_id": job_id})
+    with pytest.raises(ValidationError):
+        CompareInput.model_validate({"job_id": job_id})
 
 
 @pytest.mark.asyncio

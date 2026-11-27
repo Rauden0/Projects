@@ -1,7 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Path, Query
 
+from jobmatcher.agent.tools import MAX_JOB_ID
 from jobmatcher.api.deps import EmbedderDep, SessionDep
 from jobmatcher.api.errors import ERROR_RESPONSES
 from jobmatcher.api.schemas import JobDetail
@@ -37,5 +38,5 @@ async def search(
 
 
 @router.get("/{job_id}", response_model=JobDetail)
-async def get_job(job_id: int, session: SessionDep) -> Job:
+async def get_job(job_id: Annotated[int, Path(ge=1, le=MAX_JOB_ID)], session: SessionDep) -> Job:
     return await repository.get_job(session, job_id)

@@ -167,3 +167,10 @@ async def test_database_outage_is_an_error_result() -> None:
 
     assert result.is_error
     assert result.content[0].text == "the job index is unavailable, try again later"  # type: ignore[union-attr]
+
+
+async def test_out_of_range_job_id_is_an_error_result(client: Client) -> None:
+    async with client:
+        result = await client.call_tool("get_job", {"job_id": 99999999999999999999})
+
+    assert result.is_error

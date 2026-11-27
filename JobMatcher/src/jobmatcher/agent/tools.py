@@ -1,5 +1,5 @@
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -13,6 +13,9 @@ from jobmatcher.search.hybrid import THIN_DESCRIPTION_CHARS, SearchFilters, Sear
 
 MAX_K = 6
 REMOTE_POLICIES = ["remote_country", "remote_region", "remote_global"]
+MAX_JOB_ID = 2**63 - 1
+
+JobId = Annotated[int, Field(ge=1, le=MAX_JOB_ID)]
 
 
 class SearchJobsInput(SearchFilters):
@@ -23,11 +26,11 @@ class SearchJobsInput(SearchFilters):
 
 
 class GetJobInput(BaseModel):
-    job_id: int
+    job_id: JobId
 
 
 class CompareInput(BaseModel):
-    job_id: int
+    job_id: JobId
 
 
 class Toolbox:
