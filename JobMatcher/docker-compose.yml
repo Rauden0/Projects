@@ -23,21 +23,15 @@ services:
       retries: 10
 
   # Local LLM. First run: docker compose exec ollama ollama pull qwen2.5:7b
+  # CPU only here; with an NVIDIA GPU add -f docker-compose.gpu.yml.
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.40.18
     ports: ["127.0.0.1:11434:11434"]
     environment:
       # The default 4096-token window is silently truncated from the start (the system prompt)
       # once a chat has a few turns: one agent question alone reaches ~3.3k tokens.
       OLLAMA_CONTEXT_LENGTH: "8192"
     volumes: [ollama:/root/.ollama]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
   migrate:
     build: .

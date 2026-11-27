@@ -48,6 +48,9 @@ docker compose up --build
 docker compose exec ollama ollama pull qwen2.5:7b   # once, ~4.7 GB
 ```
 
+Ollama runs on the CPU by default. With an NVIDIA GPU (and the NVIDIA Container Toolkit) add the
+override: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build`.
+
 Any OpenAI-compatible endpoint works (`LLM_BASE_URL`, e.g. Groq or Gemini), and Anthropic
 via `LLM_PROVIDER=anthropic` — see [`.env.example`](.env.example). Without a reachable LLM,
 ingestion falls back to heuristic extraction; only `/chat` needs the model.
