@@ -32,6 +32,7 @@ def app(sessionmaker: async_sessionmaker[AsyncSession], monkeypatch: pytest.Monk
         yield
 
     monkeypatch.setattr(chat_route, "get_llm", lambda *_, **__: object())
+    monkeypatch.setattr(chat_route, "cv_extractor", lambda _: None)
     monkeypatch.setattr(chat_route, "chat_events", no_events)
     app = create_app()
     app.dependency_overrides[deps.get_session] = session

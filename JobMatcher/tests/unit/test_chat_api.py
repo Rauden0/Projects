@@ -182,3 +182,47 @@ def test_post_without_content_type_is_rejected_as_csrf() -> None:
 def test_cross_site_delete_is_rejected() -> None:
     response = make_client().delete(f"/cv/{uuid.uuid4()}", headers={"sec-fetch-site": "cross-site"})
     assert response.status_code == 403
+
+
+def _record_upload(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
+    extractors: list[Any] = []
+
+    async def fake_create(_: Any, __: Any, text: str, owner_id: str, extractor: Any) -> Any:
+        extractors.append((owner_id, extractor))
+        return uuid.uuid4(), chat_route.CvProfile(source="heuristic")
+
+    monkeypatch.setattr(chat_route, "create_cv", fake_create)
+    return extractors
+
+
+def test_upload_cv_uses_the_extraction_llm(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    purposes: list[str] = []
+
+    def fake_get_llm(purpose: str, **_: Any) -> object:
+        purposes.append(purpose)
+        return object()
+
+    monkeypatch.setattr(chat_route, "get_llm", fake_get_llm)
+    uploads = _record_upload(monkeypatch)
+    response = make_client().post("/cv", json={"text": "Python developer " * 5})
+    assert response.status_code == 201
+    assert response.json()["profile"]["source"] == "heuristic"
+    assert purposes == ["extraction"]
+    owner, extractor = uploads[0]
+    assert owner.startswith("session:")
+    assert isinstance(extractor, chat_route.LLMCvExtractor)
+
+
+def test_upload_cv_without_llm_or_when_disabled_uses_heuristics(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(chat_route, "get_llm", lambda *_, **__: None)
+    uploads = _record_upload(monkeypatch)
+    make_client().post("/cv", json={"text": "Python developer " * 5})
+    monkeypatch.setattr(chat_route, "get_llm", lambda *_, **__: object())
+    monkeypatch.setenv("CV_LLM_EXTRACTION", "false")
+    chat_route.get_settings.cache_clear()
+    try:
+        make_client().post("/cv", json={"text": "Python developer " * 5})
+    finally:
+        monkeypatch.delenv("CV_LLM_EXTRACTION")
+        chat_route.get_settings.cache_clear()
+    assert [extractor for _, extractor in uploads] == [None, None]

@@ -85,6 +85,9 @@ class Settings(BaseSettings):
     # Prompts, completions and tool arguments and results on spans: CV and posting text.
     otel_capture_content: bool = False
 
+    # Sends the uploaded CV text to the extraction LLM once to build its profile.
+    cv_llm_extraction: bool = True
+
     @model_validator(mode="after")
     def _consistent(self) -> Self:
         if self.embedding_dim != EMBEDDING_DIM:

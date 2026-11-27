@@ -1,9 +1,16 @@
+import logging
 import re
 from datetime import date
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
+from jobmatcher.cv.extraction import ExtractedCv
+from jobmatcher.domain import Seniority
+from jobmatcher.errors import BudgetExceeded, ExtractionError, LLMError
 from jobmatcher.ingest.extraction import HeuristicExtractor
+
+log = logging.getLogger(__name__)
 
 _RANGE_RE = re.compile(
     r"(?P<m1>\d{1,2})/(?P<y1>\d{4})\s*[-–—]\s*(?:(?P<m2>\d{1,2})/(?P<y2>\d{4})|present|now|současnost)",
@@ -11,12 +18,23 @@ _RANGE_RE = re.compile(
 )
 _LANG_RE = re.compile(r"\b(English|Czech|German|Slovak|Russian|Polish|French)\b", re.I)
 
+ProfileSource = Literal["llm", "heuristic"]
+
+
+class CvExtractor(Protocol):
+    async def extract(self, text: str) -> ExtractedCv: ...
+
 
 class CvProfile(BaseModel):
     skills: list[str] = Field(default_factory=list)
     years_experience: float = 0.0
     languages: list[str] = Field(default_factory=list)
+    language_levels: dict[str, str] = Field(default_factory=dict)
     city: str | None = None
+    seniority: Seniority | None = None
+    desired_roles: list[str] = Field(default_factory=list)
+    # Profiles stored before LLM extraction have no source and were all heuristic.
+    source: ProfileSource = "heuristic"
 
 
 def _experience_years(text: str, today: date) -> float:
@@ -31,7 +49,7 @@ def _experience_years(text: str, today: date) -> float:
     return round(months / 12, 1)
 
 
-async def build_profile(text: str, today: date | None = None) -> CvProfile:
+async def heuristic_profile(text: str, today: date | None = None) -> CvProfile:
     facts = await HeuristicExtractor().extract("", None, text)
     return CvProfile(
         skills=facts.tech_stack,
@@ -39,6 +57,40 @@ async def build_profile(text: str, today: date | None = None) -> CvProfile:
         languages=sorted({m.group(1).capitalize() for m in _LANG_RE.finditer(text)}),
         city=facts.office_city,
     )
+
+
+def merge_profiles(llm: ExtractedCv, heuristic: CvProfile) -> CvProfile:
+    """The LLM fields win; the heuristic fills what the LLM left empty, and its skills are
+    added because its keyword list is precise even where it misses most of a CV."""
+    levels = {lang.name.strip().capitalize(): lang.level for lang in llm.langs}
+    return CvProfile(
+        skills=list(dict.fromkeys([*llm.skills, *heuristic.skills])),
+        years_experience=heuristic.years_experience if llm.years is None else llm.years,
+        languages=sorted({*levels, *heuristic.languages}),
+        language_levels={name: level for name, level in levels.items() if level},
+        city=llm.city or heuristic.city,
+        seniority=llm.sen,
+        desired_roles=llm.roles,
+        source="llm",
+    )
+
+
+async def build_profile(
+    text: str, today: date | None = None, extractor: CvExtractor | None = None
+) -> CvProfile:
+    heuristic = await heuristic_profile(text, today)
+    if extractor is None:
+        return heuristic
+    try:
+        extracted = await extractor.extract(text)
+    except (LLMError, ExtractionError, BudgetExceeded) as exc:
+        log.warning(
+            "cv_extraction_fallback error=%s",
+            type(exc).__name__,
+            extra={"event": "cv_extraction_fallback", "error": type(exc).__name__},
+        )
+        return heuristic
+    return merge_profiles(extracted, heuristic)
 
 
 class Comparison(BaseModel):

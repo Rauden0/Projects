@@ -17,7 +17,9 @@ from jobmatcher.api.deps import (
     reject_cross_site,
 )
 from jobmatcher.api.errors import ERROR_RESPONSES
-from jobmatcher.cv.profile import CvProfile
+from jobmatcher.config import get_settings
+from jobmatcher.cv.extraction import LLMCvExtractor
+from jobmatcher.cv.profile import CvExtractor, CvProfile
 from jobmatcher.cv.service import create_cv, delete_cv, profile_summary
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.errors import LLMUnavailable
@@ -58,11 +60,23 @@ class ChatIn(BaseModel):
         return self
 
 
+def cv_extractor(client_id: str) -> CvExtractor | None:
+    if not get_settings().cv_llm_extraction:
+        return None
+    llm = get_llm("extraction", client_id=client_id)
+    return None if llm is None else LLMCvExtractor(llm)
+
+
 @router.post("/cv", response_model=CvOut, status_code=201)
 async def upload_cv(
-    body: CvIn, session: SessionDep, embedder: EmbedderDep, principal: PrincipalDep
+    body: CvIn,
+    session: SessionDep,
+    embedder: EmbedderDep,
+    principal: PrincipalDep,
+    client_id: ClientKeyDep,
 ) -> CvOut:
-    cv_id, profile = await create_cv(session, embedder, body.text, principal)
+    extractor = cv_extractor(client_id)
+    cv_id, profile = await create_cv(session, embedder, body.text, principal, extractor)
     return CvOut(cv_id=cv_id, profile=profile)
 
 
