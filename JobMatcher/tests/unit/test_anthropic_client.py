@@ -4,8 +4,9 @@ from typing import Any
 
 import pytest
 
-from jobmatcher.budget.guard import BudgetExceeded, BudgetGuard, BudgetPolicy
+from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy
 from jobmatcher.budget.pricing import TokenUsage
+from jobmatcher.errors import BudgetExceeded
 from jobmatcher.llm import AnthropicClient, usage_of
 
 
@@ -100,3 +101,20 @@ async def test_exhausted_budget_blocks_the_call() -> None:
     with pytest.raises(BudgetExceeded):
         await llm.complete(system="s", user="u")
     assert not sdk.messages.calls
+
+
+async def test_sdk_errors_become_llm_error() -> None:
+    import anthropic
+    import httpx
+
+    from jobmatcher.errors import LLMError
+
+    class FailingMessages:
+        async def create(self, **_: Any) -> None:
+            raise anthropic.APIConnectionError(request=httpx.Request("POST", "http://x"))
+
+    llm = AnthropicClient(
+        "key", "claude-haiku-5-5", sdk=SimpleNamespace(messages=FailingMessages())
+    )
+    with pytest.raises(LLMError):
+        await llm.complete(system="s", user="u")

@@ -146,3 +146,89 @@ def test_retry_delay_reads_body_hint() -> None:
     assert _retry_delay(httpx.Response(429, json=body)) == 19.79
     assert _retry_delay(httpx.Response(429, headers={"retry-after": "3"})) == 3.0
     assert _retry_delay(httpx.Response(429, json={})) == 10.0
+
+
+def _client(handler: Any, **kwargs: Any) -> OpenAICompatClient:
+    http = httpx.AsyncClient(base_url="http://ollama/v1", transport=httpx.MockTransport(handler))
+    return OpenAICompatClient("http://ollama/v1", "qwen2.5:7b", http=http, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_complete_json_sends_schema_as_response_format() -> None:
+    sent: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    schema = {"type": "object"}
+    await _client(handler).complete_json(system="s", user="u", schema=schema)
+    await _client(handler, structured_output=False).complete_json(
+        system="s", user="u", schema=schema
+    )
+
+    assert sent[0]["response_format"]["json_schema"]["schema"] == schema
+    assert "response_format" not in sent[1]
+
+
+@pytest.mark.asyncio
+async def test_usage_is_metered_and_recorded() -> None:
+    from jobmatcher.budget.pricing import TokenUsage
+    from jobmatcher.observability import UsageMeter
+
+    records: list[dict[str, Any]] = []
+
+    class Ledger:
+        async def record(self, **entry: Any) -> float:
+            records.append(entry)
+            return 0.0
+
+    body = {
+        "choices": [{"message": {"content": "ok"}}],
+        "usage": {"prompt_tokens": 120, "completion_tokens": 30},
+    }
+    meter = UsageMeter()
+    client = _client(
+        lambda _: httpx.Response(200, json=body),
+        ledger=Ledger(),
+        meter=meter,
+        purpose="chat",
+        client_id="c1",
+    )
+    await client.complete(system="s", user="u")
+
+    assert (meter.input_tokens, meter.output_tokens) == (120, 30)
+    assert meter.calls[0].ok and meter.calls[0].purpose == "chat"
+    assert records == [
+        {"purpose": "chat", "model": "qwen2.5:7b", "usage": TokenUsage(120, 30), "client_id": "c1"}
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(500, text="boom"),
+        httpx.Response(200, json={"choices": []}),
+        httpx.Response(200, text="not json"),
+    ],
+)
+async def test_provider_failures_become_llm_error(response: httpx.Response) -> None:
+    from jobmatcher.errors import LLMError
+    from jobmatcher.observability import UsageMeter
+
+    meter = UsageMeter()
+    with pytest.raises(LLMError):
+        await _client(lambda _: response, meter=meter).complete(system="s", user="u")
+    assert [c.ok for c in meter.calls] == [False]
+
+
+@pytest.mark.asyncio
+async def test_network_error_becomes_llm_error() -> None:
+    from jobmatcher.errors import LLMError
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused", request=request)
+
+    with pytest.raises(LLMError):
+        await _client(handler).complete(system="s", user="u")
