@@ -63,6 +63,9 @@ ingestion falls back to heuristic extraction; only `/chat` needs the model.
 
 Every port is published on `127.0.0.1` only. For a public deployment (one VPS, Caddy with TLS,
 a hosted LLM, the image from GHCR, nightly backups) see [docs/deploy.md](docs/deploy.md).
+Behind a proxy set `FORWARDED_ALLOW_IPS` to the proxy's address: uvicorn runs with
+`--proxy-headers` and trusts `X-Forwarded-For` only from there, so the per-client chat limits
+count real clients instead of the proxy. Never `*` while the API is reachable directly.
 
 Crawling runs in [JobIngestor](../JobIngestor): a separate service with a source registry, a
 planner and horizontally scaled crawlers. It publishes `job.discovered` (only new or changed
