@@ -19,7 +19,7 @@ Work on branch `chore/enterprise-hardening` (from `dev`). Tick items as they lan
   - [x] `llm_call`, `chat_turn`, `http_request` events; `LOG_FORMAT=json`; `X-Request-ID`
   - [x] OpenAI-compatible providers (Ollama, Groq) now recorded in `llm_usage` — per-client token limits and the budget did not apply to them before
   - [x] the API process configures logging at all (it did not)
-  - [ ] OpenTelemetry GenAI spans + optional Phoenix compose profile (ADR 0001) — not done: optional, the structured `llm_call` / `chat_turn` logs cover the numbers for now
+  - [x] OpenTelemetry GenAI spans + optional Phoenix compose profile (ADR 0001 F3, see below)
 - [x] mypy strict green (8 errors had accumulated; CI never ran mypy)
 - [x] Add `CODING_GUIDELINES.md` + `CLAUDE.md` consistent with JobIngestor; CI workflow (lint, mypy, tests)
   - [x] CI: the workflow lives at `Projects/.github/` (outside this folder), so the replacement is documented in `docs/ci.md` instead of edited
@@ -45,10 +45,13 @@ Work on branch `chore/enterprise-hardening` (from `dev`). Tick items as they lan
 ## ADR 0001 follow-ups
 - [x] F1 doc drift: `MAX_ROUNDS` = 4, sequential tool calls, two providers, §14 row links the ADR
 - [x] F2 `response_format` json_schema on the OpenAI-compatible path
-- [ ] F3 OpenTelemetry GenAI spans (`chat`, `chat {model}`, `execute_tool {name}`) + optional `phoenix` compose profile
+- [x] F3 OpenTelemetry GenAI spans (`chat`, `chat {model}`, `execute_tool {name}`) + optional `phoenix` compose profile
+  - [x] no-op unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set; `opentelemetry-api` in core, SDK + OTLP exporter in the `otel` extra; no content unless `OTEL_CAPTURE_CONTENT=true`
+  - [x] smoke run: qwen2.5:7b traces reached Phoenix; Phoenix 22.1 turns auth on by default, so the profile turns it off and binds 127.0.0.1
+  - [ ] Message Batches extraction is not traced (it bypasses `_send`); export from the API container inside compose not smoke-tested; captured content is stored in the provider format, not the semconv message format
 - [x] F4 extraction eval (`eval/run_extraction.py`)
 - [x] F5 agent eval (`eval/run_agent.py`)
 - [ ] F6 prompt-injection suite: postings with injected instructions, the agent must not follow them
-- [ ] F7 MCP server exposing `search_jobs` / `get_job` (exists on `main` from before the refactor, not on `dev`)
+- [x] F7 MCP server exposing `search_jobs` / `get_job`: `jobmatcher-mcp` (stdio, or `--http` on 127.0.0.1), schemas taken from `Toolbox`, `mcp` extra; smoke-tested against `jobmatcher_eval`
 - [x] F8 budget parity for OpenAI-compatible providers
 - [ ] F9 DSPy / GEPA offline for the local extraction prompt — later, only if the extraction numbers call for it
