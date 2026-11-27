@@ -13,4 +13,7 @@ RUN pip install --no-cache-dir ".[llm,embeddings,otel]"
 COPY alembic.ini ./
 COPY alembic ./alembic
 
+RUN useradd --create-home --uid 10001 app && mkdir -p /models && chown app:app /models
+USER app
+
 CMD ["uvicorn", "jobmatcher.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
