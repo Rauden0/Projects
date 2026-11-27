@@ -82,6 +82,7 @@ class Indexer:
             description=text,
             content_hash=digest,
             crawled_at=posting.crawled_at,
+            source=posting.source,
         )
         derivation = repository.Derivation(
             EXTRACTION_VERSION if status == "ok" else None, self.embedder.model_name

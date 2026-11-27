@@ -3,22 +3,23 @@
 Rows are locked with FOR UPDATE SKIP LOCKED, so several relays can run side by side, and are
 marked published in the same transaction only after the broker confirmed the publish. If the
 relay dies between confirm and commit, the row is published again: consumers must be
-idempotent, which they are (events carry ids, not deltas).
+idempotent, which they can be by deduplicating on the envelope's event_id (the outbox id).
 """
 
 import asyncio
-import json
 import logging
+from typing import Any
 
 import aio_pika
 from aio_pika.abc import AbstractExchange
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from jobmatcher import messaging
+from jobmatcher import messaging, metrics
 from jobmatcher.config import configure_logging, get_settings
 from jobmatcher.db.models import Outbox
 from jobmatcher.db.session import get_sessionmaker
+from jobmatcher.domain import EventEnvelope
 
 log = logging.getLogger(__name__)
 
@@ -46,8 +47,11 @@ async def relay_batch(
         )
 
         for row in rows:
+            event = envelope(row)
             await exchange.publish(
-                messaging.message(json.dumps(row.payload).encode()),
+                messaging.message(
+                    event.model_dump_json().encode(), message_id=event.event_id, type=event.type
+                ),
                 routing_key=row.topic,
                 timeout=PUBLISH_TIMEOUT_S,
             )
@@ -58,11 +62,19 @@ async def relay_batch(
                 .where(Outbox.id.in_([r.id for r in rows]))
                 .values(published_at=func.now())
             )
+        metrics.recorder.outbox_batch(len(rows), rows[0].created_at if rows else None)
     return len(rows)
+
+
+def envelope(row: Outbox) -> EventEnvelope[dict[str, Any]]:
+    return EventEnvelope(
+        event_id=str(row.id), type=row.topic, occurred_at=row.created_at, data=row.payload
+    )
 
 
 async def main() -> None:
     configure_logging()
+    metrics.serve_from_env()
     connection = await aio_pika.connect_robust(get_settings().amqp_url)
     async with connection:
         channel = await connection.channel(publisher_confirms=True)

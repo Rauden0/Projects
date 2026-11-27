@@ -11,6 +11,8 @@
 
     jobs (topic) --source.crawled--> [job.source_crawled] --> worker (listing sync)
 
+    outbox relay --job.created | job.updated | job.closed--> jobs (topic), no queues yet
+
 One retry queue per delay keeps TTLs uniform within a queue, which avoids the head-of-line
 blocking you get with per-message expiration.
 """
@@ -65,11 +67,15 @@ def message(
     *,
     content_encoding: str | None = None,
     headers: Mapping[str, FieldValue] | None = None,
+    message_id: str | None = None,
+    type: str | None = None,
 ) -> aio_pika.Message:
     return aio_pika.Message(
         body,
         content_type="application/json",
         content_encoding=content_encoding,
+        message_id=message_id,
+        type=type,
         delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
         headers={**(headers or {}), "x-attempt": attempt},
     )

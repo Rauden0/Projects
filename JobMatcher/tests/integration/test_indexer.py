@@ -184,3 +184,25 @@ async def test_fallback_extraction_has_no_version(
     )
     await indexer.index(posting())
     assert (await stored(sessionmaker)).extraction_version is None
+
+
+async def topics(sm: async_sessionmaker[AsyncSession]) -> list[str]:
+    async with sm() as session:
+        return list((await session.execute(select(Outbox.topic).order_by(Outbox.id))).scalars())
+
+
+async def test_new_job_is_created_then_updated_then_closed(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    indexer = make_indexer(sessionmaker)
+    await indexer.index(posting())
+    await indexer.index(posting(description="<p>Go</p>"))
+    async with sessionmaker() as session, session.begin():
+        source_id = await repository.get_or_create_source(session, "greenhouse", "acme")
+        await repository.close_unseen_jobs(session, source_id, {"other"})
+
+    assert await topics(sessionmaker) == ["job.created", "job.updated", "job.closed"]
+    async with sessionmaker() as session:
+        payloads = list((await session.execute(select(Outbox.payload))).scalars())
+    assert {"job_id": 1, "external_id": "1"} in payloads
+    assert payloads[0]["source"] == "acme" and payloads[0]["kind"] == "greenhouse"

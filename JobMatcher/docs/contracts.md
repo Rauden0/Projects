@@ -40,3 +40,36 @@ no `crawled_at` the old behaviour applies: last write wins, and everything not l
 - Renaming, removing or retyping a field, or making an optional field required, is a
   breaking change: bump `schema_version`, have the consumer accept both versions first,
   then switch the producer.
+
+## Outbound (JobMatcher → consumers)
+
+The outbox relay publishes to the `jobs` exchange. No consumer exists yet (a future
+notifier), so there are no queues for these routing keys.
+
+| Routing key | When | `data` | Schema |
+|---|---|---|---|
+| `job.created` | a posting was indexed for the first time | `JobChanged` | [job.created.json](contracts/job.created.json) |
+| `job.updated` | a known posting changed and was re-indexed | `JobChanged` | [job.updated.json](contracts/job.updated.json) |
+| `job.closed` | a complete listing no longer lists the posting | `JobClosed` | [job.closed.json](contracts/job.closed.json) |
+
+Every body is an `EventEnvelope`, modelled on CloudEvents:
+
+```json
+{
+  "event_id": "4711",
+  "type": "job.created",
+  "version": 1,
+  "occurred_at": "2026-11-27T10:00:00.123456Z",
+  "data": {"job_id": 42, "kind": "greenhouse", "source": "acme", "external_id": "123", "url": "https://..."}
+}
+```
+
+- `event_id` is the outbox row id, also set as the AMQP `message_id`. Delivery is
+  at-least-once, so consumers deduplicate on it.
+- `occurred_at` is when the change committed, not when it was published.
+- `type` equals the routing key and the AMQP `type` property.
+- `version` follows the same compatibility rules as the inbound `schema_version`.
+
+These replace the earlier `job.indexed` (bare `{job_id, source, external_id}`, which did not
+tell a new job from a changed one) and the bare `job.closed` `{job_id}`; nothing consumed
+either.

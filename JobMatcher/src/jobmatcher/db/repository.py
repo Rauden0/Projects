@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     ColumnElement,
     Text,
     all_,
@@ -10,6 +11,7 @@ from sqlalchemy import (
     bindparam,
     delete,
     func,
+    literal_column,
     or_,
     select,
     true,
@@ -20,7 +22,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import BindParameter
 
 from jobmatcher.db.models import Cv, Job, JobChunk, LlmUsage, Outbox, Source
-from jobmatcher.domain import Chunk, JobFacts
+from jobmatcher.domain import (
+    JOB_CLOSED,
+    JOB_CREATED,
+    JOB_UPDATED,
+    Chunk,
+    JobChanged,
+    JobClosed,
+    JobFacts,
+)
 from jobmatcher.errors import NotFound
 
 
@@ -35,6 +45,7 @@ class PostingRecord:
     description: str
     content_hash: bytes
     crawled_at: datetime | None = None
+    source: str | None = None
 
 
 @dataclass(frozen=True)
@@ -102,7 +113,7 @@ async def upsert_job(
     embeddings: list[list[float]],
     derivation: Derivation = Derivation(None, None),
 ) -> int | None:
-    """Insert or replace a job and its chunks, and enqueue a job.indexed event.
+    """Insert or replace a job and its chunks, and enqueue a job.created / job.updated event.
 
     Returns None, changing nothing, when the stored job was crawled later than ``record``.
     Must run inside the caller's transaction: the outbox row commits atomically with the data.
@@ -143,11 +154,12 @@ async def upsert_job(
             set_=update_values,
             where=_not_older(record.crawled_at),
         )
-        .returning(Job.id)
+        .returning(Job.id, literal_column("xmax = 0", Boolean).label("inserted"))
     )
-    job_id = (await session.execute(stmt)).scalar_one_or_none()
-    if job_id is None:
+    row = (await session.execute(stmt)).one_or_none()
+    if row is None:
         return None
+    job_id, inserted = row
 
     await session.execute(delete(JobChunk).where(JobChunk.job_id == job_id))
     session.add_all(
@@ -161,11 +173,15 @@ async def upsert_job(
         )
         for c, e in zip(chunks, embeddings, strict=True)
     )
+    changed = JobChanged(
+        job_id=job_id,
+        kind=record.kind,
+        source=record.source or record.company,
+        external_id=record.external_id,
+        url=record.url,
+    )
     session.add(
-        Outbox(
-            topic="job.indexed",
-            payload={"job_id": job_id, "source": record.kind, "external_id": record.external_id},
-        )
+        Outbox(topic=JOB_CREATED if inserted else JOB_UPDATED, payload=changed.model_dump())
     )
     await session.flush()
     return job_id
@@ -189,10 +205,16 @@ async def close_unseen_jobs(
             else true()
         )
         .values(status="closed")
-        .returning(Job.id)
+        .returning(Job.id, Job.external_id)
     )
-    closed = (await session.execute(stmt)).scalars().all()
-    session.add_all(Outbox(topic="job.closed", payload={"job_id": job_id}) for job_id in closed)
+    closed = (await session.execute(stmt)).all()
+    session.add_all(
+        Outbox(
+            topic=JOB_CLOSED,
+            payload=JobClosed(job_id=job_id, external_id=external_id).model_dump(),
+        )
+        for job_id, external_id in closed
+    )
     return len(closed)
 
 

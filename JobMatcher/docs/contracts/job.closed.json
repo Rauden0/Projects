@@ -1,0 +1,54 @@
+{
+  "$defs": {
+    "JobClosed": {
+      "description": "`data` of job.closed: the job left its source's listing.",
+      "properties": {
+        "job_id": {
+          "title": "Job Id",
+          "type": "integer"
+        },
+        "external_id": {
+          "title": "External Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id",
+        "external_id"
+      ],
+      "title": "JobClosed",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "type": {
+      "title": "Type",
+      "type": "string"
+    },
+    "version": {
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "data": {
+      "$ref": "#/$defs/JobClosed"
+    }
+  },
+  "required": [
+    "event_id",
+    "type",
+    "occurred_at",
+    "data"
+  ],
+  "title": "EventEnvelope[JobClosed]",
+  "type": "object"
+}

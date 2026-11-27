@@ -55,6 +55,40 @@ class SourceCrawled(InboundEvent):
     complete: bool
 
 
+EVENT_VERSION = 1
+JOB_CREATED = "job.created"
+JOB_UPDATED = "job.updated"
+JOB_CLOSED = "job.closed"
+
+
+class JobChanged(BaseModel):
+    """`data` of job.created / job.updated: the job is searchable in its new version."""
+
+    job_id: int
+    kind: str
+    source: str
+    external_id: str
+    url: str
+
+
+class JobClosed(BaseModel):
+    """`data` of job.closed: the job left its source's listing."""
+
+    job_id: int
+    external_id: str
+
+
+class EventEnvelope[DataT](BaseModel):
+    """CloudEvents-like wrapper of every event JobMatcher publishes. ``event_id`` is stable
+    across redeliveries, so consumers deduplicate on it."""
+
+    event_id: str
+    type: str
+    version: int = EVENT_VERSION
+    occurred_at: datetime
+    data: DataT
+
+
 class JobFacts(BaseModel):
     seniority: Seniority | None = None
     years_required_min: int | None = Field(default=None, ge=0, le=MAX_YEARS_REQUIRED)

@@ -6,12 +6,15 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel
 
-from jobmatcher.domain import RawPosting, SourceCrawled
+from jobmatcher.domain import EventEnvelope, JobChanged, JobClosed, RawPosting, SourceCrawled
 
 CONTRACTS = Path(__file__).parents[2] / "docs" / "contracts"
 SCHEMAS: dict[str, type[BaseModel]] = {
     "job.discovered.json": RawPosting,
     "source.crawled.json": SourceCrawled,
+    "job.created.json": EventEnvelope[JobChanged],
+    "job.updated.json": EventEnvelope[JobChanged],
+    "job.closed.json": EventEnvelope[JobClosed],
 }
 
 
