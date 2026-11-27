@@ -1,6 +1,6 @@
 import re
 
-from jobmatcher.domain import Chunk
+from jobmatcher.domain import Chunk, JobFacts
 from jobmatcher.ingest.normalize import (
     boilerplate_facts,
     is_boilerplate_heading,
@@ -91,3 +91,17 @@ def chunk_posting(title: str, company: str, text: str) -> list[Chunk]:
     if not chunks:
         chunks.append(Chunk(ord=0, section=None, content=header))
     return chunks
+
+
+PROFILE_SECTION = "profile"
+
+
+def profile_chunk(title: str, company: str, facts: JobFacts, ord: int) -> Chunk | None:
+    """A short synthetic chunk of what the job is (title, seniority, skills): it matches
+    "senior python backend" queries that long prose chunks dilute."""
+    skills = list(dict.fromkeys([*facts.required_skills, *facts.tech_stack]))
+    traits = [t for t in (facts.seniority, facts.remote_policy, facts.office_city) if t]
+    if not (skills or traits):
+        return None
+    lines = [f"{title} — {company}", ", ".join(traits), ", ".join(skills)]
+    return Chunk(ord=ord, section=PROFILE_SECTION, content="\n".join(x for x in lines if x))

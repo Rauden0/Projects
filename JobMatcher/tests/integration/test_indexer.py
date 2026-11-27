@@ -59,7 +59,8 @@ async def test_changed_description_replaces_chunks(
         job = await session.get(Job, result.job_id)
         assert job is not None and job.years_required_min == 5
         chunks = (await session.execute(select(JobChunk))).scalars().all()
-        assert all("Go" in c.content for c in chunks)
+        assert all("go" in c.content.lower() for c in chunks)
+        assert [c.section for c in chunks][-1] == "profile"
     assert await count(sessionmaker, Outbox) == 2
 
 

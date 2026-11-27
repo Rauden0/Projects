@@ -1,4 +1,5 @@
-from jobmatcher.ingest.chunking import chunk_posting
+from jobmatcher.domain import Chunk, JobFacts
+from jobmatcher.ingest.chunking import chunk_posting, profile_chunk
 from jobmatcher.ingest.normalize import content_hash, html_to_text
 
 HTML = """
@@ -57,3 +58,20 @@ def test_boilerplate_is_not_chunked_except_pay_and_work_mode() -> None:
     assert "coffee" not in text and "1990" not in text and "GDPR" not in text
     assert "80 000 Kč" in text and "Home office" in text
     assert "Kafka in production" in text
+
+
+def test_profile_chunk_names_seniority_and_skills_once() -> None:
+    facts = JobFacts(
+        seniority="senior",
+        remote_policy="hybrid",
+        tech_stack=["python", "kafka"],
+        required_skills=["python", "sql"],
+    )
+    chunk = profile_chunk("Backend Engineer", "Acme", facts, ord=3)
+    assert chunk == Chunk(
+        3, "profile", "Backend Engineer — Acme\nsenior, hybrid\npython, sql, kafka"
+    )
+
+
+def test_no_profile_chunk_without_facts() -> None:
+    assert profile_chunk("T", "C", JobFacts(), ord=0) is None

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from jobmatcher.db import repository
 from jobmatcher.domain import RawPosting
 from jobmatcher.errors import BudgetExceeded, ExtractionError, LLMError
-from jobmatcher.ingest.chunking import chunk_posting
+from jobmatcher.ingest.chunking import chunk_posting, profile_chunk
 from jobmatcher.ingest.extraction import EXTRACTION_VERSION, Extractor, HeuristicExtractor
 from jobmatcher.ingest.normalize import content_hash, html_to_text
 from jobmatcher.search.embeddings import Embedder
@@ -70,6 +70,9 @@ class Indexer:
             status = "fallback"
 
         chunks = chunk_posting(posting.title, posting.company, text)
+        profile = profile_chunk(posting.title, posting.company, facts, len(chunks))
+        if profile is not None:
+            chunks.append(profile)
         embeddings = await self.embedder.embed_documents([c.content for c in chunks])
 
         record = repository.PostingRecord(
