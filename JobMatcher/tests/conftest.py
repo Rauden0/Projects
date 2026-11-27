@@ -57,6 +57,7 @@ def fresh_limits() -> None:
         deps.get_stream_slots,
         deps.get_duplicate_guard,
         deps.get_answer_cache,
+        deps.get_captcha,
     ):
         cached.cache_clear()
 

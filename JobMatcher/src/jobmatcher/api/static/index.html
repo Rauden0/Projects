@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Job Matcher</title>
+<meta name="turnstile-site-key" content="">
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"
         integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi"
         crossorigin="anonymous"></script>
@@ -67,6 +68,7 @@
     <p class="profile">Vlož text životopisu (stačí zkopírovat z PDF). Uložený text slouží jen
       k porovnání s nabídkami, po 30 dnech se sám smaže a smazat ho můžeš kdykoli.</p>
     <textarea id="cvtext" rows="8"></textarea>
+    <div id="captcha" class="row" hidden></div>
     <div class="row">
       <button id="cvsave" type="button">Uložit CV</button>
       <button id="cvdelete" type="button">Smazat CV</button>
@@ -133,13 +135,33 @@ $("cvstate").textContent = cvId ? "· uloženo" : "· zatím chybí";
 if (!cvId) $("cvbox").open = true;
 showProfile(JSON.parse(store.get("cv_profile") || "null"));
 
+// Optional Cloudflare Turnstile: the server fills in the site key when it verifies tokens.
+const siteKey = document.querySelector('meta[name="turnstile-site-key"]').content;
+let captchaWidget = null;
+if (siteKey) {
+  const script = document.createElement("script");
+  script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+  script.onload = () => {
+    $("captcha").hidden = false;
+    captchaWidget = turnstile.render("#captcha", { sitekey: siteKey });
+  };
+  document.head.appendChild(script);
+}
+
+function captchaHeaders() {
+  if (!siteKey) return {};
+  const token = captchaWidget === null ? "" : turnstile.getResponse(captchaWidget) ?? "";
+  return { "x-turnstile-token": token };
+}
+
 $("cvsave").onclick = async () => {
   $("cvsave").disabled = true;
   try {
     const r = await api("/cv", {
-      method: "POST", headers: { "content-type": "application/json" },
+      method: "POST", headers: { "content-type": "application/json", ...captchaHeaders() },
       body: JSON.stringify({ text: $("cvtext").value }),
     });
+    if (captchaWidget !== null) turnstile.reset(captchaWidget);
     if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText);
     const data = await r.json();
     cvId = data.cv_id;
@@ -245,6 +267,7 @@ $("ask").onsubmit = async (ev) => {
           add("tool", escapeHtml(label));
         } else if (event === "answer") {
           add("msg", renderMarkdown(data.text));
+          if (data.cached) add("tool", "↺ stejná otázka padla nedávno, odpověď je z mezipaměti");
           if (data.unverified_urls?.length) {
             add("tool error", "⚠️ Odkazy, které nepřišly z vyhledávání: " +
                 escapeHtml(data.unverified_urls.join(", ")));

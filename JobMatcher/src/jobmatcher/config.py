@@ -110,6 +110,10 @@ class Settings(BaseSettings):
     chat_stream_timeout_s: float = Field(default=300.0, gt=0)
     # The same message from the same client within this window gets 429; 0 = off.
     chat_duplicate_window_s: float = Field(default=10.0, ge=0)
+    # Cloudflare Turnstile on POST /cv: the secret turns verification on, the site key shows
+    # the widget on the page. Both empty = off.
+    turnstile_secret: SecretStr = SecretStr("")
+    turnstile_site_key: str = Field(default="", pattern=r"^[\w-]*$")
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:

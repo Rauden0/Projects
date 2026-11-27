@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobmatcher.agent.answers import AnswerCache, PostgresAnswerCache
 from jobmatcher.agent.session import ChatGuards
 from jobmatcher.api.auth import Authenticator, build_authenticator
+from jobmatcher.api.captcha import HEADER, Turnstile
 from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy
 from jobmatcher.budget.ledger import UsageLedger
 from jobmatcher.budget.limits import (
@@ -185,3 +186,18 @@ def reject_cross_site(request: Request) -> None:
     media_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if request.method != "DELETE" and media_type != "application/json":
         raise CsrfRejected("state-changing requests need Content-Type: application/json")
+
+
+@lru_cache
+def get_captcha() -> Turnstile | None:
+    secret = get_settings().turnstile_secret.get_secret_value()
+    return Turnstile(secret) if secret else None
+
+
+async def require_captcha(
+    request: Request, captcha: Annotated[Turnstile | None, Depends(get_captcha)]
+) -> None:
+    if captcha is None:
+        return
+    address = request.client.host if request.client else None
+    await captcha.verify(request.headers.get(HEADER, ""), address)

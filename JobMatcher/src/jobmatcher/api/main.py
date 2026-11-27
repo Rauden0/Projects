@@ -5,9 +5,10 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 
 from jobmatcher import metrics
+from jobmatcher.api.captcha import ORIGIN as CAPTCHA_ORIGIN
 from jobmatcher.api.deps import get_authenticator
 from jobmatcher.api.errors import install_error_handlers
 from jobmatcher.api.middleware import (
@@ -32,26 +33,41 @@ def _inline_hashes(html: str, tag: str) -> str:
     return " ".join(f"'sha256-{d}'" for d in digests)
 
 
-def page_csp(html: str) -> str:
-    return "; ".join(
-        (
-            "default-src 'none'",
-            f"script-src {' '.join(CDN_SCRIPTS)} {_inline_hashes(html, 'script')}",
-            f"style-src {_inline_hashes(html, 'style')}",
-            "connect-src 'self'",
-            "img-src 'self' data:",
-            "base-uri 'none'",
-            "form-action 'self'",
-            "frame-ancestors 'none'",
-        )
-    )
+SITE_KEY_META = '<meta name="turnstile-site-key" content="">'
+
+
+def page_csp(html: str, captcha: bool = False) -> str:
+    scripts = [*CDN_SCRIPTS, CAPTCHA_ORIGIN] if captcha else list(CDN_SCRIPTS)
+    directives = [
+        "default-src 'none'",
+        f"script-src {' '.join(scripts)} {_inline_hashes(html, 'script')}",
+        f"style-src {_inline_hashes(html, 'style')}",
+        "connect-src 'self'",
+        "img-src 'self' data:",
+        "base-uri 'none'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+    ]
+    if captcha:
+        directives.append(f"frame-src {CAPTCHA_ORIGIN}")
+    return "; ".join(directives)
+
+
+def index_page(site_key: str) -> str:
+    """The page, with the Turnstile site key for the widget; config allows only [A-Za-z0-9_-]."""
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    if not site_key:
+        return html
+    return html.replace(SITE_KEY_META, SITE_KEY_META.replace('content=""', f'content="{site_key}"'))
 
 
 def create_app() -> FastAPI:
     configure_logging()
     configure_tracing()
     get_authenticator()
-    index_csp = page_csp((STATIC / "index.html").read_text(encoding="utf-8"))
+    site_key = get_settings().turnstile_site_key
+    page = index_page(site_key)
+    index_csp = page_csp(page, captcha=bool(site_key))
     app = FastAPI(title="Job Matcher", version="0.1.0")
     app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.add_middleware(BodyLimitMiddleware, max_bytes=get_settings().max_request_body_bytes)
@@ -65,8 +81,8 @@ def create_app() -> FastAPI:
     metrics.instrument(app)
 
     @app.get("/", include_in_schema=False)
-    async def index() -> FileResponse:
-        return FileResponse(STATIC / "index.html", headers={"Content-Security-Policy": index_csp})
+    async def index() -> HTMLResponse:
+        return HTMLResponse(page, headers={"Content-Security-Policy": index_csp})
 
     return app
 

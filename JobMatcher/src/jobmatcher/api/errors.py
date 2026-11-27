@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from jobmatcher import metrics
+from jobmatcher.api.captcha import CaptchaRejected, CaptchaUnavailable
 from jobmatcher.budget.limits import RateLimited, ServerBusy
 from jobmatcher.errors import (
     AuthUnavailable,
@@ -42,6 +43,8 @@ _DOMAIN_ERRORS: dict[type[JobMatcherError], tuple[int, str]] = {
     NotFound: (404, "not_found"),
     Unauthenticated: (401, "unauthenticated"),
     CsrfRejected: (403, "csrf_rejected"),
+    CaptchaRejected: (403, "captcha_failed"),
+    CaptchaUnavailable: (503, "captcha_unavailable"),
     AuthUnavailable: (503, "auth_unavailable"),
     ServerBusy: (503, "server_busy"),
     ClientLimited: (429, "rate_limited"),
@@ -86,6 +89,8 @@ async def _domain_error(_: Request, exc: Exception) -> JSONResponse:
     status, code = _status_and_code(exc)
     if isinstance(exc, ClientLimited):
         metrics.recorder.rejected(exc.kind if isinstance(exc, RateLimited) else code)
+    elif isinstance(exc, CaptchaRejected):
+        metrics.recorder.rejected("captcha")
     headers = _headers(exc)
     detail = "monthly LLM budget exhausted" if isinstance(exc, BudgetExceeded) else str(exc)
     if status >= 500:

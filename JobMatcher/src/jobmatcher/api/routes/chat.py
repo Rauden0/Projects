@@ -18,6 +18,7 @@ from jobmatcher.api.deps import (
     SessionDep,
     limit,
     reject_cross_site,
+    require_captcha,
 )
 from jobmatcher.api.errors import ERROR_RESPONSES
 from jobmatcher.config import get_settings
@@ -71,7 +72,10 @@ def cv_extractor(client_id: str) -> CvExtractor | None:
 
 
 @router.post(
-    "/cv", response_model=CvOut, status_code=201, dependencies=[Depends(limit("cv_upload"))]
+    "/cv",
+    response_model=CvOut,
+    status_code=201,
+    dependencies=[Depends(limit("cv_upload")), Depends(require_captcha)],
 )
 async def upload_cv(
     body: CvIn,
