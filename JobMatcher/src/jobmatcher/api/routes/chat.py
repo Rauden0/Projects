@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from jobmatcher.agent.session import chat_events
 from jobmatcher.api.deps import ChatGateDep, EmbedderDep, SessionDep
@@ -20,6 +20,8 @@ from jobmatcher.observability import UsageMeter
 router = APIRouter(tags=["chat"], responses=ERROR_RESPONSES)
 
 CLIENT_ID_CHARS = 64
+# The history is re-sent on every LLM round of a turn, so its size multiplies the token cost.
+HISTORY_CHARS = 24_000
 
 
 class CvIn(BaseModel):
@@ -40,6 +42,12 @@ class ChatIn(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     cv_id: uuid.UUID | None = None
     history: list[ChatTurn] = Field(default_factory=list, max_length=40)
+
+    @model_validator(mode="after")
+    def _history_fits(self) -> "ChatIn":
+        if sum(len(turn.content) for turn in self.history) > HISTORY_CHARS:
+            raise ValueError(f"history exceeds {HISTORY_CHARS} characters in total")
+        return self
 
 
 @router.post("/cv", response_model=CvOut, status_code=201)

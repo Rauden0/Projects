@@ -72,3 +72,16 @@ def test_exhausted_budget_is_503() -> None:
     response = make_client(gate).post("/chat", json={"message": "hi"})
     assert response.status_code == 503
     assert "budget" in response.json()["detail"]
+
+
+def test_oversized_history_is_422() -> None:
+    history = [{"role": "user", "content": "x" * 10_000}] * 3
+    response = make_client().post("/chat", json={"message": "hi", "history": history})
+    assert response.status_code == 422
+
+
+def test_history_within_total_limit_is_accepted(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(chat_route, "get_llm", lambda *_, **__: None)
+    history = [{"role": "user", "content": "x" * 2_000}] * 10
+    response = make_client().post("/chat", json={"message": "hi", "history": history})
+    assert response.status_code == 503
