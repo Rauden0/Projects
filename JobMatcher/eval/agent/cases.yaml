@@ -1,0 +1,82 @@
+# Scripted questions for eval/run_agent.py, against the retrieval fixtures (eval/fixtures/).
+# expect_tools: tools that must be called at least once.
+# relevant: fixture ids of which at least one must be cited (by URL) in the answer; [] means
+#   no posting fits and a good answer says so without inventing one.
+# with_cv: whether the CV below is attached to the conversation.
+cv: |
+  Martin Novák, Brno. Python backend developer.
+  Experience
+  03/2023 - present  Backend developer, Moravia Soft: Python, FastAPI, PostgreSQL, Docker,
+                     RabbitMQ, pytest.
+  09/2021 - 02/2023  Junior developer, Web Studio: Python, Django, JavaScript.
+  Languages: Czech, English.
+  Education
+  2018 - 2021 Bachelor in Computer Science, Masaryk University.
+
+cases:
+  - id: remote-python-cv
+    question: Which remote Python backend roles fit my CV?
+    with_cv: true
+    expect_tools: [search_jobs]
+    relevant: [remote-contract-py, remote-eu-py-platform]
+
+  - id: brno-or-remote-3y
+    question: Python jobs in Brno or remote, at most 3 years of experience required.
+    with_cv: true
+    expect_tools: [search_jobs]
+    expect_filters: {max_years_required: 3}
+    relevant: [brno-py-backend, remote-contract-py, brno-data-eng, brno-integration, remote-cz-ai]
+
+  - id: gap-data-engineer
+    question: What am I missing for the Data Engineer job in Brno?
+    with_cv: true
+    expect_tools: [search_jobs, compare_with_cv]
+    relevant: [brno-data-eng]
+
+  - id: golang-details
+    question: Tell me the details of the Golang Developer position.
+    with_cv: false
+    expect_tools: [search_jobs]
+    relevant: [brno-go]
+
+  - id: senior-lead
+    question: Senior Python roles where I would also mentor and lead a team?
+    with_cv: true
+    expect_tools: [search_jobs]
+    relevant: [brno-senior-py]
+
+  - id: cs-truck-driver
+    question: Hledám práci jako řidič kamionu nebo nákladního auta.
+    with_cv: false
+    expect_tools: [search_jobs]
+    relevant: [brno-ridic-c]
+
+  - id: cs-care-worker
+    question: Je někde volné místo pečovatelky v domově pro seniory?
+    with_cv: false
+    expect_tools: [search_jobs]
+    relevant: [brno-pecovatelka]
+
+  - id: cs-accountant
+    question: Účetní v Brně, umím Pohodu.
+    with_cv: false
+    expect_tools: [search_jobs]
+    relevant: [brno-ucetni]
+
+  - id: en-nurse-prague
+    question: Are there any nursing jobs in Prague?
+    with_cv: false
+    expect_tools: [search_jobs]
+    relevant: [praha-zdravotni-sestra]
+
+  - id: cs-courier-ostrava
+    question: Kurýrní práce s řidičákem B v Ostravě?
+    with_cv: false
+    expect_tools: [search_jobs]
+    relevant: [ostrava-kuryr]
+
+  - id: nothing-fits
+    question: Any openings for a commercial airline pilot?
+    with_cv: false
+    expect_tools: [search_jobs]
+    relevant: []

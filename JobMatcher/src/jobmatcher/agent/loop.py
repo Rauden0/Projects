@@ -60,9 +60,10 @@ async def run_agent(
     user_message: str,
     history: list[dict[str, Any]],
     profile_summary: str,
+    system_template: str = SYSTEM,
 ) -> AsyncIterator[AgentEvent]:
     messages = [*history, {"role": "user", "content": user_message}]
-    system = SYSTEM.format(profile=profile_summary or "not provided")
+    system = system_template.format(profile=profile_summary or "not provided")
 
     for round_no in range(MAX_ROUNDS + 1):
         # On the last round tool use is disabled, so the model must answer with what it has.

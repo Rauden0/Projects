@@ -34,10 +34,20 @@ EVAL_DATABASE_URL = os.environ.get(
 )
 
 
-async def load_fixtures(embedder: Embedder) -> None:
+def use_eval_database() -> None:
+    if not (make_url(EVAL_DATABASE_URL).database or "").endswith(("_eval", "_test")):
+        raise SystemExit(
+            f"EVAL_DATABASE_URL must name a *_eval or *_test database: {EVAL_DATABASE_URL}"
+        )
+    os.environ["DATABASE_URL"] = EVAL_DATABASE_URL
+
+
+async def load_fixtures(embedder: Embedder, url_prefix: str = "fixture://") -> None:
     sessionmaker = get_sessionmaker()
     async with sessionmaker() as session, session.begin():
-        await session.execute(text("TRUNCATE outbox, job_chunk, job, source RESTART IDENTITY"))
+        await session.execute(
+            text("TRUNCATE outbox, cv, job_chunk, job, source RESTART IDENTITY CASCADE")
+        )
 
     indexer = Indexer(sessionmaker, HeuristicExtractor(), embedder)
     for p in yaml.safe_load((HERE / "fixtures" / "postings.yaml").read_text(encoding="utf-8")):
@@ -46,7 +56,7 @@ async def load_fixtures(embedder: Embedder) -> None:
                 kind="fixture",
                 company=p["company"],
                 external_id=p["id"],
-                url=f"fixture://{p['id']}",
+                url=f"{url_prefix}{p['id']}",
                 title=p["title"],
                 location=p["location"],
                 description_html=p["description"].replace("\n", "<br>"),
@@ -94,11 +104,7 @@ async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--hashing", action="store_true", help="use the hashing baseline")
     args = parser.parse_args()
-    if not (make_url(EVAL_DATABASE_URL).database or "").endswith(("_eval", "_test")):
-        raise SystemExit(
-            f"EVAL_DATABASE_URL must name a *_eval or *_test database: {EVAL_DATABASE_URL}"
-        )
-    os.environ["DATABASE_URL"] = EVAL_DATABASE_URL
+    use_eval_database()
     embedder = HashingEmbedder(EMBEDDING_DIM) if args.hashing else get_embedder()
     await load_fixtures(embedder)
     await evaluate(embedder)
