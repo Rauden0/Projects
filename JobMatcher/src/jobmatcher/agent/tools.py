@@ -1,3 +1,4 @@
+import re
 import uuid
 from typing import Annotated, Any
 
@@ -248,3 +249,46 @@ _WORK_MODE = {
 def _where(location: str | None, remote_policy: str | None) -> str:
     mode = _WORK_MODE.get(remote_policy or "", "work mode not stated")
     return f"{location or 'location not stated'} · {mode}"
+
+
+# Chat-template control tokens (ChatML, Llama 3, Mistral) and tool-protocol tags. Ollama
+# tokenizes them as real control tokens even inside message content, so a posting containing
+# them could end the tool result and open a fake system or user turn.
+_ROLE_MARKER_RE = re.compile(
+    r"<\|[\w-]{1,30}\|>|\[/?INST\]|<</?SYS>>"
+    r"|</?(?:tool_response|tool_call|tool_result|function_results?|system|assistant|user"
+    r"|untrusted_data)\b[^>]*>",
+    re.IGNORECASE,
+)
+_LINK_RE = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
+
+
+def strip_role_markers(text: str) -> str:
+    return _ROLE_MARKER_RE.sub(" ", text)
+
+
+def without_links(value: Any, key: str = "") -> Any:
+    """Links in posting text replaced; the jobs' own `url` fields are kept."""
+    if isinstance(value, dict):
+        return {k: without_links(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [without_links(v, key) for v in value]
+    if isinstance(value, str) and key != "url":
+        return _LINK_RE.sub("[link]", value)
+    return value
+
+
+def as_untrusted_data(value: Any) -> Any:
+    """Tool output for a client outside the agent loop: the treatment the loop gives posting
+    text, applied to every string so structured results are clean too."""
+    return _strip_strings(without_links(value))
+
+
+def _strip_strings(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _strip_strings(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_strip_strings(v) for v in value]
+    if isinstance(value, str):
+        return strip_role_markers(value)
+    return value

@@ -11,7 +11,7 @@ from typing import Any, Literal
 from sqlalchemy.exc import SQLAlchemyError
 
 from jobmatcher import telemetry
-from jobmatcher.agent.tools import Toolbox
+from jobmatcher.agent.tools import Toolbox, strip_role_markers, without_links
 from jobmatcher.errors import BudgetExceeded, LLMError, ToolError
 from jobmatcher.llm import LLMClient
 
@@ -164,36 +164,12 @@ async def _execute(
         return str(exc), type(exc).__name__
 
 
-# Chat-template control tokens (ChatML, Llama 3, Mistral) and tool-protocol tags. Ollama
-# tokenizes them as real control tokens even inside message content, so a posting containing
-# them could end the tool result and open a fake system or user turn.
-_ROLE_MARKER_RE = re.compile(
-    r"<\|[\w-]{1,30}\|>|\[/?INST\]|<</?SYS>>"
-    r"|</?(?:tool_response|tool_call|tool_result|function_results?|system|assistant|user"
-    r"|untrusted_data)\b[^>]*>",
-    re.IGNORECASE,
-)
-
-
 def _untrusted(output: Any) -> str:
     """Tool output marked as data: posting text is written by whoever published the ad. Role
     markers are removed and links in posting text are replaced, so the only links the model
     sees are the jobs' own `url` fields, the ones it may cite."""
-    text = output if isinstance(output, str) else json.dumps(_without_links(output), default=str)
-    return f"{UNTRUSTED_OPEN}{_ROLE_MARKER_RE.sub(' ', text)}{UNTRUSTED_CLOSE}"
-
-
-_LINK_RE = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
-
-
-def _without_links(value: Any, key: str = "") -> Any:
-    if isinstance(value, dict):
-        return {k: _without_links(v, k) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_without_links(v, key) for v in value]
-    if isinstance(value, str) and key != "url":
-        return _LINK_RE.sub("[link]", value)
-    return value
+    text = output if isinstance(output, str) else json.dumps(without_links(output), default=str)
+    return f"{UNTRUSTED_OPEN}{strip_role_markers(text)}{UNTRUSTED_CLOSE}"
 
 
 def _compact_old_results(messages: list[dict[str, Any]]) -> None:

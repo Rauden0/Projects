@@ -30,7 +30,7 @@ from mcp.types import (
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
-from jobmatcher.agent.tools import Toolbox
+from jobmatcher.agent.tools import Toolbox, as_untrusted_data
 from jobmatcher.config import configure_logging
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.errors import ToolError
@@ -133,7 +133,8 @@ async def _call(open_tools: ToolsFactory, name: str, args: dict[str, Any]) -> Ca
 
 
 def _ok(output: Any) -> CallToolResult:
-    text = json.dumps(output, default=str, ensure_ascii=False)
+    # Posting text comes from whoever published the ad and goes on into another model.
+    text = json.dumps(as_untrusted_data(output), default=str, ensure_ascii=False)
     data = json.loads(text)
     return CallToolResult(
         content=[TextContent(type="text", text=text)],
