@@ -194,8 +194,9 @@ def extraction_prompt(title: str, location: str | None, text: str) -> str:
 
 
 class LLMExtractor:
-    def __init__(self, llm: LLMClient) -> None:
+    def __init__(self, llm: LLMClient, system: str = EXTRACTION_SYSTEM) -> None:
         self.llm = llm
+        self.system = system
 
     async def extract(self, title: str, location: str | None, text: str) -> JobFacts:
         user = extraction_prompt(title, location, text)
@@ -203,7 +204,7 @@ class LLMExtractor:
         for _ in range(2):
             prompt = user if error is None else f"{user}\n\nPrevious output was invalid: {error}"
             raw = await self.llm.complete_json(
-                system=EXTRACTION_SYSTEM, user=prompt, schema=COMPACT_SCHEMA, max_tokens=400
+                system=self.system, user=prompt, schema=COMPACT_SCHEMA, max_tokens=400
             )
             try:
                 return parse_compact(raw)

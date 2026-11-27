@@ -1,0 +1,857 @@
+# Labelled postings for the extraction eval (eval/run_extraction.py).
+# Synthetic, modelled on real Czech and EU ads (companies are fictional). The product is
+# occupation-neutral, so about half are non-IT: care, driving, trades, office, retail, food.
+#
+# Gold conventions, matching EXTRACTION_SYSTEM:
+# - A field may be a list of acceptable values when the ad is honestly ambiguous; null means
+#   "the posting does not say" and is a value like any other.
+# - seniority: only from the title or an explicit level ("senior", "junior", "medior"/"mid").
+# - years: the minimum number of years explicitly required.
+# - remote: onsite | hybrid | remote_country | remote_region | remote_global. Inherently
+#   on-site jobs (driving, care, trades) that never say so accept onsite or null.
+# - salary: as written (monthly CZK stays monthly, annual EUR stays annual), currency ISO.
+# - salary: hourly, daily or per-lesson rates also accept null (mixing them with monthly pay
+#   in one column misleads filters more than a missing value does).
+# - skills: the hard skills and tools the ad asks for; an item may be a list of synonyms
+#   (Czech ads are often answered in Czech). Scored by recall and precision against everything
+#   the model put into tech + req + nice.
+
+- id: en-py-backend-brno
+  lang: en
+  domain: it
+  title: Python Backend Developer
+  location: Brno, Czechia
+  text: |
+    Moravia Data builds telemetry analytics for manufacturing plants.
+    Hybrid, 2 days a week in our Brno office.
+    ## What you'll do
+    - Build REST APIs in FastAPI and async workers consuming RabbitMQ
+    - Design PostgreSQL schemas and migrations
+    ## Requirements
+    - 3+ years of commercial Python experience
+    - FastAPI or Django, PostgreSQL, Docker
+    - English at B2 level
+    ## Nice to have
+    - Kubernetes
+    Salary: 80 000 – 110 000 CZK per month.
+  gold:
+    seniority: null
+    years: 3
+    remote: hybrid
+    city: Brno
+    salary_min: 80000
+    salary_max: 110000
+    currency: CZK
+    skills: [python, fastapi, django, postgresql, docker, rabbitmq, kubernetes]
+
+- id: en-senior-go-remote-eu
+  lang: en
+  domain: it
+  title: Senior Go Engineer (Platform)
+  location: Remote, Europe
+  text: |
+    We are a fully remote company; you can work from anywhere in the EU (CET ± 2 hours).
+    ## About the role
+    You will own our event ingestion platform written in Go, running on Kubernetes in AWS.
+    ## You bring
+    - 6+ years building backend systems, at least 3 of them in Go
+    - Kafka, gRPC, PostgreSQL
+    - Terraform and AWS
+    ## Bonus
+    - Rust
+    Compensation: €85,000 – €105,000 per year, plus stock options.
+  gold:
+    seniority: senior
+    years: 6
+    remote: remote_region
+    city: null
+    salary_min: 85000
+    salary_max: 105000
+    currency: EUR
+    skills: [go, kubernetes, aws, kafka, grpc, postgresql, terraform, rust]
+
+- id: cs-junior-java-praha
+  lang: cs
+  domain: it
+  title: Junior Java vývojář/ka
+  location: Praha
+  text: |
+    Hledáme juniorního Java vývojáře do našeho týmu v Praze – Karlíně.
+    ## Náplň práce
+    - vývoj a údržba backendových služeb v Javě (Spring Boot)
+    - psaní unit testů
+    ## Požadujeme
+    - alespoň 1 rok praxe s Javou (stačí i školní projekty nebo stáž)
+    - základy SQL a Gitu
+    - komunikativní angličtina
+    ## Nabízíme
+    - mzda 45 000 – 55 000 Kč měsíčně
+    - práce z kanceláře, 1 den home office týdně
+    - 5 týdnů dovolené
+  gold:
+    seniority: junior
+    years: 1
+    remote: hybrid
+    city: [Praha, Prague]
+    salary_min: 45000
+    salary_max: 55000
+    currency: CZK
+    skills: [java, spring boot, sql, git]
+
+- id: en-data-engineer-remote-cz
+  lang: en
+  domain: it
+  title: Data Engineer
+  location: Czech Republic (remote)
+  text: |
+    Remote within the Czech Republic – we meet in Prague once a quarter.
+    ## Requirements
+    - 3+ years in data engineering
+    - Python and SQL
+    - Airflow, dbt, Snowflake
+    ## Nice to have
+    - Spark, Databricks
+    Salary range 90–120k CZK monthly, depending on experience.
+  gold:
+    seniority: null
+    years: 3
+    remote: remote_country
+    city: null
+    salary_min: 90000
+    salary_max: 120000
+    currency: CZK
+    skills: [python, sql, airflow, dbt, snowflake, spark, databricks]
+
+- id: en-frontend-react-onsite-ostrava
+  lang: en
+  domain: it
+  title: Frontend Developer (React)
+  location: Ostrava
+  text: |
+    This is an on-site role in our Ostrava office (no remote option, the team sits together).
+    ## What we expect
+    - 2 years of experience with React and TypeScript
+    - CSS, accessibility basics
+    - Jest or Vitest
+    We offer a salary from 60 000 CZK, meal vouchers and a MultiSport card.
+  gold:
+    seniority: null
+    years: 2
+    remote: onsite
+    city: Ostrava
+    salary_min: 60000
+    salary_max: null
+    currency: CZK
+    skills: [react, typescript, css, jest, vitest]
+
+- id: en-staff-ml-global
+  lang: en
+  domain: it
+  title: Staff Machine Learning Engineer
+  location: Anywhere
+  text: |
+    Work from anywhere in the world – we are distributed across 14 time zones.
+    ## What you'll do
+    Lead the design of our LLM retrieval and ranking stack.
+    ## Must have
+    - 8+ years of software engineering, 4+ in applied ML
+    - Python, PyTorch
+    - Experience shipping retrieval-augmented generation (RAG) to production
+    ## Nice to have
+    - Kubernetes, Ray
+    Contract: B2B / contractor. Rate USD 150–190k per year.
+  gold:
+    seniority: staff
+    years: 8
+    remote: remote_global
+    city: null
+    salary_min: 150000
+    salary_max: 190000
+    currency: USD
+    skills: [python, pytorch, rag, kubernetes, ray]
+
+- id: cs-devops-brno-hybrid
+  lang: cs
+  domain: it
+  title: DevOps inženýr
+  location: Brno
+  text: |
+    Pro našeho klienta v Brně hledáme DevOps inženýra. Hybridní režim (3 dny v kanceláři).
+    ## Co budeš dělat
+    - spravovat CI/CD pipeline v GitLabu
+    - provozovat Kubernetes clustery v Azure
+    ## Co od tebe čekáme
+    - min. 4 roky praxe v oblasti DevOps nebo administrace Linuxu
+    - Terraform, Ansible, Docker
+    - skriptování v Bashi nebo Pythonu
+    Mzda: 90 000 – 120 000 Kč/měsíc.
+  gold:
+    seniority: null
+    years: 4
+    remote: hybrid
+    city: Brno
+    salary_min: 90000
+    salary_max: 120000
+    currency: CZK
+    skills: [gitlab, kubernetes, azure, terraform, ansible, docker, bash, python, linux, ci/cd]
+
+- id: en-qa-automation-no-salary
+  lang: en
+  domain: it
+  title: QA Automation Engineer II
+  location: Prague, Czech Republic
+  text: |
+    Hybrid – 2 days per week from the Prague office.
+    ## Responsibilities
+    - Build and maintain automated test suites for our web and mobile apps
+    ## Qualifications
+    - 2+ years of test automation
+    - Python with pytest, or Java with JUnit
+    - Selenium or Playwright
+    - API testing (Postman)
+  gold:
+    seniority: [null, medior]
+    years: 2
+    remote: hybrid
+    city: [Prague, Praha]
+    salary_min: null
+    salary_max: null
+    currency: null
+    skills: [python, pytest, java, junit, selenium, playwright, postman]
+
+- id: cs-net-medior-plzen
+  lang: cs
+  domain: it
+  title: Medior .NET Developer
+  location: Plzeň
+  text: |
+    Hledáme medior .NET vývojáře do kanceláře v Plzni, práce převážně na místě,
+    home office po dohodě výjimečně.
+    ## Požadavky
+    - 3 roky praxe s C# a .NET
+    - MS SQL Server, Entity Framework
+    - zkušenost s Azure DevOps výhodou
+    Nabízíme 70 000 – 85 000 Kč hrubého.
+  gold:
+    seniority: medior
+    years: 3
+    remote: [onsite, hybrid]
+    city: Plzeň
+    salary_min: 70000
+    salary_max: 85000
+    currency: CZK
+    skills: [c#, .net, sql server, entity framework, azure devops]
+
+- id: en-security-engineer-vienna
+  lang: en
+  domain: it
+  title: Security Engineer
+  location: Vienna, Austria
+  text: |
+    Hybrid working model with 3 office days in Vienna.
+    ## Your profile
+    - At least 5 years in information security
+    - Cloud security on AWS, IAM, network security
+    - SIEM tools (Splunk), incident response
+    - German is an advantage, English is required
+    Gross annual salary from EUR 70,000 (collective agreement minimum EUR 58,000); actual
+    salary depends on qualifications.
+  gold:
+    seniority: null
+    years: 5
+    remote: hybrid
+    city: [Vienna, Wien]
+    salary_min: [70000, 58000]
+    salary_max: null
+    currency: EUR
+    skills: [aws, iam, network security, splunk, siem, incident response]
+
+- id: en-intern-python
+  lang: en
+  domain: it
+  title: Software Engineering Intern (Python)
+  location: Brno
+  text: |
+    Summer internship (3 months, full-time, on-site in Brno).
+    ## Who we are looking for
+    - Students of computer science or a related field
+    - Basic Python and Git
+    - Curiosity, no professional experience required
+    Paid internship: 250 CZK per hour.
+  gold:
+    seniority: [junior, null]
+    years: [null, 0]
+    remote: onsite
+    city: Brno
+    salary_min: [250, null]
+    salary_max: [250, null]
+    currency: CZK
+    skills: [python, git]
+
+- id: cs-it-support-olomouc
+  lang: cs
+  domain: it
+  title: IT technik / helpdesk
+  location: Olomouc
+  text: |
+    Přijmeme IT technika na helpdesk do sídla firmy v Olomouci.
+    ## Náplň
+    - podpora uživatelů (Windows, Microsoft 365)
+    - správa tiskáren a sítě
+    ## Požadavky
+    - SŠ vzdělání technického směru
+    - praxe v IT podpoře min. 1 rok
+    - řidičský průkaz sk. B
+    Mzda 35 000 – 42 000 Kč, práce pouze na pracovišti.
+  gold:
+    seniority: null
+    years: 1
+    remote: onsite
+    city: Olomouc
+    salary_min: 35000
+    salary_max: 42000
+    currency: CZK
+    skills: [windows, microsoft 365, networking, printers, driving licence b]
+
+- id: en-android-contract
+  lang: en
+  domain: it
+  title: Senior Android Developer (contract)
+  location: Remote (UK time zone)
+  text: |
+    6-month contract, outside IR35, fully remote but you must overlap with UK hours.
+    ## Requirements
+    - 5+ years of Android development
+    - Kotlin, Jetpack Compose, Coroutines
+    - Experience publishing apps to Google Play
+    Day rate £450–£550.
+  gold:
+    seniority: senior
+    years: 5
+    remote: remote_region
+    city: null
+    salary_min: [450, null]
+    salary_max: [550, null]
+    currency: [GBP, null]
+    skills: [android, kotlin, jetpack compose, coroutines]
+
+- id: cs-analytik-dat-praha
+  lang: cs
+  domain: it
+  title: Datový analytik / analytička
+  location: Praha 4
+  text: |
+    Pro naše oddělení Business Intelligence hledáme datového analytika.
+    Kancelář Praha 4 – Pankrác, 2 dny v týdnu z domova.
+    ## Očekáváme
+    - pokročilou znalost SQL a Excelu
+    - zkušenost s Power BI
+    - Python (pandas) výhodou
+    - alespoň 2 roky praxe v analýze dat
+  gold:
+    seniority: null
+    years: 2
+    remote: hybrid
+    city: [Praha, Prague]
+    salary_min: null
+    salary_max: null
+    currency: null
+    skills: [sql, excel, power bi, python, pandas]
+
+- id: en-embedded-c-brno
+  lang: en
+  domain: it
+  title: Embedded Software Engineer
+  location: Brno
+  text: |
+    Work on firmware for industrial sensors. Office-based in Brno (lab work required).
+    ## Requirements
+    - C and C++ for microcontrollers (ARM Cortex-M)
+    - RTOS (FreeRTOS or Zephyr)
+    - Reading schematics, oscilloscope
+    - 3 years of embedded experience
+    Salary CZK 75k–95k / month.
+  gold:
+    seniority: null
+    years: 3
+    remote: onsite
+    city: Brno
+    salary_min: 75000
+    salary_max: 95000
+    currency: CZK
+    skills: [c, c++, arm cortex-m, rtos, freertos, zephyr, oscilloscope]
+
+- id: en-lead-pm-hybrid
+  lang: en
+  domain: it
+  title: Lead Product Manager
+  location: Prague
+  text: |
+    Hybrid (Prague HQ, Tuesdays and Thursdays in the office).
+    ## You have
+    - 7+ years in product management, 2+ leading other PMs
+    - Experience with B2B SaaS, data-informed decisions (Amplitude, SQL)
+    - Fluent English
+    Salary 140–170k CZK/month + bonus.
+  gold:
+    seniority: [senior, staff]
+    years: 7
+    remote: hybrid
+    city: [Prague, Praha]
+    salary_min: 140000
+    salary_max: 170000
+    currency: CZK
+    skills: [product management, amplitude, sql, b2b saas]
+
+- id: cs-php-remote-cz
+  lang: cs
+  domain: it
+  title: PHP programátor (Symfony)
+  location: Home office
+  text: |
+    Práce 100 % z domova, kdekoli v ČR. Jednou za měsíc teambuilding v Brně.
+    ## Požadujeme
+    - 3+ roky zkušeností s PHP 8 a Symfony
+    - MySQL nebo PostgreSQL
+    - Docker, Git
+    Odměna: 70 – 90 tisíc Kč měsíčně, možnost spolupráce na IČO.
+  gold:
+    seniority: null
+    years: 3
+    remote: remote_country
+    city: null
+    salary_min: 70000
+    salary_max: 90000
+    currency: CZK
+    skills: [php, symfony, mysql, postgresql, docker, git]
+
+- id: en-sre-global-no-years
+  lang: en
+  domain: it
+  title: Site Reliability Engineer
+  location: Remote
+  text: |
+    We hire globally: work from anywhere.
+    ## You'll need
+    - Strong Linux and networking fundamentals
+    - Prometheus, Grafana, OpenTelemetry
+    - Kubernetes and Helm
+    - On-call experience
+  gold:
+    seniority: null
+    years: null
+    remote: remote_global
+    city: null
+    salary_min: null
+    salary_max: null
+    currency: null
+    skills: [linux, networking, prometheus, grafana, opentelemetry, kubernetes, helm]
+
+# ---- non-IT ----
+
+- id: cs-ridic-c-brno
+  lang: cs
+  domain: driving
+  title: Řidič sk. C – rozvoz po Jihomoravském kraji
+  location: Brno – Slatina
+  text: |
+    Hledáme řidiče nákladního vozidla pro rozvoz zboží po Jihomoravském kraji.
+    ## Požadujeme
+    - řidičské oprávnění sk. C
+    - profesní průkaz a kartu do tachografu
+    - praxe v řízení nákladních vozidel alespoň 2 roky
+    ## Nabízíme
+    - mzda 38 000 – 45 000 Kč měsíčně
+    - jednosměnný provoz, víkendy volné
+  gold:
+    seniority: null
+    years: 2
+    remote: [onsite, null]
+    city: Brno
+    salary_min: 38000
+    salary_max: 45000
+    currency: CZK
+    skills:
+      - [driving licence c, řidičské oprávnění sk. c, sk. c]
+      - [professional driver card, profesní průkaz, profesionální průkaz]
+      - [tachograph card, karta do tachografu, tachograf]
+
+- id: cs-pecovatelka-ostrava
+  lang: cs
+  domain: care
+  title: Pečovatel/ka v domově pro seniory
+  location: Ostrava-Poruba
+  text: |
+    Domov pro seniory v Ostravě-Porubě přijme pečovatele/pečovatelku.
+    ## Náplň práce
+    - péče o klienty, pomoc s hygienou a stravou
+    - nepřetržitý provoz, dvanáctihodinové směny
+    ## Požadavky
+    - kvalifikační kurz pracovník v sociálních službách (lze doplnit po nástupu)
+    - empatie a spolehlivost
+    Nástupní mzda 31 000 Kč + příplatky za směny.
+  gold:
+    seniority: null
+    years: null
+    remote: [onsite, null]
+    city: Ostrava
+    salary_min: 31000
+    salary_max: null
+    currency: CZK
+    skills:
+      - [social services worker course, pracovník v sociálních službách]
+      - [personal care, péče o klienty, hygiena]
+
+- id: en-registered-nurse-vienna
+  lang: en
+  domain: care
+  title: Registered Nurse (Intensive Care)
+  location: Vienna
+  text: |
+    Our hospital in Vienna is looking for an ICU nurse.
+    ## Requirements
+    - Nursing diploma recognised in Austria (Nostrifizierung)
+    - At least 2 years of ICU experience
+    - German at B2 level
+    Salary according to collective agreement, from EUR 3,400 gross per month (14 payments).
+  gold:
+    seniority: null
+    years: 2
+    remote: [onsite, null]
+    city: [Vienna, Wien]
+    salary_min: 3400
+    salary_max: null
+    currency: EUR
+    skills: [nursing diploma, icu, intensive care]
+
+- id: cs-elektrikar-praha
+  lang: cs
+  domain: trades
+  title: Elektrikář – montáže v rodinných domech
+  location: Praha a Středočeský kraj
+  text: |
+    Přijmeme elektrikáře na montáže elektroinstalací v novostavbách rodinných domů.
+    ## Požadujeme
+    - vyhláška 50/1978 Sb., § 6 (osvědčení)
+    - vyučení v oboru elektro
+    - řidičský průkaz sk. B
+    - praxe min. 3 roky
+    Mzda 45 000 – 60 000 Kč dle zkušeností, služební auto.
+  gold:
+    seniority: null
+    years: 3
+    remote: [onsite, null]
+    city: [Praha, Prague, null]
+    salary_min: 45000
+    salary_max: 60000
+    currency: CZK
+    skills:
+      - [vyhláška 50/1978]
+      - [electrical installation, elektroinstalace, vyučení v oboru elektro]
+      - [driving licence b, řidičský průkaz sk. b, sk. b]
+
+- id: cs-ucetni-brno-hybrid
+  lang: cs
+  domain: office
+  title: Účetní – samostatná
+  location: Brno-střed
+  text: |
+    Účetní kancelář v centru Brna hledá samostatnou účetní.
+    Možnost 2 dny v týdnu pracovat z domova.
+    ## Požadujeme
+    - SŠ/VŠ ekonomického směru
+    - min. 5 let praxe v podvojném účetnictví
+    - znalost Pohody nebo Money S3
+    - mzdové účetnictví výhodou
+    Plat 42 000 – 50 000 Kč, 13. plat.
+  gold:
+    seniority: [senior, null]
+    years: 5
+    remote: hybrid
+    city: Brno
+    salary_min: 42000
+    salary_max: 50000
+    currency: CZK
+    skills:
+      - [double-entry accounting, double-entry bookkeeping, podvojné účetnictví]
+      - pohoda
+      - money s3
+      - [payroll accounting, mzdové účetnictví, salary bookkeeping, payroll]
+
+- id: en-warehouse-operative-pilsen
+  lang: en
+  domain: logistics
+  title: Warehouse Operative (forklift)
+  location: Pilsen
+  text: |
+    Full-time warehouse job in our Pilsen distribution centre, three shifts.
+    ## Requirements
+    - Forklift licence
+    - Physical fitness
+    - No experience needed, we train you
+    Hourly wage 185 CZK + shift allowances.
+  gold:
+    seniority: null
+    years: [null, 0]
+    remote: [onsite, null]
+    city: [Pilsen, Plzeň]
+    salary_min: [185, null]
+    salary_max: [185, null]
+    currency: CZK
+    skills: [forklift licence]
+
+- id: cs-kuchar-brno
+  lang: cs
+  domain: food
+  title: Kuchař/kuchařka – restaurace
+  location: Brno
+  text: |
+    Restaurace v centru Brna přijme kuchaře na hlavní pracovní poměr.
+    ## Co očekáváme
+    - vyučení v oboru kuchař
+    - praxe v à la carte provozu alespoň 2 roky
+    - zdravotní průkaz
+    ## Nabízíme
+    - mzda 38 000 Kč + spropitné
+    - krátký a dlouhý týden
+  gold:
+    seniority: null
+    years: 2
+    remote: [onsite, null]
+    city: Brno
+    salary_min: 38000
+    salary_max: null
+    currency: CZK
+    skills:
+      - [à la carte cooking, à la carte, vyučení v oboru kuchař]
+      - [food handler health card, zdravotní průkaz]
+
+- id: en-office-assistant-prague
+  lang: en
+  domain: office
+  title: Office Assistant / Receptionist
+  location: Prague 1
+  text: |
+    Join our Prague 1 office as the first point of contact for clients. On-site, Mon–Fri.
+    ## Requirements
+    - Fluent Czech and English
+    - MS Office (Outlook, Word, Excel)
+    - 1 year of experience in a similar role
+    Salary CZK 36,000–40,000 gross per month.
+  gold:
+    seniority: null
+    years: 1
+    remote: onsite
+    city: [Prague, Praha]
+    salary_min: 36000
+    salary_max: 40000
+    currency: CZK
+    skills: [ms office, outlook, word, excel]
+
+- id: cs-zdravotni-sestra-brno
+  lang: cs
+  domain: care
+  title: Všeobecná sestra – interní oddělení
+  location: Brno-Bohunice
+  text: |
+    Nemocnice přijme všeobecnou sestru na interní oddělení.
+    ## Požadavky
+    - odborná způsobilost dle zákona 96/2004 Sb.
+    - registrace výhodou
+    - praxe není podmínkou, vhodné i pro absolventy
+    ## Nabízíme
+    - mzda dle platových tarifů, 6 týdnů dovolené, náborový příspěvek 50 000 Kč
+  gold:
+    seniority: [null, junior]
+    years: [null, 0]
+    remote: [onsite, null]
+    city: Brno
+    salary_min: null
+    salary_max: null
+    currency: null
+    skills:
+      - [zákon 96/2004]
+      - [nursing qualification, odborná způsobilost, všeobecná sestra]
+
+- id: en-truck-driver-ce-international
+  lang: en
+  domain: driving
+  title: International Truck Driver C+E
+  location: Ostrava (base)
+  text: |
+    International transport across the EU, tours of 2–3 weeks, base in Ostrava.
+    ## You need
+    - C+E licence, driver qualification card, ADR is a plus
+    - 3 years of international driving experience
+    Pay: EUR 2,800 – 3,300 net per month including allowances.
+  gold:
+    seniority: null
+    years: 3
+    remote: [onsite, null]
+    city: Ostrava
+    salary_min: 2800
+    salary_max: 3300
+    currency: EUR
+    skills: [c+e licence, driver qualification card, adr]
+
+- id: cs-prodavac-olomouc
+  lang: cs
+  domain: retail
+  title: Prodavač/ka – pokladní
+  location: Olomouc
+  text: |
+    Do supermarketu v Olomouci hledáme prodavače/pokladní.
+    ## Požadujeme
+    - spolehlivost a příjemné vystupování
+    - práce s pokladnou výhodou
+    Hodinová mzda 165 – 190 Kč, směnný provoz.
+  gold:
+    seniority: null
+    years: null
+    remote: [onsite, null]
+    city: Olomouc
+    salary_min: [165, null]
+    salary_max: [190, null]
+    currency: CZK
+    skills:
+      - [cash register, pokladna, práce s pokladnou]
+
+- id: en-hr-generalist-remote-cz
+  lang: en
+  domain: office
+  title: HR Generalist
+  location: Czech Republic – remote
+  text: |
+    Remote role for candidates based in the Czech Republic, occasional travel to Brno.
+    ## About you
+    - 3+ years in HR (recruitment, onboarding, payroll coordination)
+    - Knowledge of Czech labour law
+    - Experience with an HRIS such as BambooHR
+    Salary 55–65k CZK per month.
+  gold:
+    seniority: null
+    years: 3
+    remote: remote_country
+    city: null
+    salary_min: 55000
+    salary_max: 65000
+    currency: CZK
+    skills: [recruitment, onboarding, payroll, czech labour law, hris, bamboohr]
+
+- id: cs-instalater-ostrava
+  lang: cs
+  domain: trades
+  title: Instalatér / topenář
+  location: Ostrava a okolí
+  text: |
+    Hledáme instalatéra-topenáře na zakázky u zákazníků v Ostravě a okolí.
+    ## Požadujeme
+    - výuční list v oboru instalatér
+    - oprávnění na plyn výhodou
+    - ŘP sk. B
+    Odměna od 40 000 Kč, možnost práce na živnostenský list.
+  gold:
+    seniority: null
+    years: null
+    remote: [onsite, null]
+    city: Ostrava
+    salary_min: 40000
+    salary_max: null
+    currency: CZK
+    skills:
+      - [plumbing, instalatér]
+      - [heating, topenář]
+      - [gas certification, oprávnění na plyn]
+      - [driving licence b, řp sk. b, sk. b]
+
+- id: en-customer-support-hybrid-german
+  lang: en
+  domain: office
+  title: Senior Customer Support Specialist (German)
+  location: Brno
+  text: |
+    Hybrid: 3 days from home, 2 days in our Brno office.
+    ## Requirements
+    - Native-level German and fluent English
+    - 3+ years in customer support, 1 year as a team lead is a plus
+    - Zendesk or Freshdesk
+    Monthly salary 48 000 – 56 000 CZK plus language bonus.
+  gold:
+    seniority: senior
+    years: 3
+    remote: hybrid
+    city: Brno
+    salary_min: 48000
+    salary_max: 56000
+    currency: CZK
+    skills: [customer support, zendesk, freshdesk]
+
+- id: cs-skladnik-brno-bez-praxe
+  lang: cs
+  domain: logistics
+  title: Skladník/skladnice – ranní směna
+  location: Brno – Modřice
+  text: |
+    Přijmeme skladníky do logistického centra v Modřicích u Brna.
+    ## Požadujeme
+    - VZV průkaz výhodou (možno udělat u nás)
+    - praxe není nutná
+    Mzda 30 000 – 34 000 Kč měsíčně, doprava zajištěna.
+  gold:
+    seniority: null
+    years: [null, 0]
+    remote: [onsite, null]
+    city: [Modřice, Brno]
+    salary_min: 30000
+    salary_max: 34000
+    currency: CZK
+    skills:
+      - [forklift licence, vzv průkaz, vzv]
+
+- id: en-teacher-english-praha
+  lang: en
+  domain: education
+  title: English Teacher (CELTA)
+  location: Prague 6
+  text: |
+    Language school in Prague 6 seeks a qualified English teacher for adult groups.
+    On-site lessons, 20–25 teaching hours per week.
+    ## Requirements
+    - CELTA, DELTA or an equivalent qualification
+    - Native or C2 English
+    - At least 1 year of teaching experience
+    Pay: 400–500 CZK per 60-minute lesson.
+  gold:
+    seniority: null
+    years: 1
+    remote: onsite
+    city: [Prague, Praha]
+    salary_min: [400, null]
+    salary_max: [500, null]
+    currency: CZK
+    skills: [celta, delta, english teaching]
+
+- id: cs-svarec-brno
+  lang: cs
+  domain: trades
+  title: Svářeč MIG/MAG
+  location: Kuřim
+  text: |
+    Strojírenská firma v Kuřimi přijme svářeče metodou MIG/MAG.
+    ## Požadavky
+    - platný svářečský průkaz (ZK 135)
+    - čtení technických výkresů
+    - praxe 2 roky
+    Mzda 40 000 – 48 000 Kč, dvousměnný provoz, práce v hale.
+  gold:
+    seniority: null
+    years: 2
+    remote: [onsite, null]
+    city: Kuřim
+    salary_min: 40000
+    salary_max: 48000
+    currency: CZK
+    skills:
+      - [mig/mag welding, mig/mag, svařování]
+      - [welding certificate, svářečský průkaz, zk 135]
+      - [technical drawings, technických výkresů, technické výkresy]

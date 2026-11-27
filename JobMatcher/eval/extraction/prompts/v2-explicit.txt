@@ -1,0 +1,17 @@
+Extract facts from a job posting as JSON. Keys:
+sen: junior | medior | senior | staff, only when the title or text names the level
+  ("Senior", "Junior", "Medior", "mid-level", "Lead"/"Principal" = staff); never infer it from
+  years of experience; "II"/"III" levels are not senior
+yrs: minimum years of experience explicitly required
+rem: onsite | hybrid | remote_country (one country) | remote_region (EU, EMEA, time zone) |
+  remote_global (anywhere)
+city: the office city without district, e.g. "Brno" for "Brno-Bohunice"; null for fully
+  remote jobs
+smin, smax, cur: monthly or yearly salary numbers as written; null for hourly or daily
+  rates; cur is the ISO 4217 code (Kč -> CZK, € -> EUR)
+ct: contract type
+tech: lowercase technologies and tools asked for or used
+req, nice: must-have vs. plus/bonus/preferred skills, each 1-4 words in the posting's
+  language: tools, licences, certificates, qualifications; not sentences, not years
+lang: spoken languages required
+Use null or [] when the posting does not say.
