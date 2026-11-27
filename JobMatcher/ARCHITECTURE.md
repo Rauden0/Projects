@@ -26,7 +26,7 @@ flowchart LR
     REL -->|job.indexed| MQ
 
     UI[Client / curl / simple web UI] -->|HTTP + SSE| API[FastAPI]
-    API --> AG[Agent loop]
+    API --> AG[Agent graph]
     AG -->|tool calls| T[Tools<br/>search_jobs · get_job · compare_with_cv]
     T --> PG
     AG -.-> LLM
@@ -230,8 +230,12 @@ RAM; the small model keeps the whole stack runnable on a laptop (migration `0002
 
 ## 6. Agent
 
-A plain tool-calling loop on top of the provider SDK — no agent framework, so every step
-is visible and testable.
+A tool-calling agent run as a LangGraph `StateGraph` (`agent/graph.py`,
+[ADR 0002](docs/adr/0002-langgraph.md)): a `model` node calls the LLM through `LLMClient`, a
+`tools` node runs the tool calls it asked for, and routing functions decide between them and
+`END`. LangGraph only orchestrates; provider calls, budget, ledger and spans stay in `llm.py`
+and `telemetry.py`. The state is plain data (messages, round, seen URLs, answer or error) and
+the collaborators come in as the run's context, so a checkpointer can be added later.
 
 **Tools** (JSON-schema'd, implemented as regular async functions):
 
@@ -245,7 +249,7 @@ is visible and testable.
 - System prompt states the user's CV profile summary and that every recommended job must
   come from a tool result and be cited by URL.
 - Max 4 tool-call rounds per question (`MAX_ROUNDS`), then a fifth call with tools disabled,
-  so the model must answer with what it has. At most 3 tool calls per round
+  so the model must answer with what it has; the graph's `recursion_limit` is derived from it. At most 3 tool calls per round
   (`MAX_CALLS_PER_ROUND`); they run one after another because they share the request's DB
   session, and extra calls get an error result.
 - Tool errors are returned to the model as structured `is_error` results, not raised.
@@ -256,8 +260,8 @@ is visible and testable.
   only the jobs' `url` fields keep theirs, the links the agent may cite. The system prompt does
   not mention the envelope: a rule saying so was measured and only cost tokens.
   `eval/agent/injection.yaml` measures how often the model obeys a posting anyway.
-- Agent events (tool calls, tool results, final answer) are streamed to the client over
-  **SSE**, so the UI can show "searching remote Python roles…" while the agent works.
+- Agent events (tool calls, tool results, final answer) are written to LangGraph's custom
+  stream as they happen and streamed to the client over **SSE**, so the UI can show "searching remote Python roles…" while the agent works.
 - Every LLM call is logged as `llm_call` (latency, tokens) and written to `llm_usage`; each
   chat turn ends with one `chat_turn` line (LLM calls, tool calls, tokens, duration). The
   answer event carries the number of rounds.
@@ -267,7 +271,7 @@ is visible and testable.
   ```
   chat                              root, agent/session.py: request id, outcome, call counts
   ├── chat {model}                  llm.py, per LLM call: gen_ai.* model, finish reason, tokens
-  ├── execute_tool search_jobs      agent/loop.py, per tool call: name, call id, result count
+  ├── execute_tool search_jobs      agent/graph.py, per tool call: name, call id, result count
   └── chat {model}                  the next round
   ```
 
@@ -283,7 +287,7 @@ is visible and testable.
 `compare_with_cv` is fully deterministic (set overlap of normalized skills, years and
 location rules), so it is unit-testable and costs no tokens.
 
-**MCP.** The loop calls its tools in process, without MCP
+**MCP.** The agent calls its tools in process, without MCP
 ([ADR 0001](docs/adr/0001-llm-framework.md), option 9). A separate entry point,
 `jobmatcher-mcp` (`mcp_server.py`, stdio or streamable HTTP), serves `search_jobs` and
 `get_job` to Claude Desktop, Claude Code or any other MCP client. `compare_with_cv` is not
@@ -363,7 +367,7 @@ The eval runners use their own database (`jobmatcher_eval`) because they truncat
 
 | Level | What | Needs |
 |---|---|---|
-| Unit | normalization, chunking, extraction parsing, RRF SQL, budget and limits, LLM client translation and error mapping, agent loop with a scripted model, API error schema | nothing |
+| Unit | normalization, chunking, extraction parsing, RRF SQL, budget and limits, LLM client translation and error mapping, agent graph with a scripted model, API error schema | nothing |
 | Integration | indexer, search, toolbox, listing sync, outbox relay, ledger, batch extraction against Postgres + pgvector; the worker against RabbitMQ (retry queue, DLQ, gzip bodies) | `TEST_DATABASE_URL` (`*_test` only), `TEST_AMQP_URL` (own vhost) |
 | E2E | `job.discovered` on the exchange → worker → `/jobs/search` → `/chat` citing the posting; scripted model by default, `E2E_LLM=local` for Ollama | same |
 
@@ -392,7 +396,7 @@ JobMatcher/
 │   ├── ingest/                 # worker, indexer, listing sync, normalize, chunking, extraction
 │   ├── outbox/relay.py
 │   ├── search/                 # embeddings.py, hybrid.py, metrics.py
-│   ├── agent/                  # loop.py, tools.py, session.py
+│   ├── agent/                  # loop.py (entry, prompt), graph.py (LangGraph), tools.py, session.py
 │   ├── cv/                     # profile.py (extraction + comparison), service.py
 │   ├── mcp_server.py           # jobmatcher-mcp: search_jobs / get_job over MCP
 │   └── api/                    # main.py, deps.py, errors.py, middleware.py, routes/, schemas.py
@@ -464,8 +468,8 @@ container on port 6006, the trace viewer the api and worker export to once
 |---|---|---|
 | Postgres + pgvector | Qdrant, Weaviate | One database for relational filters, full-text and vectors; filtering + fusion in one query; fewer moving parts. |
 | RabbitMQ for ingestion | Celery, plain asyncio tasks | Explicit queues, DLQ and retry topology; matches production experience; async consumer via `aio-pika`. |
-| No agent framework ([ADR 0001](docs/adr/0001-llm-framework.md)) | LangChain / LangGraph, Pydantic AI, OpenAI Agents SDK, Claude Agent SDK / tool runner, LlamaIndex | The provider-specific cost features (Message Batches, cache breakpoints, effort, ledger writes on every call) leak through every abstraction; the control flow (final tool-less round, per-round cap, compaction, citation check) stays visible and is tested with a scripted fake model. Pydantic AI is the first candidate if the revisit triggers in the ADR fire. |
-| OpenTelemetry spans in the wrapper and loop ([ADR 0001](docs/adr/0001-llm-framework.md)) | OpenInference instrumentors, Langfuse or LangSmith SDKs, logs only | The two places that see every call (`llm.py`, `agent/loop.py`) emit the spans, so the raw-`httpx` OpenAI-compatible client is covered too, which SDK instrumentors would miss. Plain OTLP keeps the backend swappable; Phoenix is one container, where self-hosted Langfuse needs ClickHouse, Redis and S3. Only `opentelemetry-api` is a core dependency. |
+| LangGraph for the agent ([ADR 0002](docs/adr/0002-langgraph.md), superseding [ADR 0001](docs/adr/0001-llm-framework.md)) | Hand-written loop, Pydantic AI, OpenAI Agents SDK, Claude Agent SDK / tool runner, LlamaIndex | Owner's decision: the control flow becomes an explicit graph that can take a checkpointer, human-in-the-loop interrupts and more nodes without a rewrite. Only the orchestration moved: no LangChain chat models, so Message Batches, cache breakpoints, effort and the ledger write on every call stay in `llm.py`, and the scripted fake model still drives the tests. |
+| OpenTelemetry spans in the wrapper and agent ([ADR 0001](docs/adr/0001-llm-framework.md)) | OpenInference instrumentors, Langfuse or LangSmith SDKs, logs only | The two places that see every call (`llm.py`, `agent/graph.py`) emit the spans, so the raw-`httpx` OpenAI-compatible client is covered too, which SDK instrumentors would miss. Plain OTLP keeps the backend swappable; Phoenix is one container, where self-hosted Langfuse needs ClickHouse, Redis and S3. Only `opentelemetry-api` is a core dependency. |
 | Local multilingual embeddings | Hosted embedding API | Free, offline, good Czech support; swappable behind an interface. |
 | LLM structured extraction at ingest | Regex/heuristics | Years required, remote policy and seniority are written in free text in dozens of styles; extraction once at ingest makes filtering cheap at query time. |
 | Outbox for events | Publish directly after commit | No lost or phantom events if the process dies between commit and publish. |

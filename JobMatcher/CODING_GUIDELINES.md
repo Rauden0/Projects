@@ -41,7 +41,7 @@ conventions. So:
 | `db` | models, session factory, repository functions | `domain`, `errors` |
 | `llm`, `budget` | provider clients, budget guard, usage ledger | `db`, `config`, `errors`, `observability` |
 | `ingest` | worker, indexer, extraction, normalization, chunking, listing sync, batch | everything below `api` |
-| `search`, `cv`, `agent` | retrieval, CV profile and comparison, tools and loop | `db`, `domain`, `llm`, `search` |
+| `search`, `cv`, `agent` | retrieval, CV profile and comparison, tools and the LangGraph agent | `db`, `domain`, `llm`, `search`; `langgraph` only in `agent` |
 | `api` | FastAPI app, routes, dependencies, error mapping, middleware | everything |
 | `retention` | process deleting CVs and usage client addresses past their retention | `db`, `config` |
 | `mcp_server` | MCP entry point serving `search_jobs` / `get_job` from `Toolbox` | `agent`, `db`, `search`, `config`, `errors`, `observability` |
@@ -59,6 +59,11 @@ conventions. So:
 - Every provider call goes through an `LLMClient` from `llm.py`, which checks the budget,
   records usage in `llm_usage`, logs `llm_call` with latency and tokens, opens a
   `chat {model}` span and raises `LLMError`.
+- The chat agent is a LangGraph `StateGraph` in `agent/graph.py`
+  ([ADR 0002](docs/adr/0002-langgraph.md)). Use LangGraph for orchestration only: nodes call
+  `LLMClient`, never a LangChain chat model, and keep plain dicts in the state rather than
+  LangChain message types. Collaborators go in the run's `context`, events out through the
+  stream writer.
 - LLM output is untrusted input: validate it with Pydantic, normalise what is harmless
   (currency symbols), and never let one bad field discard the rest.
 - A prompt change needs an eval run (`eval/run_extraction.py`, `eval/run_agent.py`) and the

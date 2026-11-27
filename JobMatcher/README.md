@@ -23,7 +23,8 @@ pytest · Docker Compose · GitHub Actions
   transaction as the data and published by a relay using `FOR UPDATE SKIP LOCKED`.
 - **Hybrid search** — hard filters, then pgvector (HNSW, cosine) and Postgres full-text
   candidates fused with Reciprocal Rank Fusion, in a single SQL statement.
-- **Agent** — a plain tool-calling loop (no framework) with `search_jobs`, `get_job` and
+- **Agent** — a LangGraph state graph (`model` and `tools` nodes; provider calls still go
+  through `LLMClient`) with `search_jobs`, `get_job` and
   `compare_with_cv`; round and parallelism limits; tool errors fed back to the model;
   answer URLs checked against tool results; events streamed over SSE.
 - **MCP server** — `search_jobs` and `get_job` served over the Model Context Protocol from the
