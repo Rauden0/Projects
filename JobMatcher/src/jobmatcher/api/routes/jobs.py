@@ -1,14 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from jobmatcher.api.deps import EmbedderDep, SessionDep
+from jobmatcher.api.errors import ERROR_RESPONSES
 from jobmatcher.api.schemas import JobDetail
+from jobmatcher.db import repository
 from jobmatcher.db.models import Job
 from jobmatcher.domain import RemotePolicy, Seniority
 from jobmatcher.search.hybrid import Mode, SearchFilters, SearchHit, search_jobs
 
-router = APIRouter(prefix="/jobs", tags=["jobs"])
+router = APIRouter(prefix="/jobs", tags=["jobs"], responses=ERROR_RESPONSES)
 
 
 @router.get("/search", response_model=list[SearchHit])
@@ -36,7 +38,4 @@ async def search(
 
 @router.get("/{job_id}", response_model=JobDetail)
 async def get_job(job_id: int, session: SessionDep) -> Job:
-    job = await session.get(Job, job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="job not found")
-    return job
+    return await repository.get_job(session, job_id)

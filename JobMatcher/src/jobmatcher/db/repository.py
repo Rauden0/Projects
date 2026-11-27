@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobmatcher.db.models import Job, JobChunk, Outbox, Source
 from jobmatcher.domain import Chunk, JobFacts
+from jobmatcher.errors import NotFound
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,13 @@ async def get_or_create_source(session: AsyncSession, kind: str, company: str) -
         .returning(Source.id)
     )
     return (await session.execute(stmt)).scalar_one()
+
+
+async def get_job(session: AsyncSession, job_id: int) -> Job:
+    job = await session.get(Job, job_id)
+    if job is None:
+        raise NotFound("job", job_id)
+    return job
 
 
 async def find_job(session: AsyncSession, source_id: int, external_id: str) -> Job | None:

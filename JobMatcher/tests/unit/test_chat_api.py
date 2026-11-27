@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from jobmatcher.agent import session as chat_session
 from jobmatcher.agent.loop import AgentEvent
 from jobmatcher.api import deps
 from jobmatcher.api.main import create_app
@@ -33,7 +34,7 @@ def make_client(gate: FakeGate | None = None) -> TestClient:
 
 
 def test_chat_without_llm_key_is_503(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    monkeypatch.setattr(chat_route, "get_llm", lambda purpose, client_id=None: None)
+    monkeypatch.setattr(chat_route, "get_llm", lambda *_, **__: None)
     assert make_client().post("/chat", json={"message": "hi"}).status_code == 503
 
 
@@ -42,8 +43,8 @@ def test_chat_streams_agent_events(monkeypatch) -> None:  # type: ignore[no-unty
         yield AgentEvent("tool_call", {"name": "search_jobs", "input": {"query": "python"}})
         yield AgentEvent("answer", {"text": "Zkus Heureku.", "unverified_urls": []})
 
-    monkeypatch.setattr(chat_route, "get_llm", lambda purpose, client_id=None: object())
-    monkeypatch.setattr(chat_route, "run_agent", fake_agent)
+    monkeypatch.setattr(chat_route, "get_llm", lambda *_, **__: object())
+    monkeypatch.setattr(chat_session, "run_agent", fake_agent)
 
     response = make_client().post("/chat", json={"message": "python v Brně?"})
 
