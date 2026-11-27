@@ -53,7 +53,11 @@ async def sessionmaker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
     try:
         async with engine.begin() as conn:
             await conn.execute(
-                text("TRUNCATE outbox, cv, job_chunk, job, source, llm_usage RESTART IDENTITY")
+                # CASCADE: tables referencing these (chat_answer_cache) are emptied too.
+                text(
+                    "TRUNCATE outbox, cv, job_chunk, job, source, llm_usage"
+                    " RESTART IDENTITY CASCADE"
+                )
             )
     except (OSError, SQLAlchemyError) as exc:  # pragma: no cover - no database available
         await engine.dispose()

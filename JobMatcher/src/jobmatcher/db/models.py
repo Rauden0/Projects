@@ -182,3 +182,33 @@ class LlmUsage(Base):
     cache_read_tokens: Mapped[int] = mapped_column(server_default=text("0"))
     cache_write_tokens: Mapped[int] = mapped_column(server_default=text("0"))
     cost_usd: Mapped[float] = mapped_column(Numeric(12, 6))
+
+
+class ChatAnswerCache(Base):
+    """Replayable events of a first chat turn; `key` hashes everything the answer depends on."""
+
+    __tablename__ = "chat_answer_cache"
+    __table_args__ = (
+        Index("chat_answer_cache_expires", "expires_at"),
+        Index("chat_answer_cache_cv", "cv_id"),
+    )
+
+    key: Mapped[bytes] = mapped_column(LargeBinary, primary_key=True)
+    cv_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cv.id", ondelete="CASCADE")
+    )
+    events: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class RateLimit(Base):
+    """Fixed-window request counters shared by API replicas; `key` hashes bucket and client."""
+
+    __tablename__ = "rate_limit"
+    __table_args__ = (Index("rate_limit_expires", "expires_at"),)
+
+    key: Mapped[bytes] = mapped_column(LargeBinary, primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    hits: Mapped[int]
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
