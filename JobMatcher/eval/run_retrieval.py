@@ -11,6 +11,8 @@ jobmatcher_eval on localhost, migrated with alembic) and refuses databases not n
 import argparse
 import asyncio
 import os
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean
 from typing import Any
@@ -21,7 +23,7 @@ from sqlalchemy.engine import make_url
 
 from jobmatcher.db.models import EMBEDDING_DIM
 from jobmatcher.db.session import get_sessionmaker
-from jobmatcher.domain import RawPosting
+from jobmatcher.domain import JobFacts, RawPosting
 from jobmatcher.ingest.extraction import HeuristicExtractor
 from jobmatcher.ingest.indexer import Indexer
 from jobmatcher.search.embeddings import Embedder, HashingEmbedder, get_embedder
@@ -42,15 +44,33 @@ def use_eval_database() -> None:
     os.environ["DATABASE_URL"] = EVAL_DATABASE_URL
 
 
-async def load_fixtures(embedder: Embedder, url_prefix: str = "fixture://") -> None:
+@dataclass(frozen=True)
+class FixtureExtractor:
+    """Heuristic facts plus the required skills a fixture states, so a test can plant text
+    in the skills field."""
+
+    skills: tuple[str, ...]
+
+    async def extract(self, title: str, location: str | None, text: str) -> JobFacts:
+        facts = await HeuristicExtractor().extract(title, location, text)
+        return facts.model_copy(update={"required_skills": list(self.skills)})
+
+
+async def load_fixtures(
+    embedder: Embedder, url_prefix: str = "fixture://", extra: Sequence[str] = ()
+) -> None:
+    """Seeds fixtures/postings.yaml, then the `extra` files from fixtures/ (job ids follow)."""
     sessionmaker = get_sessionmaker()
     async with sessionmaker() as session, session.begin():
         await session.execute(
             text("TRUNCATE outbox, cv, job_chunk, job, source RESTART IDENTITY CASCADE")
         )
 
-    indexer = Indexer(sessionmaker, HeuristicExtractor(), embedder)
-    for p in yaml.safe_load((HERE / "fixtures" / "postings.yaml").read_text(encoding="utf-8")):
+    postings = []
+    for name in ("postings.yaml", *extra):
+        postings += yaml.safe_load((HERE / "fixtures" / name).read_text(encoding="utf-8"))
+    for p in postings:
+        indexer = Indexer(sessionmaker, FixtureExtractor(tuple(p.get("skills", []))), embedder)
         await indexer.index(
             RawPosting(
                 kind="fixture",
