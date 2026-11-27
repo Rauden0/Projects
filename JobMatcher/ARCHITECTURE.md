@@ -406,7 +406,7 @@ The default LLM is a local Ollama model, so the project runs without any paid AP
 |---|---|---|
 | Postgres + pgvector | Qdrant, Weaviate | One database for relational filters, full-text and vectors; filtering + fusion in one query; fewer moving parts. |
 | RabbitMQ for ingestion | Celery, plain asyncio tasks | Explicit queues, DLQ and retry topology; matches production experience; async consumer via `aio-pika`. |
-| No agent framework | LangChain, LangGraph | The loop is ~150 lines; full control over limits, errors and streaming; easier to test. |
+| No agent framework ([ADR 0001](docs/adr/0001-llm-framework.md)) | LangChain / LangGraph, Pydantic AI, OpenAI Agents SDK, Claude Agent SDK / tool runner, LlamaIndex | The provider-specific cost features (Message Batches, cache breakpoints, effort, ledger writes on every call) leak through every abstraction; the control flow (final tool-less round, per-round cap, compaction, citation check) stays visible and is tested with a scripted fake model. Pydantic AI is the first candidate if the revisit triggers in the ADR fire. |
 | Local multilingual embeddings | Hosted embedding API | Free, offline, good Czech support; swappable behind an interface. |
 | LLM structured extraction at ingest | Regex/heuristics | Years required, remote policy and seniority are written in free text in dozens of styles; extraction once at ingest makes filtering cheap at query time. |
 | Outbox for events | Publish directly after commit | No lost or phantom events if the process dies between commit and publish. |

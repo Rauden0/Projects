@@ -40,4 +40,15 @@ Work on branch `chore/enterprise-hardening` (from `dev`). Tick items as they lan
 - [x] Retrieval eval: run `eval/run_retrieval.py`, extend golden set, record hit@5 / recall@10 / MRR per mode
 - [x] Agent eval: scripted questions → tool-call correctness, citation validity, latency, tokens
 - [x] Compare local model vs hosted model; write results to `eval/RESULTS.md`
-- [ ] Decision record: plain loop vs LangChain / LangGraph / PydanticAI (see `docs/adr/`) — handled by another agent (ADR 0001 committed)
+- [x] Decision record: plain loop vs LangChain / LangGraph / PydanticAI — [ADR 0001](docs/adr/0001-llm-framework.md): keep the loop, add tracing and evals
+
+## ADR 0001 follow-ups
+- [x] F1 doc drift: `MAX_ROUNDS` = 4, sequential tool calls, two providers, §14 row links the ADR
+- [x] F2 `response_format` json_schema on the OpenAI-compatible path
+- [ ] F3 OpenTelemetry GenAI spans (`chat`, `chat {model}`, `execute_tool {name}`) + optional `phoenix` compose profile
+- [x] F4 extraction eval (`eval/run_extraction.py`)
+- [x] F5 agent eval (`eval/run_agent.py`)
+- [ ] F6 prompt-injection suite: postings with injected instructions, the agent must not follow them
+- [ ] F7 MCP server exposing `search_jobs` / `get_job` (exists on `main` from before the refactor, not on `dev`)
+- [x] F8 budget parity for OpenAI-compatible providers
+- [ ] F9 DSPy / GEPA offline for the local extraction prompt — later, only if the extraction numbers call for it
