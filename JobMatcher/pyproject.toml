@@ -39,7 +39,10 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]
-markers = ["integration: needs running Postgres and RabbitMQ"]
+markers = [
+    "integration: needs a migrated Postgres (TEST_DATABASE_URL) and RabbitMQ (TEST_AMQP_URL)",
+    "e2e: whole pipeline in process against Postgres and RabbitMQ; optionally a real LLM",
+]
 
 [tool.ruff]
 line-length = 100

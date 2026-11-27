@@ -4,6 +4,7 @@ import logging
 import aio_pika
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher import messaging
 from jobmatcher.config import configure_logging, get_settings
@@ -71,26 +72,33 @@ def build_extractor() -> Extractor:
     return LLMExtractor(llm) if llm else HeuristicExtractor()
 
 
+async def start_consumers(
+    channel: AbstractChannel,
+    indexer: Indexer,
+    sessionmaker: async_sessionmaker[AsyncSession],
+    prefetch: int,
+) -> None:
+    await channel.set_qos(prefetch_count=prefetch)
+    await messaging.declare_topology(channel)
+    queue = await channel.get_queue(messaging.DISCOVERED)
+    await queue.consume(Worker(indexer, channel).handle)
+    listings = await channel.get_queue(messaging.SOURCE_CRAWLED_QUEUE)
+    await listings.consume(ListingSyncConsumer(sessionmaker).handle)
+
+
 async def main() -> None:
     configure_logging()
     settings = get_settings()
+    indexer = Indexer(
+        get_sessionmaker(),
+        build_extractor(),
+        get_embedder(),
+        defer_extraction=settings.extraction_mode == "batch",
+    )
     connection = await aio_pika.connect_robust(settings.amqp_url)
     async with connection:
         channel = await connection.channel(publisher_confirms=True)
-        await channel.set_qos(prefetch_count=settings.worker_prefetch)
-        await messaging.declare_topology(channel)
-
-        indexer = Indexer(
-            get_sessionmaker(),
-            build_extractor(),
-            get_embedder(),
-            defer_extraction=settings.extraction_mode == "batch",
-        )
-        worker = Worker(indexer, channel)
-        queue = await channel.get_queue(messaging.DISCOVERED)
-        await queue.consume(worker.handle)
-        listings = await channel.get_queue(messaging.SOURCE_CRAWLED_QUEUE)
-        await listings.consume(ListingSyncConsumer(get_sessionmaker()).handle)
+        await start_consumers(channel, indexer, get_sessionmaker(), settings.worker_prefetch)
         log.info("worker started")
         await asyncio.Future()
 
