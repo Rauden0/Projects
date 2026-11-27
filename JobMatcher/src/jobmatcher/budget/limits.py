@@ -31,19 +31,36 @@ class ClientLimiter:
     async def check(self, client_id: str) -> None:
         now = self.now()
         self._check_rate(client_id, now)
+        # Counted before the await, so concurrent requests see each other.
+        self._requests[client_id].append(now)
         used = await self.tokens.client_tokens_since(client_id, day_start(now))
         if used >= self.daily_tokens:
+            self._forget(client_id, now)
             tomorrow = day_start(now) + timedelta(days=1)
             raise ClientLimited("daily token limit reached", int((tomorrow - now).total_seconds()))
-        self._requests[client_id].append(now)
 
     def _check_rate(self, client_id: str, now: datetime) -> None:
-        recent = self._requests[client_id]
-        while recent and now - recent[0] >= WINDOW:
-            recent.popleft()
-        if len(recent) >= self.requests_per_minute:
+        self._prune(now)
+        recent = self._requests.get(client_id)
+        if recent is not None and len(recent) >= self.requests_per_minute:
             retry_after = WINDOW - (now - recent[0])
             raise ClientLimited("too many requests", max(1, int(retry_after.total_seconds())))
+
+    def _prune(self, now: datetime) -> None:
+        for client_id in list(self._requests):
+            recent = self._requests[client_id]
+            while recent and now - recent[0] >= WINDOW:
+                recent.popleft()
+            if not recent:
+                del self._requests[client_id]
+
+    def _forget(self, client_id: str, at: datetime) -> None:
+        recent = self._requests.get(client_id)
+        if recent is None or at not in recent:
+            return
+        recent.remove(at)
+        if not recent:
+            del self._requests[client_id]
 
 
 class BudgetCheck(Protocol):
