@@ -20,6 +20,8 @@ MAX_ROUNDS = 4
 MAX_CALLS_PER_ROUND = 3
 COMPACT_CHARS = 600
 UNTRUSTED_OPEN, UNTRUSTED_CLOSE = "<untrusted_data>\n", "\n</untrusted_data>"
+LLM_ERROR_MESSAGE = "The language model request failed, try again later."
+BUDGET_MESSAGE = "The chat budget is used up, try again later."
 FINAL_ROUND_NOTE = "No more tool calls are available. Answer now using only the results above."
 
 SYSTEM = """You help a job seeker find jobs that fit their CV, in any occupation.
@@ -79,9 +81,13 @@ async def run_agent(
                 tools=toolbox.definitions(),
                 tool_choice=tool_choice,
             )
-        except (LLMError, BudgetExceeded) as exc:
+        except BudgetExceeded as exc:
             log.warning("agent stopped in round %d: %s", round_no, exc)
-            yield AgentEvent("error", {"message": f"LLM request failed: {exc}"[:500]})
+            yield AgentEvent("error", {"message": BUDGET_MESSAGE})
+            return
+        except LLMError as exc:
+            log.warning("agent stopped in round %d: %s", round_no, exc)
+            yield AgentEvent("error", {"message": LLM_ERROR_MESSAGE})
             return
         content = list(_block(response, "content"))
         tool_uses = [b for b in content if _block(b, "type") == "tool_use"]

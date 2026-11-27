@@ -6,7 +6,7 @@ import pytest
 
 from jobmatcher.agent import loop
 from jobmatcher.agent.loop import run_agent
-from jobmatcher.errors import LLMError, ToolError
+from jobmatcher.errors import BudgetExceeded, LLMError, ToolError
 
 
 class ScriptedModel:
@@ -113,7 +113,17 @@ async def test_llm_failure_becomes_error_event() -> None:
 
     events = await collect(FailingModel(), FakeToolbox())
     assert [e.type for e in events] == ["error"]
-    assert "400 from LLM" in events[0].data["message"]
+    assert events[0].data["message"] == loop.LLM_ERROR_MESSAGE
+
+
+@pytest.mark.asyncio
+async def test_exhausted_budget_error_event_hides_the_numbers() -> None:
+    class BrokeModel(ScriptedModel):
+        async def create_message(self, **kwargs: Any) -> dict[str, Any]:
+            raise BudgetExceeded("chat", 40.0, 40.0)
+
+    events = await collect(BrokeModel(), FakeToolbox())
+    assert events[0].data == {"message": loop.BUDGET_MESSAGE}
 
 
 @pytest.mark.asyncio
