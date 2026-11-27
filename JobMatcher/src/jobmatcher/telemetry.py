@@ -7,6 +7,7 @@ Prompts, completions and tool arguments or results go on spans only with `captur
 """
 
 import json
+import time
 from collections.abc import AsyncIterator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -17,7 +18,9 @@ from opentelemetry import context, trace
 from opentelemetry.trace import NoOpTracer, Span, SpanKind, StatusCode, Tracer, TracerProvider
 from opentelemetry.util.types import Attributes
 
-from jobmatcher.errors import JobMatcherError, LLMError
+from jobmatcher import metrics
+from jobmatcher.budget.pricing import TokenUsage, cost_usd
+from jobmatcher.errors import BudgetExceeded, JobMatcherError, LLMError
 
 # GenAI semantic conventions (Development status).
 OPERATION = "gen_ai.operation.name"
@@ -132,6 +135,7 @@ class Usage(Protocol):
 class LlmSpan:
     def __init__(self, span: Span) -> None:
         self._span = span
+        self.usage: TokenUsage | None = None
 
     def prompt(self, messages: object, system: object = None) -> None:
         if not _tracing.capture_content:
@@ -149,6 +153,12 @@ class LlmSpan:
         finish_reason: str | None,
         output: object,
     ) -> None:
+        self.usage = TokenUsage(
+            usage.input_tokens,
+            usage.output_tokens,
+            usage.cache_read_tokens,
+            usage.cache_write_tokens,
+        )
         cached = usage.cache_read_tokens + usage.cache_write_tokens
         attributes: dict[str, str | int | list[str]] = {
             INPUT_TOKENS: usage.input_tokens + cached,
@@ -176,8 +186,8 @@ def llm_call(
     max_tokens: int | None = None,
     base_url: str | None = None,
 ) -> Iterator[LlmSpan]:
-    """A `chat {model}` span around one provider call, budget check and ledger write included,
-    so a call refused by the budget shows up too."""
+    """A `chat {model}` span and the LLM metrics around one provider call, budget check and
+    ledger write included, so a call refused by the budget shows up too."""
     attributes: dict[str, str | int] = {
         OPERATION: "chat",
         PROVIDER: provider,
@@ -188,8 +198,41 @@ def llm_call(
         attributes[REQUEST_MAX_TOKENS] = max_tokens
     if base_url:
         attributes.update(_server(base_url))
+    started = time.perf_counter()
+    outcome = "error"
     with _span(f"chat {model}", SpanKind.CLIENT, attributes) as span:
-        yield LlmSpan(span)
+        llm_span = LlmSpan(span)
+        try:
+            yield llm_span
+            outcome = "ok" if llm_span.usage is not None else "error"
+        except BudgetExceeded:
+            outcome = "budget_exceeded"
+            raise
+        finally:
+            _record_llm_call(
+                provider, model, purpose, outcome, time.perf_counter() - started, llm_span.usage
+            )
+
+
+def _record_llm_call(
+    provider: str,
+    model: str,
+    purpose: str,
+    outcome: str,
+    duration_s: float,
+    usage: TokenUsage | None,
+) -> None:
+    tokens = usage or TokenUsage(0, 0)
+    metrics.recorder.llm_call(
+        provider=provider,
+        model=model,
+        purpose=purpose,
+        outcome=outcome,
+        duration_s=duration_s,
+        input_tokens=tokens.input_tokens + tokens.cache_read_tokens + tokens.cache_write_tokens,
+        output_tokens=tokens.output_tokens,
+        cost_usd=cost_usd(model, tokens),
+    )
 
 
 class ToolSpan:
@@ -235,6 +278,7 @@ def start_chat(*, request_id: str | None, has_cv: bool, history_turns: int) -> S
 
 
 def end_chat(span: Span, *, outcome: str, llm_calls: int, tool_calls: int) -> None:
+    metrics.recorder.chat_turn(outcome)
     span.set_attributes(
         {CHAT_OUTCOME: outcome, CHAT_LLM_CALLS: llm_calls, CHAT_TOOL_CALLS: tool_calls}
     )

@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 
+from jobmatcher import metrics
 from jobmatcher.api.deps import get_authenticator
 from jobmatcher.api.errors import install_error_handlers
 from jobmatcher.api.middleware import (
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(jobs.router)
     app.include_router(chat.router)
+    metrics.instrument(app)
 
     @app.get("/", include_in_schema=False)
     async def index() -> FileResponse:
