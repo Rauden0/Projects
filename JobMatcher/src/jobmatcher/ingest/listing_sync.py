@@ -22,8 +22,17 @@ class ListingSyncConsumer:
         self.sessionmaker = sessionmaker
 
     async def handle(self, msg: AbstractIncomingMessage) -> None:
-        async with msg.process(requeue=True):
+        try:
             await self.sync(msg.body, msg.content_encoding)
+        except Exception:  # noqa: BLE001 - consumer boundary: requeue once, then drop the poison event
+            if msg.redelivered:
+                log.exception("listing sync failed again, dropping source.crawled event")
+                await msg.reject(requeue=False)
+            else:
+                log.exception("listing sync failed, requeueing source.crawled event")
+                await msg.nack(requeue=True)
+            return
+        await msg.ack()
 
     async def sync(self, body: bytes, encoding: str | None = None) -> repository.ListingSync | None:
         try:
