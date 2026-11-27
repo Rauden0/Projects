@@ -1,21 +1,12 @@
-"""Tool-calling loop. Provider-agnostic as long as the response has Anthropic-style content
-blocks: {type: text, text} and {type: tool_use, id, name, input}."""
+"""The chat agent's entry point, prompt and limits. The agent itself is the LangGraph state
+graph in `agent.graph`."""
 
-import json
-import logging
-import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from sqlalchemy.exc import SQLAlchemyError
-
-from jobmatcher import telemetry
-from jobmatcher.agent.tools import Toolbox, strip_role_markers, without_links
-from jobmatcher.errors import BudgetExceeded, LLMError, ToolError
+from jobmatcher.agent.tools import Toolbox
 from jobmatcher.llm import LLMClient
-
-log = logging.getLogger(__name__)
 
 MAX_ROUNDS = 4
 # Calls of one round run one after another: the tools share the request's DB session.
@@ -25,6 +16,7 @@ UNTRUSTED_OPEN, UNTRUSTED_CLOSE = "<untrusted_data>\n", "\n</untrusted_data>"
 LLM_ERROR_MESSAGE = "The language model request failed, try again later."
 TOOL_FAILURE_MESSAGE = "The job index is unavailable, try again later."
 BUDGET_MESSAGE = "The chat budget is used up, try again later."
+UNFINISHED_MESSAGE = "agent did not finish"
 FINAL_ROUND_NOTE = "No more tool calls are available. Answer now using only the results above."
 
 SYSTEM = """You help a job seeker find jobs that fit their CV, in any occupation.
@@ -59,10 +51,6 @@ class AgentEvent:
     data: dict[str, Any]
 
 
-def _block(block: Any, key: str) -> Any:
-    return block[key] if isinstance(block, dict) else getattr(block, key)
-
-
 async def run_agent(
     llm: LLMClient,
     toolbox: Toolbox,
@@ -71,141 +59,11 @@ async def run_agent(
     profile_summary: str,
     system_template: str = SYSTEM,
 ) -> AsyncIterator[AgentEvent]:
-    messages = [*history, {"role": "user", "content": user_message}]
+    # langgraph imports langchain-core, whose langsmith client imports the OpenTelemetry SDK
+    # when it is installed; loading it on the first turn keeps the SDK out of every import path
+    # that never chats, as `telemetry` promises.
+    from jobmatcher.agent import graph
+
     system = system_template.format(profile=profile_summary or "not provided")
-
-    for round_no in range(MAX_ROUNDS + 1):
-        # On the last round tool use is disabled, so the model must answer with what it has.
-        tool_choice = {"type": "auto"} if round_no < MAX_ROUNDS else {"type": "none"}
-        try:
-            response = await llm.create_message(
-                system=system,
-                messages=messages,
-                tools=toolbox.definitions(),
-                tool_choice=tool_choice,
-            )
-        except BudgetExceeded as exc:
-            log.warning("agent stopped in round %d: %s", round_no, exc)
-            yield AgentEvent("error", {"message": BUDGET_MESSAGE})
-            return
-        except LLMError as exc:
-            log.warning("agent stopped in round %d: %s", round_no, exc)
-            yield AgentEvent("error", {"message": LLM_ERROR_MESSAGE})
-            return
-        content = list(_block(response, "content"))
-        tool_uses = [b for b in content if _block(b, "type") == "tool_use"]
-
-        if not tool_uses:
-            answer = "".join(_block(b, "text") for b in content if _block(b, "type") == "text")
-            yield AgentEvent(
-                "answer",
-                {
-                    "text": answer,
-                    "unverified_urls": _unverified(answer, toolbox.seen_urls),
-                    "rounds": round_no + 1,
-                },
-            )
-            return
-
-        if not llm.caches_prompts:
-            _compact_old_results(messages)
-        messages.append({"role": "assistant", "content": [_as_dict(b) for b in content]})
-        results = []
-        for i, use in enumerate(tool_uses):
-            name, tool_input, use_id = _block(use, "name"), _block(use, "input"), _block(use, "id")
-            yield AgentEvent("tool_call", {"name": name, "input": tool_input})
-            try:
-                output, is_error = await _call_tool(toolbox, i, name, tool_input, use_id)
-            except (SQLAlchemyError, OSError) as exc:
-                log.warning("agent stopped in round %d: tool %s failed: %s", round_no, name, exc)
-                yield AgentEvent("error", {"message": TOOL_FAILURE_MESSAGE})
-                return
-            yield AgentEvent(
-                "tool_result",
-                {
-                    "name": name,
-                    "is_error": is_error,
-                    "count": len(output) if isinstance(output, list) else None,
-                },
-            )
-            results.append(
-                {
-                    "type": "tool_result",
-                    "tool_use_id": use_id,
-                    "content": output if is_error else _untrusted(output),
-                    "is_error": is_error,
-                }
-            )
-        if round_no == MAX_ROUNDS - 1:
-            results.append({"type": "text", "text": FINAL_ROUND_NOTE})
-        messages.append({"role": "user", "content": results})
-
-    yield AgentEvent("error", {"message": "agent did not finish"})  # pragma: no cover
-
-
-async def _call_tool(
-    toolbox: Toolbox, index: int, name: str, tool_input: Any, use_id: str
-) -> tuple[Any, bool]:
-    with telemetry.tool_call(name, use_id, tool_input) as span:
-        output, error = await _execute(toolbox, index, name, tool_input)
-        span.result(output, error=error)
-    return output, error is not None
-
-
-async def _execute(
-    toolbox: Toolbox, index: int, name: str, tool_input: Any
-) -> tuple[Any, str | None]:
-    """The tool's output, or the message the model gets instead, and the error type if any."""
-    if index >= MAX_CALLS_PER_ROUND:
-        return "too many tool calls in one round; ask again next turn", "too_many_calls"
-    try:
-        return await toolbox.call(name, tool_input), None
-    except (ToolError, ValueError) as exc:
-        return str(exc), type(exc).__name__
-
-
-def _untrusted(output: Any) -> str:
-    """Tool output marked as data: posting text is written by whoever published the ad. Role
-    markers are removed and links in posting text are replaced, so the only links the model
-    sees are the jobs' own `url` fields, the ones it may cite."""
-    text = output if isinstance(output, str) else json.dumps(without_links(output), default=str)
-    return f"{UNTRUSTED_OPEN}{strip_role_markers(text)}{UNTRUSTED_CLOSE}"
-
-
-def _compact_old_results(messages: list[dict[str, Any]]) -> None:
-    """Shorten tool results from earlier rounds. The model has already read them; keeping them
-    whole makes every request re-send the full history, which quickly exceeds the per-minute
-    token limits of free API tiers. Job ids, titles and URLs come first in each result, so a
-    prefix keeps what later reasoning refers to."""
-    for message in messages:
-        if message["role"] != "user" or isinstance(message["content"], str):
-            continue
-        for block in message["content"]:
-            if block.get("type") == "tool_result" and len(block["content"]) > COMPACT_CHARS:
-                closing = UNTRUSTED_CLOSE if block["content"].endswith(UNTRUSTED_CLOSE) else ""
-                block["content"] = block["content"][:COMPACT_CHARS] + " ...(truncated)" + closing
-
-
-def _as_dict(block: Any) -> dict[str, Any]:
-    if isinstance(block, dict):
-        return block
-    match block.type:
-        case "tool_use":
-            return {"type": "tool_use", "id": block.id, "name": block.name, "input": block.input}
-        case "thinking":
-            return {"type": "thinking", "thinking": block.thinking, "signature": block.signature}
-        case "redacted_thinking":
-            return {"type": "redacted_thinking", "data": block.data}
-    return {"type": "text", "text": block.text}
-
-
-# Stops at whitespace, brackets and quotes: models also answer in Markdown links or JSON.
-_URL_RE = re.compile(r"https?://[^\s()\[\]<>\"'`]+")
-# Trailing punctuation and Markdown emphasis (**url**, _url_); inside a URL both are legal.
-_URL_TRAILERS = ".,;:!?*_"
-
-
-def _unverified(answer: str, seen: set[str]) -> list[str]:
-    """URLs in the answer that no tool returned — a cheap hallucination check."""
-    urls = {u.rstrip(_URL_TRAILERS) for u in _URL_RE.findall(answer)}
-    return sorted(u for u in urls if u not in seen)
+    async for event in graph.run_turn(llm, toolbox, system, user_message, history):
+        yield event
