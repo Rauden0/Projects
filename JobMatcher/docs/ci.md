@@ -1,8 +1,9 @@
 # CI
 
 The workflow lives at the repository root, `../.github/workflows/jobmatcher-ci.yml`, because
-the git root is `Projects/`. It currently runs `ruff check`, migrations and `pytest` against
-service containers, on pushes to `main` and on pull requests.
+the git root is `Projects/`. It runs `ruff check`, `ruff format --check`, `mypy src`, migrations
+and `pytest` with coverage against Postgres and RabbitMQ service containers, on pushes to `main`
+and `dev` and on pull requests.
 
 What the earlier workflow missed:
 
@@ -65,7 +66,7 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: JobMatcher/pyproject.toml
-      - run: pip install -e ".[dev,llm]"
+      - run: pip install -e ".[dev,llm,mcp]"
       - name: Lint and format
         run: |
           ruff check src tests eval alembic
@@ -78,13 +79,9 @@ jobs:
         run: pytest -q --cov=jobmatcher --cov-report=term-missing:skip-covered
 ```
 
-The MCP server (`src/jobmatcher/mcp_server.py`) imports the optional `mcp` SDK, so once it is
-merged the install step needs the `mcp` extra; otherwise `mypy src` fails on the import and
-`tests/unit/test_mcp_server.py` is skipped:
-
-```yaml
-      - run: pip install -e ".[dev,llm,mcp]"
-```
+The install step includes the `mcp` extra because `src/jobmatcher/mcp_server.py` imports the
+optional `mcp` SDK; without it `mypy src` fails on the import and `tests/unit/test_mcp_server.py`
+is skipped.
 
 The LLM evals are not part of CI: they need a GPU (or a paid API) and take minutes. Run them
 before changing a prompt or a model and record the numbers in `eval/RESULTS.md`.
