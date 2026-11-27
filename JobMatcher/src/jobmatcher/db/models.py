@@ -4,6 +4,7 @@ from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    CHAR,
     BigInteger,
     Computed,
     DateTime,
@@ -12,7 +13,6 @@ from sqlalchemy import (
     LargeBinary,
     Numeric,
     SmallInteger,
-    String,
     Text,
     UniqueConstraint,
     func,
@@ -68,7 +68,7 @@ class Job(Base):
     office_city: Mapped[str | None] = mapped_column(Text)
     salary_min: Mapped[int | None]
     salary_max: Mapped[int | None]
-    currency: Mapped[str | None] = mapped_column(String(3))
+    currency: Mapped[str | None] = mapped_column(CHAR(3))
     contract_type: Mapped[str | None] = mapped_column(Text)
     tech_stack: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
     required_skills: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
@@ -76,8 +76,12 @@ class Job(Base):
     extraction_status: Mapped[str] = mapped_column(Text, server_default="pending")
 
     status: Mapped[str] = mapped_column(Text, server_default="open")
-    first_seen_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    last_seen_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     chunks: Mapped[list["JobChunk"]] = relationship(
         back_populates="job", cascade="all, delete-orphan", order_by="JobChunk.ord"
@@ -119,7 +123,7 @@ class Cv(Base):
     raw_text: Mapped[str] = mapped_column(Text)
     profile: Mapped[dict[str, Any]] = mapped_column(JSONB)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Outbox(Base):
@@ -131,8 +135,8 @@ class Outbox(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     topic: Mapped[str] = mapped_column(Text)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    published_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class LlmUsage(Base):
