@@ -20,7 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from jobmatcher import telemetry
 from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy, Purpose
 from jobmatcher.budget.ledger import UsageLedger
-from jobmatcher.budget.pricing import TokenUsage
+from jobmatcher.budget.pricing import TokenUsage, warn_if_unpriced
 from jobmatcher.config import Provider, Settings, get_settings
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.errors import LLMError
@@ -507,6 +507,7 @@ def get_llm(
         )
     if not api_key:
         return None
+    warn_if_unpriced(model)
     return AnthropicClient(
         api_key,
         model,

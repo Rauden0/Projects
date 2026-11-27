@@ -1,4 +1,7 @@
+import logging
 from dataclasses import dataclass
+
+log = logging.getLogger(__name__)
 
 CACHE_READ_FACTOR = 0.1
 CACHE_WRITE_FACTOR = 1.25
@@ -47,3 +50,19 @@ def cost_usd(model: str, usage: TokenUsage, batch: bool = False) -> float:
     )
     total = (input_cost + price.output_per_mtok * usage.output_tokens) * PER_TOKEN
     return total * BATCH_FACTOR if batch else total
+
+
+_warned_unpriced: set[str] = set()
+
+
+def warn_if_unpriced(model: str) -> None:
+    """Calls to a model missing from PRICES cost $0, so the monthly cap never stops them."""
+    if model in PRICES or model in _warned_unpriced:
+        return
+    _warned_unpriced.add(model)
+    log.warning(
+        "llm_model_unpriced model=%s: its calls are recorded at $0 and the budget cap does "
+        "not apply; add it to budget/pricing.py PRICES",
+        model,
+        extra={"event": "llm_model_unpriced", "model": model},
+    )
