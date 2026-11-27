@@ -11,6 +11,7 @@ request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 LogFormat = Literal["text", "json"]
 
 _NOISY_LOGGERS = ("httpx", "httpcore", "huggingface_hub", "sentence_transformers", "aio_pika")
+_UVICORN_LOGGERS = ("uvicorn", "uvicorn.error", "uvicorn.access")
 _STANDARD_ATTRS = set(vars(logging.makeLogRecord({}))) | {"message", "asctime", "request_id"}
 
 
@@ -53,6 +54,10 @@ def configure_logging(level: str = "INFO", fmt: LogFormat = "text") -> None:
     root = logging.getLogger()
     root.handlers[:] = [handler]
     root.setLevel(level)
+    for name in _UVICORN_LOGGERS:
+        uvicorn_logger = logging.getLogger(name)
+        uvicorn_logger.handlers.clear()
+        uvicorn_logger.propagate = True
     for noisy in _NOISY_LOGGERS:
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
