@@ -1,9 +1,15 @@
-# Single-VPS production override (docs/deploy.md):
-# docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
-# docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Single-VPS production override (docs/deploy.md). deploy/gen-env.sh puts
+# COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml in .env, so plain
+# `docker compose pull && docker compose up -d` uses both files.
+x-logging: &logging
+  logging:
+    driver: json-file
+    options: { max-size: 10m, max-file: "3" }
+
 x-app: &app
   image: ${JOBMATCHER_IMAGE:?set JOBMATCHER_IMAGE, e.g. ghcr.io/<owner>/jobmatcher:latest}
   build: !reset null
+  <<: *logging
 
 services:
   caddy:
@@ -21,12 +27,17 @@ services:
     depends_on:
       api: { condition: service_healthy }
     mem_limit: 128m
+    <<: *logging
 
   api:
     <<: *app
     environment:
       # Trust X-Forwarded-For from Caddy only, so per-client chat limits see the real client.
       FORWARDED_ALLOW_IPS: 172.30.0.10
+      # Never an ephemeral signing key or a plain-http cookie in production: the API refuses
+      # to start without SESSION_SECRET.
+      AUTH_INSECURE_DEV: "false"
+      SESSION_COOKIE_SECURE: "true"
     mem_limit: 1g
 
   worker:
@@ -50,10 +61,19 @@ services:
     mem_limit: 256m
 
   postgres:
+    restart: unless-stopped
     mem_limit: 512m
+    <<: *logging
 
   rabbitmq:
+    restart: unless-stopped
     mem_limit: 384m
+    <<: *logging
+
+  prometheus:
+    restart: unless-stopped
+    mem_limit: 256m
+    <<: *logging
 
   # No local LLM on a CPU VPS: use a hosted provider (docs/deploy.md).
   ollama:
