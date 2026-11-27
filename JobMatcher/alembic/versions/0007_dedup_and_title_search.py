@@ -1,4 +1,4 @@
-"""cross-source duplicates resolved at ingest
+"""cross-source duplicates resolved at ingest, accent-insensitive title search
 
 Revision ID: 0007
 Revises: 0006
@@ -56,6 +56,25 @@ def upgrade() -> None:
     op.execute("CREATE INDEX job_canonical ON job (canonical_job_id)")
     op.execute(BACKFILL_CANONICAL)
 
+    op.execute("CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public")
+    # unaccent() is only STABLE (its dictionary could change), which generated columns and
+    # index expressions reject; the wrapper pins the dictionary and declares it immutable.
+    op.execute(
+        """
+        CREATE FUNCTION immutable_unaccent(text) RETURNS text
+        LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
+        AS $$ SELECT public.unaccent('public.unaccent'::regdictionary, $1) $$
+        """
+    )
+    op.execute(
+        "ALTER TABLE job ADD COLUMN title_tsv tsvector GENERATED ALWAYS AS "
+        "(to_tsvector('simple'::regconfig, public.immutable_unaccent(title))) STORED"
+    )
+    op.execute("CREATE INDEX job_title_tsv ON job USING gin (title_tsv)")
+
 
 def downgrade() -> None:
+    op.execute("ALTER TABLE job DROP COLUMN title_tsv")
+    op.execute("DROP FUNCTION immutable_unaccent(text)")
+    op.execute("DROP EXTENSION IF EXISTS unaccent")
     op.execute("ALTER TABLE job DROP COLUMN canonical_job_id, DROP COLUMN dedup_key")

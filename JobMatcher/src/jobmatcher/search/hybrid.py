@@ -205,16 +205,15 @@ async def search_jobs(
     if mode == "hybrid":
         # Titles are the most precise signal ("Python Developer" vs. a TypeScript job that
         # mentions Python once), so title matches form a third ranked list in the fusion.
+        # title_tsv is unaccented, so "vyvojar" finds "Vývojář".
         ranked.append(
             f"""
             (SELECT 'title' AS list, c.id AS chunk_id, j.id AS job_id,
-                    row_number() OVER (
-                        ORDER BY ts_rank_cd(to_tsvector('simple', j.title), q) DESC
-                    ) AS rank
+                    row_number() OVER (ORDER BY ts_rank_cd(j.title_tsv, q) DESC) AS rank
              FROM job j JOIN job_chunk c ON c.job_id = j.id AND c.ord = 0,
-                  to_tsquery('simple', :tsq) q
-             WHERE {where} AND to_tsvector('simple', j.title) @@ q
-             ORDER BY ts_rank_cd(to_tsvector('simple', j.title), q) DESC
+                  to_tsquery('simple', immutable_unaccent(:tsq)) q
+             WHERE {where} AND j.title_tsv @@ q
+             ORDER BY ts_rank_cd(j.title_tsv, q) DESC
              LIMIT :keyword_candidates)
             """
         )

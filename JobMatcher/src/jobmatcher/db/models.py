@@ -59,6 +59,7 @@ class Job(Base):
         Index("job_tech_stack", "tech_stack", postgresql_using="gin"),
         Index("job_dedup_key", "dedup_key", postgresql_where=text("status = 'open'")),
         Index("job_canonical", "canonical_job_id"),
+        Index("job_title_tsv", "title_tsv", postgresql_using="gin"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -96,6 +97,12 @@ class Job(Base):
     dedup_key: Mapped[str] = mapped_column(Text, Computed(DEDUP_KEY_SQL, persisted=True))
     canonical_job_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("job.id", ondelete="SET NULL")
+    )
+    title_tsv: Mapped[str] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('simple'::regconfig, public.immutable_unaccent(title))", persisted=True
+        ),
     )
 
     chunks: Mapped[list["JobChunk"]] = relationship(

@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher.db import repository
@@ -189,3 +190,27 @@ async def test_stub_resurfaces_when_full_copy_closes(
         await repository.close_unseen_jobs(session, source_id, {"other"})
 
     assert await found(sessionmaker) == ["board"]
+
+
+async def test_title_match_ignores_accents(sessionmaker: async_sessionmaker[AsyncSession]) -> None:
+    indexer = Indexer(sessionmaker, HeuristicExtractor(), EMBEDDER)
+    await indexer.index(
+        RawPosting(
+            kind="jobscz",
+            company="acme",
+            external_id="cz",
+            url="https://example.com/cz",
+            title="Vývojář Python",
+            location="Brno",
+            description_html="<p>Backend.</p>",
+        )
+    )
+    async with sessionmaker() as session:
+        hits = await search_jobs(session, EMBEDDER, "vyvojar", k=5, mode="hybrid")
+        titles = (
+            await session.execute(
+                text("SELECT id FROM job WHERE title_tsv @@ to_tsquery('simple', 'vyvojar')")
+            )
+        ).all()
+    assert [h.url for h in hits] == ["https://example.com/cz"]
+    assert len(titles) == 1
