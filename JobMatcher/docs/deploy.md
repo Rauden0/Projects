@@ -40,6 +40,25 @@ In `.env`, at least:
 - new `POSTGRES_PASSWORD`, `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS`, and the same values
   in `DATABASE_URL` and `AMQP_URL`
 - the LLM provider settings above, `LOG_FORMAT=json`
+- `SESSION_SECRET` (`python -c "import secrets; print(secrets.token_urlsafe(32))"`) and
+  `AUTH_INSECURE_DEV=false`. With `AUTH_INSECURE_DEV=true` and no secret the API still starts,
+  but signs session cookies with a key made at startup, so every deploy logs everybody out of
+  their uploaded CV. Rotating `SESSION_SECRET` does the same on purpose.
+
+### Authentication
+
+The default `AUTH_MODE=session` needs no accounts: each browser gets an anonymous id in a
+signed cookie and can only see and delete its own CV. Caddy serves HTTPS, so the cookie's
+`Secure` flag holds; keep `SESSION_COOKIE_SECURE=true`.
+
+For a deployment with real users, set `AUTH_MODE=oidc`, `OIDC_ISSUER` (the issuer URL exactly
+as it appears in the tokens' `iss`) and `OIDC_AUDIENCE`, and put an authenticating proxy such
+as oauth2-proxy between Caddy and the API that forwards the token as `Authorization: Bearer`
+([ADR 0003](adr/0003-authentication.md)). The API fetches the issuer's keys over HTTPS, so it
+needs outbound access to the issuer. `AUTH_PROTECT_SEARCH=true` also closes `/jobs/*`.
+
+Do not publish `jobmatcher-mcp --http`; if you must, it refuses to bind anything but loopback
+without `MCP_HTTP_TOKEN`.
 
 `docker-compose.prod.yml` sets `FORWARDED_ALLOW_IPS` on the API to Caddy's fixed address, so
 uvicorn takes the client address from `X-Forwarded-For` and the per-client chat limits count

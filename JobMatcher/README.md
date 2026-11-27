@@ -87,18 +87,42 @@ here were removed once JobIngestor took over, so without JobIngestor nothing new
 # search without the LLM
 curl "localhost:8000/jobs/search?q=python%20backend&remote_policy=remote_region&max_years_required=3"
 
-# upload a CV, then chat (Server-Sent Events)
-curl -X POST localhost:8000/cv -H "content-type: application/json" -d '{"text": "..."}'
-curl -N -X POST localhost:8000/chat -H "content-type: application/json" \
+# upload a CV, then chat (Server-Sent Events); the CV belongs to the session cookie
+curl -c jar -b jar -X POST localhost:8000/cv -H "content-type: application/json" -d '{"text": "..."}'
+curl -c jar -b jar -N -X POST localhost:8000/chat -H "content-type: application/json" \
      -d '{"cv_id": "<id>", "message": "Remote Python roles that fit me?"}'
 ```
+
+## Authentication
+
+Every uploaded CV belongs to the caller that uploaded it; chatting with it or deleting it from
+anywhere else is a 404, as if it did not exist ([ADR 0003](docs/adr/0003-authentication.md)).
+`AUTH_MODE` picks who the caller is:
+
+- **`session`** (default): no accounts. The API gives each browser an anonymous id in a
+  signed `HttpOnly`, `SameSite=Lax`, `Secure` cookie. Set `SESSION_SECRET` (32+ characters,
+  `python -c "import secrets; print(secrets.token_urlsafe(32))"`); without it the API refuses
+  to start, unless `AUTH_INSECURE_DEV=true` (what `.env.example` sets for local use), which
+  signs with a key made at startup, so a restart forgets every session. Browsers keep Secure
+  cookies on `http://localhost`; set `SESSION_COOKIE_SECURE=false` only for plain http on
+  another host. Clearing cookies loses access to the uploaded CV (upload it again).
+- **`oidc`**: every `/cv` and `/chat` call needs `Authorization: Bearer <JWT>` from
+  `OIDC_ISSUER` for `OIDC_AUDIENCE`, checked against the issuer's published keys. The caller is
+  the token's `sub`, which also keys the chat limits. `/jobs/*` stays public unless
+  `AUTH_PROTECT_SEARCH=true`. The UI asks for a token to paste when it gets a 401; for real
+  users, put an authenticating proxy such as oauth2-proxy in front (see the ADR).
+
+`POST` requests need `Content-Type: application/json` and cross-site requests are refused
+(CSRF protection for the cookie). CVs uploaded before owners were recorded belong to nobody
+and are only removed by retention.
 
 ## Personal data
 
 `POST /cv` stores the CV text, its extracted profile and an embedding. `DELETE /cv/{cv_id}`
 (the "Smazat CV" button in the UI) removes them at once; otherwise the `retention` service
-deletes CVs `CV_RETENTION_DAYS` (default 30) after upload. Chat limits store the client IP on
-`llm_usage` rows, and the same service clears it after two days. Chat messages and the CV
+deletes CVs `CV_RETENTION_DAYS` (default 30) after upload. Chat limits store the client IP (in
+`AUTH_MODE=oidc` the token subject) on `llm_usage` rows, and the same service clears it after
+two days. The session cookie holds a random id and nothing else. Chat messages and the CV
 profile (skills, years, languages, city, not the CV text) are sent to the configured LLM
 provider; with a hosted provider that provider is a processor of that data.
 
@@ -116,7 +140,9 @@ jobmatcher-mcp                                  # stdio (also: python -m jobmatc
 jobmatcher-mcp --http --port 8001               # streamable HTTP at http://127.0.0.1:8001/mcp
 ```
 
-The HTTP transport has no authentication, so it binds to `127.0.0.1` unless you pass `--host`.
+The HTTP transport binds to `127.0.0.1` unless you pass `--host`. On any other address it
+refuses to start without `MCP_HTTP_TOKEN` (32+ characters); with a token set, clients must send
+`Authorization: Bearer <token>`.
 
 Claude Desktop starts stdio servers itself, without your shell's virtualenv or `.env`, so
 give the absolute path to the script and the environment it needs. Add this to

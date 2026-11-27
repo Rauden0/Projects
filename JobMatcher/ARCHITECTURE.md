@@ -303,7 +303,8 @@ become `isError` results; an unknown tool, including `compare_with_cv`, is a pro
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/cv` | Upload CV text → extracted profile, returns `cv_id` |
+| `POST` | `/cv` | Upload CV text → extracted profile, returns `cv_id`; the caller owns it |
+| `DELETE` | `/cv/{id}` | Delete the caller's CV |
 | `GET` | `/jobs/search` | Direct hybrid search with filters (no LLM) |
 | `GET` | `/jobs/{id}` | Job detail |
 | `POST` | `/chat` | `{cv_id, message, history}` → SSE stream of tool events + answer |
@@ -321,14 +322,42 @@ Every error has one shape, produced in `api/errors.py` from the typed errors in
 | Code | Status | Raised by |
 |---|---|---|
 | `validation_error` | 422 | request validation (adds an `errors` list) |
-| `not_found` | 404 | unknown job, CV or route |
+| `unauthenticated` | 401 + `WWW-Authenticate` | `AUTH_MODE=oidc` without a valid bearer token |
+| `csrf_rejected` | 403 | cross-site or non-JSON state-changing request |
+| `not_found` | 404 | unknown job or route, or a CV the caller does not own |
 | `rate_limited` | 429 + `Retry-After` | per-client chat limits |
 | `budget_exhausted`, `llm_unavailable` | 503 | monthly LLM budget, no chat model configured |
+| `auth_unavailable` | 503 | the OIDC issuer's discovery document or keys cannot be fetched |
 | `llm_error` | 502 | provider failure outside the SSE stream |
 | `internal_error` | 500 | anything unexpected (logged, details not exposed) |
 
 Each request gets an `X-Request-ID` (the caller's, if well-formed), echoed in the response and
 attached to every log line written while handling it.
+
+### 7.1 Security
+
+Decided in [ADR 0003](docs/adr/0003-authentication.md).
+
+- **Callers.** `api/auth.py` turns a request into a principal behind `PrincipalDep`.
+  `AUTH_MODE=session` (default): an anonymous random id in an HMAC-signed `HttpOnly`,
+  `SameSite=Lax`, `Secure` cookie (`SESSION_SECRET` required unless `AUTH_INSECURE_DEV=true`).
+  `AUTH_MODE=oidc`: a bearer JWT verified against `OIDC_ISSUER`'s JWKS (discovery, cached
+  keys, `exp`/`iss`/`aud`, asymmetric algorithms only); principal `oidc:<sub>`.
+- **CV ownership.** `cv.owner_id` is the uploading principal. `cv/service.owned_cv` answers
+  404 for a CV that is missing, someone else's or from before owners existed (`NULL`), so a
+  `cv_id` is no longer a capability.
+- **Public endpoints.** `/`, `/healthz`, `/readyz`, and `/jobs/*` (catalogue data; in oidc mode
+  protected with `AUTH_PROTECT_SEARCH=true`).
+- **CSRF.** SameSite=Lax plus `reject_cross_site`: unsafe methods with
+  `Sec-Fetch-Site: cross-site` and `POST`s without `Content-Type: application/json` get 403;
+  no CORS, so cross-origin JSON never passes the preflight.
+- **Chat limits** key on the client address in session mode (a cookie is free to reset) and
+  on the principal in oidc mode.
+- **Headers.** nosniff, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` and a deny-all
+  CSP on API responses; the page's CSP allows only the two pinned CDN scripts and the hashes
+  of its own inline script and style, computed at startup.
+- **MCP over HTTP** needs `MCP_HTTP_TOKEN` (bearer) on any non-loopback host and refuses to
+  start without it.
 
 ---
 
@@ -420,7 +449,8 @@ JobMatcher/
 
 All configuration via environment variables loaded by `pydantic-settings`
 (`DATABASE_URL`, `AMQP_URL`, `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`,
-optional `CHAT_LLM_*` overrides, `EMBEDDING_MODEL`, budget and limits, `LOG_LEVEL` / `LOG_FORMAT`, `OTEL_EXPORTER_OTLP_ENDPOINT`
+optional `CHAT_LLM_*` overrides, `EMBEDDING_MODEL`, budget and limits, `AUTH_MODE` /
+`SESSION_SECRET` / `OIDC_*` / `MCP_HTTP_TOKEN`, `LOG_LEVEL` / `LOG_FORMAT`, `OTEL_EXPORTER_OTLP_ENDPOINT`
 / `OTEL_SERVICE_NAME` / `OTEL_CAPTURE_CONTENT`), validated at startup (enums, ranges, URL
 schemes of the database, broker, LLM and OTLP URLs, `EMBEDDING_DIM` against the schema, a
 `CHAT_LLM_PROVIDER` other than `LLM_PROVIDER` having its own model and base URL). API keys are
