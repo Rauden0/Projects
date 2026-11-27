@@ -31,8 +31,9 @@ pytest · Docker Compose · GitHub Actions
   validity) evals against the local model; see [eval/RESULTS.md](eval/RESULTS.md).
 - **Operations** — one JSON error shape (`{detail, code, request_id}`), `X-Request-ID` on every
   request and log line, `llm_call` / `chat_turn` log events with latency and tokens
-  (`LOG_FORMAT=json` for log shippers), every LLM call in the `llm_usage` ledger, settings
-  validated at startup.
+  (`LOG_FORMAT=json` for log shippers), every LLM call in the `llm_usage` ledger, OpenTelemetry
+  traces of chat turns, LLM and tool calls (Phoenix as the local viewer), settings validated at
+  startup.
 
 ## Run it
 
@@ -95,6 +96,35 @@ hard cap: extraction stops at `LLM_EXTRACTION_BUDGET_SHARE` of it (jobs then kee
 facts and are retried later) and chat answers 503 at the full amount. Chat is also limited per
 client (`X-Client-Id` header, otherwise the IP): `CHAT_REQUESTS_PER_MINUTE` and
 `CHAT_DAILY_TOKENS_PER_CLIENT`. Set a spend limit on the workspace in the Claude Console as well.
+
+## Tracing
+
+Every `/chat` turn is one OpenTelemetry trace: a `chat` root span with a `chat {model}` span per
+LLM call and an `execute_tool {name}` span per tool call. Extraction calls in the worker get
+their own `chat {model}` spans. LLM spans use the GenAI semantic-convention attributes:
+provider, request and response model, finish reason, and input, output, cache-read and
+cache-write tokens. The root span carries the request id, so a trace can be found from a log
+line.
+
+Tracing is off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set; without it no SDK is loaded and
+the spans cost nothing. Export is plain OTLP over HTTP, so any backend that accepts it works
+(Phoenix, Langfuse, Datadog, a Collector). Locally, Phoenix runs as one container:
+
+```bash
+docker compose --profile phoenix up -d phoenix
+# in .env: OTEL_EXPORTER_OTLP_ENDPOINT=http://phoenix:6006 (http://localhost:6006 from the host)
+docker compose up -d api worker                 # recreate them with the new setting
+```
+
+The UI is at http://localhost:6006. Traces land in Phoenix's `default` project; the API reports
+as service `jobmatcher`, the worker as `jobmatcher-worker` (`OTEL_SERVICE_NAME`). The image
+installs the `otel` extra (SDK and OTLP exporter); a local install needs `.[otel]`, which `dev`
+includes, and refuses to start with the endpoint set but the extra missing.
+
+Spans carry no prompt, completion, CV or posting text by default. `OTEL_CAPTURE_CONTENT=true`
+adds the system prompt, the messages, the model output and tool arguments and results, which
+is meant for local debugging only. Message Batches extraction (`EXTRACTION_MODE=batch`) is not
+traced.
 
 ## Branches
 

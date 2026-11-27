@@ -37,7 +37,7 @@ conventions. So:
 | Module | Contains | May import |
 |---|---|---|
 | `domain` | `RawPosting` (the `job.discovered` contract), `JobFacts`, `Chunk`, enum literals | pydantic only |
-| `errors`, `observability`, `config` | error types, logging / request ids / LLM call records, settings | stdlib, pydantic |
+| `errors`, `observability`, `telemetry`, `config` | error types, logging / request ids / LLM call records, spans, settings | stdlib, pydantic, `opentelemetry-api` (the SDK only inside `telemetry.otlp_provider`) |
 | `db` | models, session factory, repository functions | `domain`, `errors` |
 | `llm`, `budget` | provider clients, budget guard, usage ledger | `db`, `config`, `errors`, `observability` |
 | `ingest` | worker, indexer, extraction, normalization, chunking, listing sync, batch | everything below `api` |
@@ -55,7 +55,8 @@ conventions. So:
 ## LLM code
 
 - Every provider call goes through an `LLMClient` from `llm.py`, which checks the budget,
-  records usage in `llm_usage`, logs `llm_call` with latency and tokens and raises `LLMError`.
+  records usage in `llm_usage`, logs `llm_call` with latency and tokens, opens a
+  `chat {model}` span and raises `LLMError`.
 - LLM output is untrusted input: validate it with Pydantic, normalise what is harmless
   (currency symbols), and never let one bad field discard the rest.
 - A prompt change needs an eval run (`eval/run_extraction.py`, `eval/run_agent.py`) and the
@@ -70,12 +71,17 @@ conventions. So:
   why a filter keeps NULLs), never what the next line does. No docstrings that repeat the
   signature.
 
-## Logging
+## Logging and tracing
 
 - `logging.getLogger(__name__)`; configure once per process with `config.configure_logging()`
   (`LOG_LEVEL`, `LOG_FORMAT=text|json`). Every line carries the request id when there is one.
 - Log events that matter for operations with a stable name and `extra` fields: `llm_call`,
   `chat_turn`, `http_request`. Never log secrets, CV text or full prompts.
+- Spans come from the helpers in `telemetry.py` (`llm_call`, `tool_call`, `start_chat`), which
+  hold every attribute name; the GenAI conventions are not stable yet. Content goes on a span
+  only behind `OTEL_CAPTURE_CONTENT`, and errors as `error.type` without the message.
+- Never hold a span current across a `yield`; iterate the generator through
+  `telemetry.within` instead.
 
 ## Tests
 

@@ -245,6 +245,22 @@ is visible and testable.
 - Every LLM call is logged as `llm_call` (latency, tokens) and written to `llm_usage`; each
   chat turn ends with one `chat_turn` line (LLM calls, tool calls, tokens, duration). The
   answer event carries the number of rounds.
+- Each chat turn is one OpenTelemetry trace (`telemetry.py`), exported over OTLP only when
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is set:
+
+  ```
+  chat                              root, agent/session.py: request id, outcome, call counts
+  ├── chat {model}                  llm.py, per LLM call: gen_ai.* model, finish reason, tokens
+  ├── execute_tool search_jobs      agent/loop.py, per tool call: name, call id, result count
+  └── chat {model}                  the next round
+  ```
+
+  Extraction calls are traced as standalone `chat {model}` spans. Attribute names follow the
+  GenAI semantic conventions, which are still in Development status, so they are all defined
+  in `telemetry.py`. Errors set the span status and `error.type`, never the message, because
+  provider errors can quote the prompt. Prompt, completion and tool content is recorded only
+  with `OTEL_CAPTURE_CONTENT=true`. The root span is made current only while the agent
+  generator runs, never across a `yield`, so the SSE consumer never runs inside it.
 - Client-supplied history is validated as plain `user` / `assistant` text turns, so a client
   cannot inject tool calls or system messages.
 
@@ -336,6 +352,7 @@ JobMatcher/
 │   ├── llm.py                  # Anthropic + OpenAI-compatible clients, usage, LLMError
 │   ├── errors.py               # typed errors (JobMatcherError)
 │   ├── observability.py        # logging, request ids, LLM call records
+│   ├── telemetry.py            # OpenTelemetry spans, GenAI attribute names, OTLP setup
 │   ├── messaging.py            # RabbitMQ topology
 │   ├── db/                     # SQLAlchemy models, session, repositories
 │   ├── domain.py               # RawPosting, JobFacts, Chunk, enums shared by all modules
@@ -365,8 +382,9 @@ JobMatcher/
 
 All configuration via environment variables loaded by `pydantic-settings`
 (`DATABASE_URL`, `AMQP_URL`, `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`,
-`EMBEDDING_MODEL`, budget and limits, `LOG_LEVEL` / `LOG_FORMAT`), validated at startup
-(enums, ranges, URL schemes, `EMBEDDING_DIM` against the schema). API keys are `SecretStr`.
+`EMBEDDING_MODEL`, budget and limits, `LOG_LEVEL` / `LOG_FORMAT`, `OTEL_EXPORTER_OTLP_ENDPOINT`
+/ `OTEL_SERVICE_NAME` / `OTEL_CAPTURE_CONTENT`), validated at startup (enums, ranges, URL
+schemes, `EMBEDDING_DIM` against the schema). API keys are `SecretStr`.
 The default LLM is a local Ollama model, so the project runs without any paid API.
 `.env.example` is committed; `.env` is git-ignored. No keys in code or in the image.
 
@@ -375,7 +393,10 @@ The default LLM is a local Ollama model, so the project runs without any paid AP
 ## 12. Deployment
 
 **Phase 1 — local:** `docker compose up` brings up postgres (pgvector image), rabbitmq
-(management plugin), ollama, a one-shot migration, api, worker, outbox-relay.
+(management plugin), ollama, a one-shot migration, api, worker, outbox-relay. Optional
+profiles: `batch` (hourly Message Batches extraction) and `phoenix` (one Arize Phoenix
+container on port 6006, the trace viewer the api and worker export to once
+`OTEL_EXPORTER_OTLP_ENDPOINT=http://phoenix:6006` is set).
 `eval/run_retrieval.py` loads the eval fixtures, so the app is usable without crawling.
 
 **Phase 2 — cloud via Terraform** (separate milestone, `infra/`):
@@ -407,6 +428,7 @@ The default LLM is a local Ollama model, so the project runs without any paid AP
 | Postgres + pgvector | Qdrant, Weaviate | One database for relational filters, full-text and vectors; filtering + fusion in one query; fewer moving parts. |
 | RabbitMQ for ingestion | Celery, plain asyncio tasks | Explicit queues, DLQ and retry topology; matches production experience; async consumer via `aio-pika`. |
 | No agent framework ([ADR 0001](docs/adr/0001-llm-framework.md)) | LangChain / LangGraph, Pydantic AI, OpenAI Agents SDK, Claude Agent SDK / tool runner, LlamaIndex | The provider-specific cost features (Message Batches, cache breakpoints, effort, ledger writes on every call) leak through every abstraction; the control flow (final tool-less round, per-round cap, compaction, citation check) stays visible and is tested with a scripted fake model. Pydantic AI is the first candidate if the revisit triggers in the ADR fire. |
+| OpenTelemetry spans in the wrapper and loop ([ADR 0001](docs/adr/0001-llm-framework.md)) | OpenInference instrumentors, Langfuse or LangSmith SDKs, logs only | The two places that see every call (`llm.py`, `agent/loop.py`) emit the spans, so the raw-`httpx` OpenAI-compatible client is covered too, which SDK instrumentors would miss. Plain OTLP keeps the backend swappable; Phoenix is one container, where self-hosted Langfuse needs ClickHouse, Redis and S3. Only `opentelemetry-api` is a core dependency. |
 | Local multilingual embeddings | Hosted embedding API | Free, offline, good Czech support; swappable behind an interface. |
 | LLM structured extraction at ingest | Regex/heuristics | Years required, remote policy and seniority are written in free text in dozens of styles; extraction once at ingest makes filtering cheap at query time. |
 | Outbox for events | Publish directly after commit | No lost or phantom events if the process dies between commit and publish. |
