@@ -6,7 +6,7 @@ import logging
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from jobmatcher.agent.tools import Toolbox
 from jobmatcher.errors import BudgetExceeded, LLMError, ToolError
@@ -15,22 +15,23 @@ from jobmatcher.llm import LLMClient
 log = logging.getLogger(__name__)
 
 MAX_ROUNDS = 4
-MAX_PARALLEL_CALLS = 3
+# Calls of one round run one after another: the tools share the request's DB session.
+MAX_CALLS_PER_ROUND = 3
 COMPACT_CHARS = 600
 FINAL_ROUND_NOTE = "No more tool calls are available. Answer now using only the results above."
 
-SYSTEM = """You help a software developer find jobs that fit their CV.
+SYSTEM = """You help a job seeker find jobs that fit their CV, in any occupation.
 CV profile: {profile}
 
 Rules:
 - Only recommend jobs that appeared in tool results in this conversation, and link each one
   by its exact URL.
 - Use search_jobs with filters only for the user's hard constraints (location, remote,
-  years of experience); put skills into the query text. For "in <city> or remote" set
-  only city. Results then come in two groups ("local" and "remote"); when the user asked
-  for both, recommend the best fitting job from each group. Describe where a job is
-  exactly as its "where" field says. If a search returns nothing, search again with
-  fewer filters before concluding there are no jobs.
+  years of experience); put the occupation and skills into the query text. For
+  "in <city> or remote" set only city. Results then come in two groups ("local" and
+  "remote"); when the user asked for both, recommend the best fitting job from each
+  group. Describe where a job is exactly as its "where" field says. If a search returns
+  nothing, search again with fewer filters before concluding there are no jobs.
 - Search results already include a short "fit" (missing required skills, years gap) for each
   job; use it to choose. Call compare_with_cv only for the jobs you recommend, to get the full
   picture. Never invent job ids or URLs.
@@ -40,9 +41,12 @@ Rules:
   the URL, why it fits and the main gap. No introduction, no closing summary."""
 
 
-@dataclass(frozen=True)
+EventType = Literal["tool_call", "tool_result", "answer", "error"]
+
+
+@dataclass(frozen=True, slots=True)
 class AgentEvent:
-    type: str  # tool_call | tool_result | answer | error
+    type: EventType
     data: dict[str, Any]
 
 
@@ -81,7 +85,11 @@ async def run_agent(
             answer = "".join(_block(b, "text") for b in content if _block(b, "type") == "text")
             yield AgentEvent(
                 "answer",
-                {"text": answer, "unverified_urls": _unverified(answer, toolbox.seen_urls)},
+                {
+                    "text": answer,
+                    "unverified_urls": _unverified(answer, toolbox.seen_urls),
+                    "rounds": round_no + 1,
+                },
             )
             return
 
@@ -92,8 +100,8 @@ async def run_agent(
         for i, use in enumerate(tool_uses):
             name, tool_input, use_id = _block(use, "name"), _block(use, "input"), _block(use, "id")
             yield AgentEvent("tool_call", {"name": name, "input": tool_input})
-            if i >= MAX_PARALLEL_CALLS:
-                output, is_error = "too many parallel tool calls; ask again next turn", True
+            if i >= MAX_CALLS_PER_ROUND:
+                output, is_error = "too many tool calls in one round; ask again next turn", True
             else:
                 try:
                     output, is_error = await toolbox.call(name, tool_input), False

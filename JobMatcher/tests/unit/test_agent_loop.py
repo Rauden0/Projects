@@ -63,6 +63,7 @@ async def test_tool_round_then_answer() -> None:
     [(name, args)] = toolbox.calls
     assert name == "search_jobs" and args["remote_policy"] == ["remote_region"]
     assert events[-1].data["unverified_urls"] == ["https://made.up/2"]
+    assert events[-1].data["rounds"] == 2
 
     tool_result = model.calls[1]["messages"][-1]["content"][0]
     assert tool_result["tool_use_id"] == "t1" and tool_result["is_error"] is False
@@ -80,16 +81,16 @@ async def test_tool_errors_are_returned_to_model() -> None:
 
 
 @pytest.mark.asyncio
-async def test_parallel_call_limit() -> None:
+async def test_calls_per_round_limit() -> None:
     model = ScriptedModel(
         [tool_use(f"t{i}", "search_jobs", query=str(i)) for i in range(5)],
         [{"type": "text", "text": "done"}],
     )
     toolbox = FakeToolbox()
     events = await collect(model, toolbox)
-    assert len(toolbox.calls) == loop.MAX_PARALLEL_CALLS
+    assert len(toolbox.calls) == loop.MAX_CALLS_PER_ROUND
     errors = [e for e in events if e.type == "tool_result" and e.data["is_error"]]
-    assert len(errors) == 5 - loop.MAX_PARALLEL_CALLS
+    assert len(errors) == 5 - loop.MAX_CALLS_PER_ROUND
 
 
 @pytest.mark.asyncio
