@@ -40,7 +40,7 @@ async def index(sm: async_sessionmaker[AsyncSession], *ids: str) -> None:
 async def statuses(sm: async_sessionmaker[AsyncSession]) -> dict[str, str]:
     async with sm() as session:
         rows = await session.execute(select(Job.external_id, Job.status))
-        return dict(rows.tuples().all())
+        return {external_id: status for external_id, status in rows}
 
 
 async def test_complete_listing_closes_missing_jobs(
