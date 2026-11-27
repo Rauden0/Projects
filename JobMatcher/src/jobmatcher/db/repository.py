@@ -1,8 +1,10 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 
-from sqlalchemy import delete, func, select, true, update
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import Text, all_, any_, bindparam, delete, func, select, true, update
+from sqlalchemy.dialects.postgresql import ARRAY, insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import BindParameter
 
 from jobmatcher.db.models import Job, JobChunk, Outbox, Source
 from jobmatcher.domain import Chunk, JobFacts
@@ -116,13 +118,18 @@ async def close_unseen_jobs(session: AsyncSession, source_id: int, seen_ids: set
     stmt = (
         update(Job)
         .where(Job.source_id == source_id, Job.status == "open")
-        .where(Job.external_id.not_in(seen_ids) if seen_ids else true())
+        .where(Job.external_id != all_(_ids_param(seen_ids)) if seen_ids else true())
         .values(status="closed")
         .returning(Job.id)
     )
     closed = (await session.execute(stmt)).scalars().all()
     session.add_all(Outbox(topic="job.closed", payload={"job_id": job_id}) for job_id in closed)
     return len(closed)
+
+
+def _ids_param(ids: set[str]) -> BindParameter[Sequence[str]]:
+    values: Sequence[str] = sorted(ids)
+    return bindparam("external_ids", values, type_=ARRAY(Text))
 
 
 @dataclass(frozen=True)
@@ -144,7 +151,7 @@ async def sync_listing(
 async def _touch_listed(session: AsyncSession, source_id: int, listed_ids: set[str]) -> int:
     if not listed_ids:
         return 0
-    listed = (Job.source_id == source_id) & Job.external_id.in_(listed_ids)
+    listed = (Job.source_id == source_id) & (Job.external_id == any_(_ids_param(listed_ids)))
     reopened = await session.execute(
         update(Job).where(listed, Job.status == "closed").values(status="open").returning(Job.id)
     )

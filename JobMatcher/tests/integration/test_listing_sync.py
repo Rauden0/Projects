@@ -86,3 +86,15 @@ async def test_listed_closed_job_is_reopened(
 
     assert result is not None and result.reopened == 1
     assert await statuses(sessionmaker) == {"1": "open", "2": "open"}
+
+
+async def test_listing_larger_than_bind_param_limit_is_synced(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    await index(sessionmaker, "1", "2")
+    listed = ["1", *(f"x{i}" for i in range(40_000))]
+
+    result = await ListingSyncConsumer(sessionmaker).sync(event(listed))
+
+    assert result is not None and result.closed == 1
+    assert await statuses(sessionmaker) == {"1": "open", "2": "closed"}
