@@ -3,7 +3,18 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from jobmatcher.budget.limits import ChatGate, ClientLimiter
+from jobmatcher.budget.limits import (
+    ChatGate,
+    ClientLimiter,
+    DuplicateGuard,
+    MemoryRateStore,
+    Rate,
+    RateLimited,
+    RequestLimiter,
+    ServerBusy,
+    StreamSlots,
+    window_start,
+)
 from jobmatcher.errors import BudgetExceeded, ClientLimited
 
 START = datetime(2026, 11, 26, 23, 59, 0, tzinfo=UTC)
@@ -87,8 +98,111 @@ async def test_rejected_by_daily_tokens_does_not_count_as_request() -> None:
 
 async def test_idle_clients_are_evicted() -> None:
     clock = Clock()
-    limiter = ClientLimiter(Tokens(), requests_per_minute=5, daily_tokens=1000, now=clock)
+    store = MemoryRateStore()
+    limiter = ClientLimiter(Tokens(), 5, daily_tokens=1000, now=clock, store=store)
     await limiter.check("a")
     clock.current = START + timedelta(minutes=2)
     await limiter.check("b")
-    assert set(limiter._requests) == {"b"}
+    assert len(store) == 1
+
+
+CV_RATES = {"cv": [Rate(2, timedelta(minutes=1)), Rate(3, timedelta(days=1))]}
+
+
+async def test_bucket_needs_every_rate_to_admit() -> None:
+    clock = Clock()
+    clock.current = datetime(2026, 11, 26, 8, 0, tzinfo=UTC)
+    limiter = RequestLimiter(MemoryRateStore(), CV_RATES, now=clock)
+    await limiter.check("cv", "a")
+    await limiter.check("cv", "a")
+    with pytest.raises(RateLimited) as exc:
+        await limiter.check("cv", "a")
+    assert exc.value.kind == "rate_cv"
+    assert exc.value.retry_after_s == 60
+    clock.current += timedelta(minutes=1)
+    await limiter.check("cv", "a")
+    clock.current += timedelta(minutes=1)
+    with pytest.raises(RateLimited) as exc:
+        await limiter.check("cv", "a")
+    assert exc.value.retry_after_s == 24 * 3600 - 120
+
+
+async def test_hit_refused_by_one_rate_is_not_counted_by_the_others() -> None:
+    clock = Clock()
+    rates = {"cv": [Rate(5, timedelta(minutes=1)), Rate(1, timedelta(days=1))]}
+    limiter = RequestLimiter(MemoryRateStore(), rates, now=clock)
+    await limiter.check("cv", "a")
+    for _ in range(5):
+        with pytest.raises(RateLimited):
+            await limiter.check("cv", "a")
+    await limiter.check("cv", "b")
+
+
+async def test_buckets_and_unknown_buckets_are_independent() -> None:
+    limiter = RequestLimiter(MemoryRateStore(), CV_RATES, now=lambda: START)
+    await limiter.check("cv", "a")
+    await limiter.check("cv", "a")
+    for _ in range(10):
+        await limiter.check("search", "a")
+
+
+async def test_cached_chat_turn_counts_only_against_the_request_rate() -> None:
+    class NoBudget:
+        async def check(self, purpose: str) -> None:
+            raise BudgetExceeded("chat", 40.0, 40.0)
+
+    limiter = ClientLimiter(Tokens(used=10**9), 1, daily_tokens=1000, now=lambda: START)
+    gate = ChatGate(limiter, NoBudget())
+    await gate.admit_cached("a")
+    with pytest.raises(ClientLimited):
+        await gate.admit_cached("a")
+
+
+def test_window_start_aligns_days_to_utc_midnight() -> None:
+    assert window_start(START, timedelta(days=1)) == datetime(2026, 11, 26, tzinfo=UTC)
+    assert window_start(START, timedelta(minutes=1)) == START
+
+
+class Ticks:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+def test_stream_slots_cap_per_client_and_in_total() -> None:
+    slots = StreamSlots(total=3, per_client=2, hold_s=100, clock=Ticks())
+    a1, _ = slots.acquire("a"), slots.acquire("a")
+    with pytest.raises(RateLimited) as exc:
+        slots.acquire("a")
+    assert not isinstance(exc.value, ServerBusy)
+    slots.acquire("b")
+    with pytest.raises(ServerBusy):
+        slots.acquire("c")
+    a1.release()
+    a1.release()
+    slots.acquire("c")
+    assert len(slots) == 3
+
+
+def test_stream_slot_never_released_is_reclaimed_after_hold() -> None:
+    clock = Ticks()
+    slots = StreamSlots(total=1, per_client=1, hold_s=100, clock=clock)
+    slots.acquire("a")
+    clock.now = 100
+    slots.acquire("a")
+
+
+def test_duplicate_message_is_refused_within_the_window() -> None:
+    clock = Ticks()
+    guard = DuplicateGuard(window_s=10, clock=clock)
+    guard.check("a", "hello")
+    guard.check("b", "hello")
+    guard.check("a", "other")
+    clock.now = 4
+    with pytest.raises(RateLimited) as exc:
+        guard.check("a", "hello")
+    assert (exc.value.kind, exc.value.retry_after_s) == ("duplicate", 6)
+    clock.now = 10
+    guard.check("a", "hello")

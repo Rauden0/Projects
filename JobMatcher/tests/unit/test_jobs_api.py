@@ -61,3 +61,25 @@ def test_job_id_outside_bigint_is_422() -> None:
     app = create_app()
     assert TestClient(app).get("/jobs/99999999999999999999").status_code == 422
     assert TestClient(app).get("/jobs/0").status_code == 422
+
+
+def test_search_is_rate_limited_per_address(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    async def fake_search(*_: object, **__: object) -> list[SearchHit]:
+        return []
+
+    async def fake_session():  # type: ignore[no-untyped-def]
+        yield None
+
+    monkeypatch.setenv("SEARCH_REQUESTS_PER_MINUTE", "3")
+    deps.get_settings.cache_clear()
+    monkeypatch.setattr(jobs_route, "search_jobs", fake_search)
+    try:
+        app = create_app()
+        app.dependency_overrides[deps.get_session] = fake_session
+        app.dependency_overrides[deps.get_embedder] = lambda: HashingEmbedder(8)
+        client = TestClient(app)
+        statuses = [client.get("/jobs/search", params={"q": f"q{i}"}).status_code for i in range(4)]
+    finally:
+        monkeypatch.delenv("SEARCH_REQUESTS_PER_MINUTE")
+        deps.get_settings.cache_clear()
+    assert statuses == [200, 200, 200, 429]

@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from jobmatcher import messaging
+from jobmatcher.api import deps
 from jobmatcher.config import get_settings
 from jobmatcher.db.session import get_engine, get_sessionmaker
 
@@ -44,6 +45,13 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
         for directory, marker in LEVELS.items():
             if directory in Path(item.path).parents:
                 item.add_marker(marker)
+
+
+@pytest.fixture(autouse=True)
+def fresh_limits() -> None:
+    """Rate windows and caches live in the process; every test starts with empty ones."""
+    for cached in (deps.get_rate_store, deps.get_request_limiter):
+        cached.cache_clear()
 
 
 @pytest.fixture

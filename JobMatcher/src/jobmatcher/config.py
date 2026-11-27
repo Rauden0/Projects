@@ -90,6 +90,12 @@ class Settings(BaseSettings):
 
     # Query vectors kept in memory per process (LRU); 0 = off.
     query_embedding_cache_size: int = Field(default=2048, ge=0)
+    # memory: per-process windows; postgres: the rate_limit table, shared by all replicas.
+    rate_limit_backend: Literal["memory", "postgres"] = "memory"
+    search_requests_per_minute: int = Field(default=60, ge=1)
+    cv_uploads_per_minute: int = Field(default=5, ge=1)
+    cv_uploads_per_day: int = Field(default=20, ge=1)
+    cv_deletes_per_minute: int = Field(default=10, ge=1)
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:

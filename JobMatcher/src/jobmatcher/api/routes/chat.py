@@ -14,6 +14,7 @@ from jobmatcher.api.deps import (
     EmbedderDep,
     PrincipalDep,
     SessionDep,
+    limit,
     reject_cross_site,
 )
 from jobmatcher.api.errors import ERROR_RESPONSES
@@ -67,7 +68,9 @@ def cv_extractor(client_id: str) -> CvExtractor | None:
     return None if llm is None else LLMCvExtractor(llm)
 
 
-@router.post("/cv", response_model=CvOut, status_code=201)
+@router.post(
+    "/cv", response_model=CvOut, status_code=201, dependencies=[Depends(limit("cv_upload"))]
+)
 async def upload_cv(
     body: CvIn,
     session: SessionDep,
@@ -80,7 +83,7 @@ async def upload_cv(
     return CvOut(cv_id=cv_id, profile=profile)
 
 
-@router.delete("/cv/{cv_id}", status_code=204)
+@router.delete("/cv/{cv_id}", status_code=204, dependencies=[Depends(limit("cv_delete"))])
 async def remove_cv(cv_id: uuid.UUID, session: SessionDep, principal: PrincipalDep) -> None:
     await delete_cv(session, cv_id, principal)
 

@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from jobmatcher import metrics
+from jobmatcher.budget.limits import RateLimited, ServerBusy
 from jobmatcher.errors import (
     AuthUnavailable,
     BudgetExceeded,
@@ -41,6 +43,7 @@ _DOMAIN_ERRORS: dict[type[JobMatcherError], tuple[int, str]] = {
     Unauthenticated: (401, "unauthenticated"),
     CsrfRejected: (403, "csrf_rejected"),
     AuthUnavailable: (503, "auth_unavailable"),
+    ServerBusy: (503, "server_busy"),
     ClientLimited: (429, "rate_limited"),
     BudgetExceeded: (503, "budget_exhausted"),
     LLMUnavailable: (503, "llm_unavailable"),
@@ -81,6 +84,8 @@ def _headers(exc: JobMatcherError) -> dict[str, str] | None:
 async def _domain_error(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, JobMatcherError)
     status, code = _status_and_code(exc)
+    if isinstance(exc, ClientLimited):
+        metrics.recorder.rejected(exc.kind if isinstance(exc, RateLimited) else code)
     headers = _headers(exc)
     detail = "monthly LLM budget exhausted" if isinstance(exc, BudgetExceeded) else str(exc)
     if status >= 500:

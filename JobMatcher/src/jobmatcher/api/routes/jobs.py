@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Query
 
 from jobmatcher.agent.tools import MAX_JOB_ID
-from jobmatcher.api.deps import EmbedderDep, SessionDep, require_search_access
+from jobmatcher.api.deps import EmbedderDep, SessionDep, limit_search, require_search_access
 from jobmatcher.api.errors import ERROR_RESPONSES
 from jobmatcher.api.schemas import JobDetail
 from jobmatcher.db import repository
@@ -19,7 +19,7 @@ router = APIRouter(
 )
 
 
-@router.get("/search", response_model=list[SearchHit])
+@router.get("/search", response_model=list[SearchHit], dependencies=[Depends(limit_search)])
 async def search(
     session: SessionDep,
     embedder: EmbedderDep,

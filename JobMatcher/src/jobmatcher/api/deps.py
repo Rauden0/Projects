@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from functools import lru_cache
 from typing import Annotated
 
@@ -8,7 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobmatcher.api.auth import Authenticator, build_authenticator
 from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy
 from jobmatcher.budget.ledger import UsageLedger
-from jobmatcher.budget.limits import ChatGate, ClientLimiter
+from jobmatcher.budget.limits import (
+    DAY,
+    WINDOW,
+    ChatGate,
+    ClientLimiter,
+    MemoryRateStore,
+    PostgresRateStore,
+    Rate,
+    RateStore,
+    RequestLimiter,
+)
 from jobmatcher.config import get_settings
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.errors import CsrfRejected, Unauthenticated
@@ -25,12 +35,22 @@ EmbedderDep = Annotated[Embedder, Depends(get_embedder)]
 
 
 @lru_cache
+def get_rate_store() -> RateStore:
+    if get_settings().rate_limit_backend == "postgres":
+        return PostgresRateStore(get_sessionmaker())
+    return MemoryRateStore()
+
+
+@lru_cache
 def get_chat_gate() -> ChatGate:
     settings = get_settings()
     ledger = UsageLedger(get_sessionmaker())
     policy = BudgetPolicy(settings.llm_monthly_budget_usd, settings.llm_extraction_budget_share)
     limiter = ClientLimiter(
-        ledger, settings.chat_requests_per_minute, settings.chat_daily_tokens_per_client
+        ledger,
+        settings.chat_requests_per_minute,
+        settings.chat_daily_tokens_per_client,
+        store=get_rate_store(),
     )
     return ChatGate(limiter, BudgetGuard(ledger, policy))
 
@@ -68,6 +88,36 @@ ClientKeyDep = Annotated[str, Depends(client_key)]
 async def require_search_access(request: Request, auth: AuthenticatorDep) -> None:
     if auth.protects_search:
         await get_principal(request, auth)
+
+
+@lru_cache
+def get_request_limiter() -> RequestLimiter:
+    s = get_settings()
+    rates: dict[str, list[Rate]] = {
+        "search": [Rate(s.search_requests_per_minute, WINDOW)],
+        "cv_upload": [Rate(s.cv_uploads_per_minute, WINDOW), Rate(s.cv_uploads_per_day, DAY)],
+        "cv_delete": [Rate(s.cv_deletes_per_minute, WINDOW)],
+    }
+    return RequestLimiter(get_rate_store(), rates)
+
+
+RequestLimiterDep = Annotated[RequestLimiter, Depends(get_request_limiter)]
+
+
+def limit(bucket: str) -> Callable[..., Awaitable[None]]:
+    async def check(limiter: RequestLimiterDep, client_id: ClientKeyDep) -> None:
+        await limiter.check(bucket, client_id)
+
+    return check
+
+
+async def limit_search(
+    request: Request, auth: AuthenticatorDep, limiter: RequestLimiterDep
+) -> None:
+    """Search needs no identity, so it is limited by address unless a token names the caller."""
+    principal = await auth.authenticate(request) if auth.limits_by_principal else None
+    address = request.client.host if request.client else "anonymous"
+    await limiter.check("search", principal or address)
 
 
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})

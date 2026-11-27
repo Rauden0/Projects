@@ -226,3 +226,26 @@ def test_upload_cv_without_llm_or_when_disabled_uses_heuristics(monkeypatch) -> 
         monkeypatch.delenv("CV_LLM_EXTRACTION")
         chat_route.get_settings.cache_clear()
     assert [extractor for _, extractor in uploads] == [None, None]
+
+
+def test_cv_uploads_are_rate_limited_per_client(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(chat_route, "get_llm", lambda *_, **__: None)
+    _record_upload(monkeypatch)
+    client = make_client()
+    statuses = [
+        client.post("/cv", json={"text": "Python developer " * 5}).status_code for _ in range(6)
+    ]
+    assert statuses == [201] * 5 + [429]
+    response = client.post("/cv", json={"text": "Python developer " * 5})
+    assert response.json()["code"] == "rate_limited"
+    assert 0 < int(response.headers["retry-after"]) <= 60
+
+
+def test_cv_deletes_are_rate_limited(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    async def fake_delete(_: Any, cv_id: uuid.UUID, owner_id: str) -> None:
+        return None
+
+    monkeypatch.setattr(chat_route, "delete_cv", fake_delete)
+    client = make_client()
+    statuses = [client.delete(f"/cv/{uuid.uuid4()}").status_code for _ in range(11)]
+    assert statuses == [204] * 10 + [429]
