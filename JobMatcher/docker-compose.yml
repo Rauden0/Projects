@@ -5,7 +5,7 @@ services:
       POSTGRES_USER: jobmatcher
       POSTGRES_PASSWORD: jobmatcher
       POSTGRES_DB: jobmatcher
-    ports: ["5432:5432"]
+    ports: ["127.0.0.1:5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U jobmatcher"]
@@ -14,7 +14,9 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13-management
-    ports: ["5672:5672", "15672:15672"]
+    # Default credentials, so nothing is published beyond localhost. Set AMQP_BIND=0.0.0.0
+    # only if a publisher outside this compose network (JobIngestor) must reach it over the host.
+    ports: ["${AMQP_BIND:-127.0.0.1}:5672:5672", "127.0.0.1:15672:15672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
       interval: 10s
@@ -23,7 +25,7 @@ services:
   # Local LLM. First run: docker compose exec ollama ollama pull qwen2.5:7b
   ollama:
     image: ollama/ollama:latest
-    ports: ["11434:11434"]
+    ports: ["127.0.0.1:11434:11434"]
     environment:
       # The default 4096-token window is silently truncated from the start (the system prompt)
       # once a chat has a few turns: one agent question alone reaches ~3.3k tokens.
