@@ -3,9 +3,13 @@ client can search the job index without going through /chat.
 
     jobmatcher-mcp                  # stdio
     jobmatcher-mcp --http           # streamable HTTP on http://127.0.0.1:8001/mcp
+
+Off loopback, --http needs MCP_HTTP_TOKEN and every request `Authorization: Bearer <token>`.
 """
 
 import argparse
+import hmac
+import ipaddress
 import json
 import logging
 from collections.abc import AsyncIterator, Callable
@@ -29,9 +33,11 @@ from mcp.types import (
 )
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from jobmatcher.agent.tools import Toolbox, as_untrusted_data
-from jobmatcher.config import configure_logging
+from jobmatcher.config import configure_logging, get_settings
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.errors import ToolError
 from jobmatcher.observability import Stopwatch
@@ -49,6 +55,7 @@ constraints the user stated. Call get_job only with a job_id from a search resul
 by the exact url the tools return, never invent one."""
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
+MIN_TOKEN_CHARS = 32
 
 
 class Tools(Protocol):
@@ -158,6 +165,43 @@ async def _serve_stdio(server: Server) -> None:
         await server.run(read, write, server.create_initialization_options())
 
 
+class BearerTokenMiddleware:
+    def __init__(self, app: ASGIApp, token: str) -> None:
+        self.app = app
+        self.expected = f"Bearer {token}".encode()
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and not self._authorized(scope):
+            response = JSONResponse(
+                {"error": "unauthorized"}, status_code=401, headers={"WWW-Authenticate": "Bearer"}
+            )
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+    def _authorized(self, scope: Scope) -> bool:
+        header = dict(scope["headers"]).get(b"authorization", b"")
+        return hmac.compare_digest(header, self.expected)
+
+
+def is_loopback(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def http_app(server: Server, host: str, token: str) -> ASGIApp:
+    if token and len(token) < MIN_TOKEN_CHARS:
+        raise ValueError(f"MCP_HTTP_TOKEN must be at least {MIN_TOKEN_CHARS} characters")
+    if not token and not is_loopback(host):
+        raise ValueError(f"--host {host} is reachable from other machines: set MCP_HTTP_TOKEN")
+    app = server.streamable_http_app(stateless_http=True, host=host)
+    return BearerTokenMiddleware(app, token) if token else app
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="jobmatcher-mcp", description="MCP server for the job search tools"
@@ -170,7 +214,11 @@ def main() -> None:
     configure_logging()
     server = build_server(database_tools(get_embedder()))
     if args.http:
-        app = server.streamable_http_app(stateless_http=True, host=args.host)
+        token = get_settings().mcp_http_token.get_secret_value()
+        try:
+            app = http_app(server, args.host, token)
+        except ValueError as exc:
+            parser.error(str(exc))
         uvicorn.run(app, host=args.host, port=args.port, log_config=None)
     else:
         anyio.run(_serve_stdio, server)

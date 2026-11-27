@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
+import httpx
 import pytest
 
 pytest.importorskip("mcp")
@@ -11,7 +12,7 @@ from mcp import Client, MCPError  # noqa: E402
 from jobmatcher.agent import tools as tools_module  # noqa: E402
 from jobmatcher.agent.tools import Toolbox  # noqa: E402
 from jobmatcher.db.models import Job  # noqa: E402
-from jobmatcher.mcp_server import build_server  # noqa: E402
+from jobmatcher.mcp_server import BearerTokenMiddleware, build_server, http_app  # noqa: E402
 from jobmatcher.search.embeddings import HashingEmbedder  # noqa: E402
 from jobmatcher.search.hybrid import SearchFilters, SearchHit  # noqa: E402
 
@@ -195,3 +196,51 @@ async def test_posting_text_is_treated_as_untrusted_data() -> None:
     assert "Python." in description and "[link]" in description
     assert result.structured_content["url"] == "https://jobs.example/7"
     assert "<|im_" not in result.content[0].text  # type: ignore[union-attr]
+
+
+TOKEN = "t" * 40
+
+
+async def _echo(scope: Any, receive: Any, send: Any) -> None:
+    await send({"type": "http.response.start", "status": 200, "headers": []})
+    await send({"type": "http.response.body", "body": b"ok"})
+
+
+async def _status(app: Any, headers: dict[str, str]) -> int:
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://mcp") as http:
+        return (await http.post("/mcp", json={}, headers=headers)).status_code
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [{}, {"authorization": "Bearer wrong"}, {"authorization": TOKEN}],
+    ids=["none", "wrong", "no-scheme"],
+)
+async def test_http_request_without_the_token_is_401(headers: dict[str, str]) -> None:
+    assert await _status(BearerTokenMiddleware(_echo, TOKEN), headers) == 401
+
+
+async def test_http_request_with_the_token_passes() -> None:
+    app = BearerTokenMiddleware(_echo, TOKEN)
+    assert await _status(app, {"authorization": f"Bearer {TOKEN}"}) == 200
+
+
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "192.168.1.10", "mcp.example"])
+def test_http_off_loopback_without_token_refuses_to_start(host: str, toolboxes: Toolboxes) -> None:
+    with pytest.raises(ValueError, match="MCP_HTTP_TOKEN"):
+        http_app(build_server(toolboxes), host, "")
+
+
+def test_short_token_refuses_to_start(toolboxes: Toolboxes) -> None:
+    with pytest.raises(ValueError, match="at least"):
+        http_app(build_server(toolboxes), "0.0.0.0", "short")
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "::1", "localhost"])
+def test_http_on_loopback_needs_no_token(host: str, toolboxes: Toolboxes) -> None:
+    assert not isinstance(http_app(build_server(toolboxes), host, ""), BearerTokenMiddleware)
+
+
+def test_http_with_a_token_checks_it(toolboxes: Toolboxes) -> None:
+    assert isinstance(http_app(build_server(toolboxes), "0.0.0.0", TOKEN), BearerTokenMiddleware)
