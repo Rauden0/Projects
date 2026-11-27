@@ -1,0 +1,175 @@
+[
+  {
+    "id": "en-python-backend",
+    "lang": "en",
+    "source": "heuristic",
+    "skills_tp": 10,
+    "skills_gold": 13,
+    "skills_precise": 10,
+    "skills_pred": 10,
+    "years": true,
+    "languages": true,
+    "city": true,
+    "injected": false,
+    "profile": {
+      "skills": [
+        "python",
+        "fastapi",
+        "django",
+        "celery",
+        "postgresql",
+        "redis",
+        "rabbitmq",
+        "docker",
+        "kubernetes",
+        "react"
+      ],
+      "years_experience": 7.3,
+      "languages": [
+        "Czech",
+        "English",
+        "German"
+      ],
+      "language_levels": {},
+      "city": "Brno",
+      "seniority": null,
+      "desired_roles": [],
+      "source": "heuristic"
+    }
+  },
+  {
+    "id": "cs-ucetni",
+    "lang": "cs",
+    "source": "heuristic",
+    "skills_tp": 0,
+    "skills_gold": 8,
+    "skills_precise": 0,
+    "skills_pred": 0,
+    "years": false,
+    "languages": false,
+    "city": false,
+    "injected": false,
+    "profile": {
+      "skills": [],
+      "years_experience": 0.0,
+      "languages": [],
+      "language_levels": {},
+      "city": null,
+      "seniority": null,
+      "desired_roles": [],
+      "source": "heuristic"
+    }
+  },
+  {
+    "id": "en-data-engineer",
+    "lang": "en",
+    "source": "heuristic",
+    "skills_tp": 8,
+    "skills_gold": 12,
+    "skills_precise": 8,
+    "skills_pred": 8,
+    "years": false,
+    "languages": true,
+    "city": true,
+    "injected": false,
+    "profile": {
+      "skills": [
+        "python",
+        "kafka",
+        "terraform",
+        "aws",
+        "airflow",
+        "dbt",
+        "spark",
+        "snowflake"
+      ],
+      "years_experience": 0.0,
+      "languages": [
+        "English",
+        "Polish"
+      ],
+      "language_levels": {},
+      "city": "Prague",
+      "seniority": null,
+      "desired_roles": [],
+      "source": "heuristic"
+    }
+  },
+  {
+    "id": "cs-ridic",
+    "lang": "cs",
+    "source": "heuristic",
+    "skills_tp": 0,
+    "skills_gold": 6,
+    "skills_precise": 0,
+    "skills_pred": 0,
+    "years": true,
+    "languages": false,
+    "city": true,
+    "injected": false,
+    "profile": {
+      "skills": [],
+      "years_experience": 14.8,
+      "languages": [],
+      "language_levels": {},
+      "city": "Ostrava",
+      "seniority": null,
+      "desired_roles": [],
+      "source": "heuristic"
+    }
+  },
+  {
+    "id": "en-nurse",
+    "lang": "en",
+    "source": "heuristic",
+    "skills_tp": 0,
+    "skills_gold": 8,
+    "skills_precise": 0,
+    "skills_pred": 0,
+    "years": false,
+    "languages": true,
+    "city": true,
+    "injected": false,
+    "profile": {
+      "skills": [],
+      "years_experience": 0.0,
+      "languages": [
+        "Czech",
+        "English",
+        "German"
+      ],
+      "language_levels": {},
+      "city": "Vienna",
+      "seniority": null,
+      "desired_roles": [],
+      "source": "heuristic"
+    }
+  },
+  {
+    "id": "cs-frontend-injection",
+    "lang": "cs",
+    "source": "heuristic",
+    "skills_tp": 2,
+    "skills_gold": 7,
+    "skills_precise": 2,
+    "skills_pred": 3,
+    "years": true,
+    "languages": false,
+    "city": true,
+    "injected": true,
+    "profile": {
+      "skills": [
+        "rust",
+        "typescript",
+        "react"
+      ],
+      "years_experience": 4.2,
+      "languages": [],
+      "language_levels": {},
+      "city": "Prague",
+      "seniority": null,
+      "desired_roles": [],
+      "source": "heuristic"
+    }
+  }
+]

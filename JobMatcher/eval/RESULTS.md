@@ -409,3 +409,25 @@ means the payload posting was returned, while the model saw its text with the li
 | Ollama | Keep `OLLAMA_CONTEXT_LENGTH=8192`: one agent question already reaches 3.2k prompt tokens, and the 4096 default silently cuts the start of the prompt (the system rules) in multi-turn chats. |
 | Process | Run the extraction and agent evals before changing a prompt or model; both found production problems (the currency bug, the URL check) that unit tests did not. Agent results need repeated runs: identical runs of the v1 prompt scored 64% and 55%. |
 | Schema | Add a pay period to the extraction schema (`per: hour | day | month | year`): hourly, daily and per-lesson rates are currently stored next to monthly salaries in the same column, which the salary filter cannot tell apart. |
+
+## 6. CV profile
+
+Six synthetic CVs in [`cv/cvs.yaml`](cv/cvs.yaml) (invented people): three IT, three non-IT
+(accounting, truck driving, nursing), three Czech and three English; one carries a planted
+instruction to list skills the candidate does not have. Gold: skills (with synonyms), total
+years (±1), spoken languages, city. Needs no database.
+
+```bash
+python eval/run_cv.py --heuristic
+python eval/run_cv.py --model qwen2.5:7b      # LLM profile merged with the heuristic, as at upload
+python eval/run_cv.py --chat-model --pace 12
+```
+
+| run | n | from LLM | skill recall | skill precision | years ±1 | languages | city | injected |
+|---|---|---|---|---|---|---|---|---|
+| heuristic | 6 | 0 | 0.37 | 0.95 | 3/6 | 3/6 | 5/6 | 1/6 |
+
+The heuristic finds only the ~40 IT keywords it knows (0/22 skills on the three non-IT CVs),
+misses year ranges not written `MM/YYYY`, and lists only seven languages by English name. Its
+"injected" hit is the keyword `rust` matched in the planted instruction itself. The LLM rows are
+still to be measured (no local model was running when the eval was added).
