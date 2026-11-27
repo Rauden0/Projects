@@ -5,6 +5,12 @@ the git root is `Projects/`. It runs `ruff check`, `ruff format --check`, `mypy 
 and `pytest` with coverage against Postgres and RabbitMQ service containers, on pushes to `main`
 and `dev` and on pull requests.
 
+The `image` job then builds the `Dockerfile` with BuildKit (layers cached in the GitHub Actions
+cache), so a broken image fails the pull request instead of the deploy. On pushes to `main` it
+also pushes `ghcr.io/<owner>/jobmatcher:latest` and `:<commit sha>` with the workflow's
+`GITHUB_TOKEN` (`packages: write`); [deploy.md](deploy.md) pulls that image. The owner is
+lowercased because GHCR rejects upper-case repository names.
+
 What the earlier workflow missed:
 
 | Gap | Effect today |
@@ -15,6 +21,7 @@ What the earlier workflow missed:
 | no RabbitMQ vhost for tests | the broker tests use `TEST_AMQP_URL` with the `jobmatcher_test` vhost |
 | no coverage | `pytest-cov` reports it now |
 | only `main` pushes | `dev` is the working branch |
+| the image was never built | a broken `Dockerfile` showed up only on deploy |
 
 Current `.github/workflows/jobmatcher-ci.yml`:
 
@@ -77,6 +84,33 @@ jobs:
         run: alembic upgrade head
       - name: Tests (unit, integration, e2e with a scripted model)
         run: pytest -q --cov=jobmatcher --cov-report=term-missing:skip-covered
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Image name (GHCR needs a lowercase owner)
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/jobmatcher" >> "$GITHUB_ENV"
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: JobMatcher
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 ```
 
 The install step includes the `mcp` extra because `src/jobmatcher/mcp_server.py` imports the
