@@ -155,3 +155,22 @@ async def test_history_is_not_compacted_when_prompts_are_cached() -> None:
     assert events[-1].type == "answer"
     first_result = model.calls[-1]["messages"][2]["content"][0]["content"]
     assert "(truncated)" not in first_result
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        '[{"url": "https://jobs.example/1", "fit": "good"}]',
+        "[Python Dev](https://jobs.example/1).",
+        "See <https://jobs.example/1>, it fits.",
+        "`https://jobs.example/1`",
+    ],
+)
+def test_url_check_ignores_surrounding_markup(answer: str) -> None:
+    assert loop._unverified(answer, {"https://jobs.example/1"}) == []
+
+
+def test_url_check_reports_invented_urls() -> None:
+    assert loop._unverified("Try https://made.up/9!", {"https://jobs.example/1"}) == [
+        "https://made.up/9"
+    ]
