@@ -5,6 +5,16 @@ the git root is `Projects/`. It runs `ruff check`, `ruff format --check`, `mypy 
 and `pytest` with coverage against Postgres and RabbitMQ service containers, on pushes to `main`
 and `dev` and on pull requests.
 
+The `retrieval-eval` job runs in parallel with `test`: it installs the `embeddings` extra with
+CPU-only torch, migrates a `jobmatcher_eval` service database, indexes the frozen fixtures with
+`intfloat/multilingual-e5-small` and runs the 41 golden questions of
+[`eval/golden.yaml`](../eval/golden.yaml). It fails when hybrid search (the production mode)
+over all questions drops below hit@5 0.80 or recall@10 0.85, a few points under the numbers in
+[`eval/RESULTS.md`](../eval/RESULTS.md) (0.83 / 0.90). Embedding on CPU is deterministic, so a
+failure means a change to chunking, embedding text, SQL or ranking moved the results; rerun it
+locally with the same command and update `RESULTS.md` (and the thresholds, if the drop is
+intended). The model (~470 MB) is kept in the Actions cache under `~/.cache/huggingface`.
+
 The `image` job then builds the `Dockerfile` with BuildKit (layers cached in the GitHub Actions
 cache), so a broken image fails the pull request instead of the deploy. On pushes to `main` it
 also pushes `ghcr.io/<owner>/jobmatcher:latest` and `:<commit sha>` with the workflow's
@@ -85,8 +95,45 @@ jobs:
       - name: Tests (unit, integration, e2e with a scripted model)
         run: pytest -q --cov=jobmatcher --cov-report=term-missing:skip-covered
 
+  retrieval-eval:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: jobmatcher
+          POSTGRES_PASSWORD: jobmatcher
+          POSTGRES_DB: jobmatcher_eval
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher_eval
+      EVAL_DATABASE_URL: postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher_eval
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: JobMatcher/pyproject.toml
+      - name: Install (CPU-only torch, as in the Dockerfile)
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[embeddings]"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-multilingual-e5-small-v1
+      - name: Migrate
+        run: alembic upgrade head
+      - name: Retrieval eval (fails below hybrid hit@5 0.80 or recall@10 0.85)
+        run: python eval/run_retrieval.py --min-hit5 0.80 --min-recall10 0.85
+
   image:
-    needs: test
+    needs: [test, retrieval-eval]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -117,5 +164,19 @@ The install step includes the `mcp` extra because `src/jobmatcher/mcp_server.py`
 optional `mcp` SDK; without it `mypy src` fails on the import and `tests/unit/test_mcp_server.py`
 is skipped.
 
-The LLM evals are not part of CI: they need a GPU (or a paid API) and take minutes. Run them
-before changing a prompt or a model and record the numbers in `eval/RESULTS.md`.
+The extraction and agent evals are not part of CI, not even nightly: they need an LLM (a GPU
+running Ollama, or a paid API key in the repository secrets) and take minutes, and a hosted
+runner has neither. Run them on the development machine before changing a prompt, a model or
+the agent graph, and record the numbers in `eval/RESULTS.md`:
+
+```bash
+docker compose up -d postgres ollama
+docker compose exec ollama ollama pull qwen2.5:7b
+export EVAL_DATABASE_URL=postgresql+asyncpg://jobmatcher:jobmatcher@localhost:5432/jobmatcher_eval
+python eval/run_extraction.py --model qwen2.5:7b     # field accuracy, skills P/R/F1, latency
+python eval/run_agent.py --model qwen2.5:7b          # agent questions against the fixtures
+python eval/run_agent.py --model qwen2.5:7b --cases eval/agent/injection.yaml   # injection suite
+```
+
+A self-hosted runner with a GPU could run them on a `schedule:` trigger with the same
+commands; there is none today.
