@@ -43,6 +43,7 @@ conventions. So:
 | `ingest` | worker, indexer, extraction, normalization, chunking, listing sync, batch | everything below `api` |
 | `search`, `cv`, `agent` | retrieval, CV profile and comparison, tools and loop | `db`, `domain`, `llm`, `search` |
 | `api` | FastAPI app, routes, dependencies, error mapping, middleware | everything |
+| `retention` | process deleting CVs and usage client addresses past their retention | `db`, `config` |
 | `mcp_server` | MCP entry point serving `search_jobs` / `get_job` from `Toolbox` | `agent`, `db`, `search`, `config`, `errors`, `observability` |
 
 - Routes parse input, call one service function and shape the response. No queries, no

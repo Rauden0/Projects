@@ -51,6 +51,11 @@ class Settings(BaseSettings):
 
     worker_prefetch: int = Field(default=8, ge=1)
 
+    # Personal data: uploaded CVs are deleted this many days after upload, and the client
+    # address on llm_usage rows (only needed for the daily per-client limit) after two days.
+    cv_retention_days: int = Field(default=30, ge=1)
+    usage_client_retention_days: int = Field(default=2, ge=2)
+
     log_level: LogLevel = "INFO"
     log_format: LogFormat = "text"
 

@@ -1,12 +1,13 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy import Text, all_, any_, bindparam, delete, func, select, true, update
 from sqlalchemy.dialects.postgresql import ARRAY, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import BindParameter
 
-from jobmatcher.db.models import Job, JobChunk, Outbox, Source
+from jobmatcher.db.models import Cv, Job, JobChunk, LlmUsage, Outbox, Source
 from jobmatcher.domain import Chunk, JobFacts
 from jobmatcher.errors import NotFound
 
@@ -157,3 +158,18 @@ async def _touch_listed(session: AsyncSession, source_id: int, listed_ids: set[s
     )
     await session.execute(update(Job).where(listed).values(last_seen_at=func.now()))
     return len(reopened.all())
+
+
+async def delete_cvs_before(session: AsyncSession, cutoff: datetime) -> int:
+    result = await session.execute(delete(Cv).where(Cv.created_at < cutoff).returning(Cv.id))
+    return len(result.all())
+
+
+async def forget_usage_clients_before(session: AsyncSession, cutoff: datetime) -> int:
+    result = await session.execute(
+        update(LlmUsage)
+        .where(LlmUsage.created_at < cutoff, LlmUsage.client_id.is_not(None))
+        .values(client_id=None)
+        .returning(LlmUsage.id)
+    )
+    return len(result.all())

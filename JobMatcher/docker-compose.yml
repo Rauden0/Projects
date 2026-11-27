@@ -93,6 +93,16 @@ services:
       migrate: { condition: service_completed_successfully }
       rabbitmq: { condition: service_healthy }
 
+  # Deletes CVs after CV_RETENTION_DAYS and client addresses on usage rows after two days.
+  retention:
+    build: .
+    image: jobmatcher:latest
+    restart: unless-stopped
+    env_file: .env
+    command: ["python", "-m", "jobmatcher.retention", "--every", "3600"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
   # Trace viewer: `docker compose --profile phoenix up -d`, then set
   # OTEL_EXPORTER_OTLP_ENDPOINT=http://phoenix:6006 in .env and recreate api and worker.
   # UI and OTLP/HTTP on http://localhost:6006; traces are kept in the phoenix volume (SQLite).
