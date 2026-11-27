@@ -19,7 +19,7 @@ pytest · Docker Compose · GitHub Actions
   deduplicates by content hash, extracts structured facts (seniority, years required,
   remote policy, salary, stack) with an LLM validated by Pydantic, chunks by section and
   embeds. Retries via per-delay TTL queues, then a dead-letter queue.
-- **Transactional outbox** — `job.indexed` / `job.closed` events are written in the same
+- **Transactional outbox** — `job.created` / `job.updated` / `job.closed` events are written in the same
   transaction as the data and published by a relay using `FOR UPDATE SKIP LOCKED`.
 - **Hybrid search** — hard filters, then pgvector (HNSW, cosine) and Postgres full-text
   candidates fused with Reciprocal Rank Fusion, in a single SQL statement.
