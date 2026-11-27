@@ -7,6 +7,8 @@ Seniority = Literal["junior", "medior", "senior", "staff"]
 RemotePolicy = Literal["onsite", "hybrid", "remote_country", "remote_region", "remote_global"]
 ContractType = Literal["employment", "contract", "freelance"]
 ExtractionStatus = Literal["ok", "pending", "fallback", "batch_failed"]
+MAX_YEARS_REQUIRED = 30
+MAX_SALARY = 2_147_483_647
 
 
 class RawPosting(BaseModel):
@@ -26,11 +28,11 @@ class RawPosting(BaseModel):
 
 class JobFacts(BaseModel):
     seniority: Seniority | None = None
-    years_required_min: int | None = Field(default=None, ge=0, le=30)
+    years_required_min: int | None = Field(default=None, ge=0, le=MAX_YEARS_REQUIRED)
     remote_policy: RemotePolicy | None = None
     office_city: str | None = None
-    salary_min: int | None = Field(default=None, ge=0)
-    salary_max: int | None = Field(default=None, ge=0)
+    salary_min: int | None = Field(default=None, ge=0, le=MAX_SALARY)
+    salary_max: int | None = Field(default=None, ge=0, le=MAX_SALARY)
     currency: str | None = Field(default=None, min_length=3, max_length=3)
     contract_type: ContractType | None = None
     tech_stack: list[str] = Field(default_factory=list)

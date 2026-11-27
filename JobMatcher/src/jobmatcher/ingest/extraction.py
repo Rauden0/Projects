@@ -8,9 +8,22 @@ fails validation twice (``extraction_status = 'fallback'``, retried by ``reextra
 import re
 from typing import Any, Protocol, get_args
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationError,
+    ValidatorFunctionWrapHandler,
+    field_validator,
+)
 
-from jobmatcher.domain import ContractType, JobFacts, RemotePolicy, Seniority
+from jobmatcher.domain import (
+    MAX_SALARY,
+    MAX_YEARS_REQUIRED,
+    ContractType,
+    JobFacts,
+    RemotePolicy,
+    Seniority,
+)
 from jobmatcher.errors import ExtractionError
 from jobmatcher.ingest.normalize import compact_for_llm
 from jobmatcher.llm import LLMClient
@@ -71,7 +84,9 @@ class HeuristicExtractor:
         haystack = f"{title}\n{location or ''}\n{text}"
         lowered = haystack.lower()
 
-        years = [int(m.group(1)) for m in _YEARS_RE.finditer(text)]
+        years = [
+            y for m in _YEARS_RE.finditer(text) if (y := int(m.group(1))) <= MAX_YEARS_REQUIRED
+        ]
         seniority: Seniority | None = None
         levels: tuple[Seniority, ...] = ("staff", "senior", "medior", "junior")
         for level in levels:
@@ -199,6 +214,16 @@ class CompactFacts(BaseModel):
         code = _CURRENCY_ALIASES.get(value.strip().casefold(), value.strip().upper())
         return code if re.fullmatch(r"[A-Z]{3}", code) else None
 
+    @field_validator("yrs", mode="wrap")
+    @classmethod
+    def _years_in_range(cls, value: object, handler: ValidatorFunctionWrapHandler) -> int | None:
+        return _int_or_none(value, handler, MAX_YEARS_REQUIRED)
+
+    @field_validator("smin", "smax", mode="wrap")
+    @classmethod
+    def _salary_in_range(cls, value: object, handler: ValidatorFunctionWrapHandler) -> int | None:
+        return _int_or_none(value, handler, MAX_SALARY)
+
     def to_facts(self) -> JobFacts:
         return JobFacts(
             seniority=self.sen,
@@ -214,6 +239,14 @@ class CompactFacts(BaseModel):
             nice_to_have_skills=self.nice,
             languages_required=self.lang,
         )
+
+
+def _int_or_none(value: object, handler: ValidatorFunctionWrapHandler, upper: int) -> int | None:
+    try:
+        number = handler(value)
+    except ValidationError:
+        return None
+    return number if isinstance(number, int) and 0 <= number <= upper else None
 
 
 def parse_compact(raw: str) -> JobFacts:

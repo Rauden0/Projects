@@ -105,3 +105,31 @@ def test_currency_symbols_become_iso_codes_instead_of_failing(
     facts = parse_compact(f'{{"smin": 38000, "cur": "{written}", "yrs": 2}}')
     assert facts.currency == iso
     assert facts.years_required_min == 2
+
+
+@pytest.mark.parametrize(
+    "bad",
+    ['"yrs": 99', '"yrs": -1', '"smin": -5', '"smax": 3000000000', '"yrs": "many"'],
+)
+def test_out_of_range_number_drops_only_that_field(bad: str) -> None:
+    from jobmatcher.ingest.extraction import parse_compact
+
+    facts = parse_compact(f'{{"sen": "senior", "tech": ["go"], "cur": "EUR", {bad}}}')
+    assert facts.seniority == "senior"
+    assert facts.tech_stack == ["go"]
+    assert facts.currency == "EUR"
+    assert facts.years_required_min is None
+    assert facts.salary_min is None and facts.salary_max is None
+
+
+def test_salary_above_int4_is_rejected_by_job_facts() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        JobFacts(salary_max=2_147_483_648)
+
+
+@pytest.mark.asyncio
+async def test_heuristic_ignores_implausible_years() -> None:
+    facts = await HeuristicExtractor().extract("Dev", None, "Jsme 50 let na trhu.")
+    assert facts.years_required_min is None
