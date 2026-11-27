@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from jobmatcher.agent.answers import PostgresAnswerCache, Turn
 from jobmatcher.agent.loop import AgentEvent
@@ -79,3 +79,10 @@ async def test_deleting_a_cv_deletes_its_answers_and_purge_drops_expired(
     assert purged.cache_rows == 1
     async with sessionmaker() as session:
         assert await session.scalar(select(func.count()).select_from(ChatAnswerCache)) == 0
+
+
+async def test_unreadable_cache_runs_the_turn_uncached() -> None:
+    engine = create_async_engine("postgresql+asyncpg://nobody:x@127.0.0.1:1/none_test")
+    answers = PostgresAnswerCache(async_sessionmaker(engine), timedelta(minutes=10))
+    assert await answers.lookup(Turn("python", None, "session:a", "", model="m")) == (None, None)
+    await engine.dispose()

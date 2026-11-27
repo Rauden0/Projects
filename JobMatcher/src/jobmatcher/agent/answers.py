@@ -75,7 +75,7 @@ def cacheable_events(events: list[AgentEvent]) -> bool:
 
 
 class AnswerCache(Protocol):
-    async def lookup(self, turn: Turn) -> tuple[bytes, list[AgentEvent] | None]: ...
+    async def lookup(self, turn: Turn) -> tuple[bytes | None, list[AgentEvent] | None]: ...
 
     async def store(self, key: bytes, turn: Turn, events: list[AgentEvent]) -> None: ...
 
@@ -94,10 +94,16 @@ class PostgresAnswerCache:
         self.ttl = ttl
         self.now = now
 
-    async def lookup(self, turn: Turn) -> tuple[bytes, list[AgentEvent] | None]:
-        async with self.sessionmaker() as session:
-            key = answer_key(turn, await cache_store.index_version(session))
-            rows = await cache_store.cached_answer(session, key, self.now())
+    async def lookup(self, turn: Turn) -> tuple[bytes | None, list[AgentEvent] | None]:
+        """The turn's key and its cached events; no key when the cache cannot be read, so the
+        turn runs uncached instead of failing."""
+        try:
+            async with self.sessionmaker() as session:
+                key = answer_key(turn, await cache_store.index_version(session))
+                rows = await cache_store.cached_answer(session, key, self.now())
+        except (SQLAlchemyError, OSError) as exc:
+            log.warning("chat answer cache unavailable: %s", exc)
+            return None, None
         metrics.recorder.cache_lookup("chat_answer", rows is not None)
         if rows is None:
             return key, None

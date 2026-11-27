@@ -39,7 +39,7 @@ class FakeAnswers:
         self.rows: dict[bytes, list[AgentEvent]] = {}
         self.lookups: list[Turn] = []
 
-    async def lookup(self, turn: Turn) -> tuple[bytes, list[AgentEvent] | None]:
+    async def lookup(self, turn: Turn) -> tuple[bytes | None, list[AgentEvent] | None]:
         self.lookups.append(turn)
         key = answer_key(turn, index_version=1)
         return key, self.rows.get(key)
