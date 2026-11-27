@@ -14,11 +14,18 @@ class RecordingExchange:
     def __init__(self, fail: bool = False) -> None:
         self.fail = fail
         self.routing_keys: list[str] = []
+        self.timeouts: list[float | None] = []
 
-    async def publish(self, message: Any, routing_key: str) -> None:
+    async def publish(
+        self,
+        message: Any,
+        routing_key: str,
+        timeout: float | None = None,  # noqa: ASYNC109
+    ) -> None:
         if self.fail:
             raise ConnectionError("broker down")
         self.routing_keys.append(routing_key)
+        self.timeouts.append(timeout)
 
 
 async def add_events(sm: async_sessionmaker[AsyncSession], *topics: str) -> None:
@@ -34,6 +41,7 @@ async def test_relay_publishes_in_order_and_marks_rows(
 
     assert await relay_batch(sessionmaker, exchange) == 2  # type: ignore[arg-type]
     assert exchange.routing_keys == ["job.indexed", "job.closed"]
+    assert all(t is not None for t in exchange.timeouts)
     assert await relay_batch(sessionmaker, exchange) == 0  # type: ignore[arg-type]
 
 

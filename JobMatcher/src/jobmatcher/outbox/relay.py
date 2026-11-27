@@ -24,6 +24,7 @@ log = logging.getLogger(__name__)
 
 BATCH_SIZE = 100
 IDLE_SLEEP_S = 1.0
+PUBLISH_TIMEOUT_S = 30.0
 
 
 async def relay_batch(
@@ -46,7 +47,9 @@ async def relay_batch(
 
         for row in rows:
             await exchange.publish(
-                messaging.message(json.dumps(row.payload).encode()), routing_key=row.topic
+                messaging.message(json.dumps(row.payload).encode()),
+                routing_key=row.topic,
+                timeout=PUBLISH_TIMEOUT_S,
             )
 
         if rows:
