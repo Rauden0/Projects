@@ -1,0 +1,1382 @@
+[
+ {
+  "id": "en-py-backend-brno",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9480937999906018,
+  "input_tokens": 774,
+  "output_tokens": 145,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 6,
+  "skills_pred": 7,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": "medior",
+   "years": 3,
+   "remote": "hybrid",
+   "city": "Brno",
+   "salary_min": 80000,
+   "salary_max": 110000,
+   "currency": "CZK",
+   "skills": [
+    "English B2",
+    "FastAPI or Django",
+    "Kubernetes",
+    "commercial python experience",
+    "docker",
+    "fastapi",
+    "postgresql"
+   ],
+   "_precise_skills": 6
+  }
+ },
+ {
+  "id": "en-senior-go-remote-eu",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.8652272999897832,
+  "input_tokens": 775,
+  "output_tokens": 128,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 7,
+  "skills_pred": 9,
+  "skills_gold": 8,
+  "predicted": {
+   "seniority": "senior",
+   "years": 6,
+   "remote": "remote_region",
+   "city": null,
+   "salary_min": 85000,
+   "salary_max": 105000,
+   "currency": "EUR",
+   "skills": [
+    "AWS",
+    "aws",
+    "gRPC",
+    "go",
+    "grpc",
+    "kafka",
+    "postgresql",
+    "rust",
+    "terraform"
+   ],
+   "_precise_skills": 9
+  }
+ },
+ {
+  "id": "cs-junior-java-praha",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.976055200007977,
+  "input_tokens": 825,
+  "output_tokens": 144,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 3,
+  "skills_pred": 7,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": "junior",
+   "years": 1,
+   "remote": null,
+   "city": "Praha",
+   "salary_min": 45000,
+   "salary_max": 55000,
+   "currency": "CZK",
+   "skills": [
+    "alespoň 1 rok praxe s Javou",
+    "git",
+    "java",
+    "komunikativní angličtina",
+    "spring-boot",
+    "sql",
+    "základy SQL a Gitu"
+   ],
+   "_precise_skills": 4
+  }
+ },
+ {
+  "id": "en-data-engineer-remote-cz",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.8224636999948416,
+  "input_tokens": 731,
+  "output_tokens": 122,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": false,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": true
+  },
+  "skills_tp": 7,
+  "skills_pred": 8,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": "medior",
+   "years": 3,
+   "remote": "remote_region",
+   "city": null,
+   "salary_min": 9000,
+   "salary_max": 12000,
+   "currency": "CZK",
+   "skills": [
+    "3+ years in data engineering",
+    "airflow",
+    "databricks",
+    "dbt",
+    "python",
+    "snowflake",
+    "spark",
+    "sql"
+   ],
+   "_precise_skills": 7
+  }
+ },
+ {
+  "id": "en-frontend-react-onsite-ostrava",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9697111999994377,
+  "input_tokens": 735,
+  "output_tokens": 146,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 5,
+  "skills_pred": 9,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": "medior",
+   "years": 2,
+   "remote": "onsite",
+   "city": "Ostrava",
+   "salary_min": 60000,
+   "salary_max": null,
+   "currency": "CZK",
+   "skills": [
+    "2 years of experience with React and TypeScript",
+    "CSS, accessibility basics",
+    "Jest or Vitest",
+    "accessibility",
+    "css",
+    "jest",
+    "react",
+    "typescript",
+    "vitest"
+   ],
+   "_precise_skills": 8
+  }
+ },
+ {
+  "id": "en-staff-ml-global",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9035520000034012,
+  "input_tokens": 769,
+  "output_tokens": 135,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": true
+  },
+  "skills_tp": 5,
+  "skills_pred": 8,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": "staff",
+   "years": 8,
+   "remote": "remote_global",
+   "city": null,
+   "salary_min": 15000,
+   "salary_max": 19000,
+   "currency": "USD",
+   "skills": [
+    "4+ in applied ML",
+    "8+ years of software engineering",
+    "Experience with retrieval-augmented generation (RAG)",
+    "Production experience with RAG",
+    "kubernetes",
+    "python",
+    "pytorch",
+    "ray"
+   ],
+   "_precise_skills": 6
+  }
+ },
+ {
+  "id": "cs-devops-brno-hybrid",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.7707799000054365,
+  "input_tokens": 819,
+  "output_tokens": 109,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 5,
+  "skills_pred": 5,
+  "skills_gold": 10,
+  "predicted": {
+   "seniority": "medior",
+   "years": 4,
+   "remote": "hybrid",
+   "city": "Brno",
+   "salary_min": 90000,
+   "salary_max": 120000,
+   "currency": "CZK",
+   "skills": [
+    "Bash",
+    "Python",
+    "ansible",
+    "docker",
+    "terraform"
+   ],
+   "_precise_skills": 5
+  }
+ },
+ {
+  "id": "en-qa-automation-no-salary",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9881313999940176,
+  "input_tokens": 729,
+  "output_tokens": 143,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 7,
+  "skills_pred": 13,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": "medior",
+   "years": 2,
+   "remote": "hybrid",
+   "city": "Prague",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "2+ years of test automation",
+    "API testing (Postman)",
+    "Selenium or Playwright",
+    "api testing",
+    "java",
+    "java with JUnit",
+    "junit",
+    "playwright",
+    "postman",
+    "pytest",
+    "python",
+    "python with pytest",
+    "selenium"
+   ],
+   "_precise_skills": 11
+  }
+ },
+ {
+  "id": "cs-net-medior-plzen",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 1.1246404999983497,
+  "input_tokens": 789,
+  "output_tokens": 163,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 5,
+  "skills_pred": 10,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": "medior",
+   "years": 3,
+   "remote": "onsite",
+   "city": "Plzeň",
+   "salary_min": 70000,
+   "salary_max": 85000,
+   "currency": "CZK",
+   "skills": [
+    ".net",
+    "3 roky praxe",
+    "C# a .NET",
+    "Entity Framework",
+    "MS SQL Server",
+    "azure devops",
+    "c#",
+    "entity framework",
+    "sql server",
+    "zkušenost s Azure DevOps"
+   ],
+   "_precise_skills": 9
+  }
+ },
+ {
+  "id": "en-security-engineer-vienna",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9282959999982268,
+  "input_tokens": 751,
+  "output_tokens": 133,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": false,
+   "currency": true
+  },
+  "skills_tp": 6,
+  "skills_pred": 8,
+  "skills_gold": 6,
+  "predicted": {
+   "seniority": "medior",
+   "years": 5,
+   "remote": "hybrid",
+   "city": "Vienna",
+   "salary_min": 58000,
+   "salary_max": 70000,
+   "currency": "EUR",
+   "skills": [
+    "German language skills",
+    "SIEM tools (Splunk)",
+    "aws",
+    "cloud security on AWS",
+    "iam",
+    "incident response",
+    "network security",
+    "splunk"
+   ],
+   "_precise_skills": 7
+  }
+ },
+ {
+  "id": "en-intern-python",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.6219195000012405,
+  "input_tokens": 688,
+  "output_tokens": 86,
+  "fields": {
+   "seniority": true,
+   "years": false,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 1,
+  "skills_gold": 2,
+  "predicted": {
+   "seniority": "junior",
+   "years": 3,
+   "remote": "onsite",
+   "city": "Brno",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": "CZK",
+   "skills": [
+    "python"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "cs-it-support-olomouc",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 1.1521406000101706,
+  "input_tokens": 808,
+  "output_tokens": 164,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 2,
+  "skills_pred": 5,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": "junior",
+   "years": 1,
+   "remote": "onsite",
+   "city": "Olomouc",
+   "salary_min": 35000,
+   "salary_max": 42000,
+   "currency": "CZK",
+   "skills": [
+    "Microsoft 365",
+    "SŠ vzdělání technického směru",
+    "Windows",
+    "praxe v IT podpoře min. 1 rok",
+    "řidičský průkaz sk. B"
+   ],
+   "_precise_skills": 2
+  }
+ },
+ {
+  "id": "en-android-contract",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.8609695999912219,
+  "input_tokens": 726,
+  "output_tokens": 128,
+  "fields": {
+   "seniority": true,
+   "years": false,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 3,
+  "skills_pred": 4,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": "senior",
+   "years": 6,
+   "remote": "remote_region",
+   "city": null,
+   "salary_min": 450,
+   "salary_max": 550,
+   "currency": "GBP",
+   "skills": [
+    "android-development",
+    "coroutines",
+    "jetpack-compose",
+    "kotlin"
+   ],
+   "_precise_skills": 3
+  }
+ },
+ {
+  "id": "cs-analytik-dat-praha",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9314910999964923,
+  "input_tokens": 777,
+  "output_tokens": 139,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": false,
+   "city": false,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": false
+  },
+  "skills_tp": 4,
+  "skills_pred": 8,
+  "skills_gold": 5,
+  "predicted": {
+   "seniority": "medior",
+   "years": 2,
+   "remote": "remote_region",
+   "city": "Pankrác",
+   "salary_min": null,
+   "salary_max": null,
+   "currency": "CZK",
+   "skills": [
+    "pandas",
+    "pokročilá znalost sql",
+    "power bi",
+    "python",
+    "sql",
+    "zkušenost s pandas",
+    "zkušenost s power bi",
+    "zkušenost s pythonem"
+   ],
+   "_precise_skills": 8
+  }
+ },
+ {
+  "id": "en-embedded-c-brno",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 1.307180799994967,
+  "input_tokens": 734,
+  "output_tokens": 200,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 6,
+  "skills_pred": 9,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": "medior",
+   "years": 3,
+   "remote": "onsite",
+   "city": "Brno",
+   "salary_min": 75000,
+   "salary_max": 95000,
+   "currency": "CZK",
+   "skills": [
+    "arm-cortex-m",
+    "c",
+    "c++",
+    "freertos",
+    "microcontrollers",
+    "oscilloscope",
+    "reading-schematics",
+    "rtos",
+    "zephyr"
+   ],
+   "_precise_skills": 6
+  }
+ },
+ {
+  "id": "en-lead-pm-hybrid",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9858641000028001,
+  "input_tokens": 734,
+  "output_tokens": 150,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 4,
+  "skills_pred": 7,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": "senior",
+   "years": 7,
+   "remote": "hybrid",
+   "city": "Prague",
+   "salary_min": 140000,
+   "salary_max": 170000,
+   "currency": "CZK",
+   "skills": [
+    "Amplitude",
+    "B2B SaaS",
+    "Fluent English",
+    "SQL",
+    "data-informed decisions",
+    "leading other PMs",
+    "product management"
+   ],
+   "_precise_skills": 4
+  }
+ },
+ {
+  "id": "cs-php-remote-cz",
+  "domain": "it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9032640000077663,
+  "input_tokens": 772,
+  "output_tokens": 136,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": true
+  },
+  "skills_tp": 6,
+  "skills_pred": 10,
+  "skills_gold": 6,
+  "predicted": {
+   "seniority": "medior",
+   "years": 3,
+   "remote": "remote_country",
+   "city": null,
+   "salary_min": 7000,
+   "salary_max": 9000,
+   "currency": "CZK",
+   "skills": [
+    "3+ rok zkušeností PHP 8",
+    "Docker",
+    "Git",
+    "MySQL nebo PostgreSQL",
+    "docker",
+    "git",
+    "mysql",
+    "php",
+    "postgres",
+    "symfony"
+   ],
+   "_precise_skills": 10
+  }
+ },
+ {
+  "id": "en-sre-global-no-years",
+  "domain": "it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.7581153999926755,
+  "input_tokens": 698,
+  "output_tokens": 114,
+  "fields": {
+   "seniority": true,
+   "years": false,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 6,
+  "skills_pred": 6,
+  "skills_gold": 7,
+  "predicted": {
+   "seniority": null,
+   "years": 0,
+   "remote": "remote_global",
+   "city": null,
+   "salary_min": null,
+   "salary_max": null,
+   "currency": null,
+   "skills": [
+    "grafana",
+    "helm",
+    "kubernetes",
+    "open-telemetry",
+    "prometheus",
+    "strong linux and networking fundamentals"
+   ],
+   "_precise_skills": 5
+  }
+ },
+ {
+  "id": "cs-ridic-c-brno",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9464900000020862,
+  "input_tokens": 809,
+  "output_tokens": 138,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 3,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": "medior",
+   "years": 2,
+   "remote": "onsite",
+   "city": "Brno",
+   "salary_min": 38000,
+   "salary_max": 45000,
+   "currency": "CZK",
+   "skills": [
+    "mzda",
+    "praxe v řízení nákladních vozidel",
+    "řidičské oprávnění sk. C"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "cs-pecovatelka-ostrava",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.8676382999983616,
+  "input_tokens": 827,
+  "output_tokens": 126,
+  "fields": {
+   "seniority": false,
+   "years": false,
+   "remote": true,
+   "city": false,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 3,
+  "skills_gold": 2,
+  "predicted": {
+   "seniority": "medior",
+   "years": 1,
+   "remote": "onsite",
+   "city": "Ostrava-Poruba",
+   "salary_min": 31000,
+   "salary_max": null,
+   "currency": "CZK",
+   "skills": [
+    "empatie",
+    "kurz pracovník v sociálních službách",
+    "spolehlivost"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "en-registered-nurse-vienna",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.7778301999933319,
+  "input_tokens": 727,
+  "output_tokens": 111,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 2,
+  "skills_pred": 3,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": "medior",
+   "years": 2,
+   "remote": "onsite",
+   "city": "Vienna",
+   "salary_min": 3400,
+   "salary_max": null,
+   "currency": "EUR",
+   "skills": [
+    "German B2 level",
+    "ICU experience",
+    "Nursing diploma"
+   ],
+   "_precise_skills": 2
+  }
+ },
+ {
+  "id": "cs-elektrikar-praha",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.9969437999970978,
+  "input_tokens": 822,
+  "output_tokens": 145,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 4,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": "medior",
+   "years": 3,
+   "remote": "onsite",
+   "city": "Praha",
+   "salary_min": 45000,
+   "salary_max": 60000,
+   "currency": "CZK",
+   "skills": [
+    "osvědčení",
+    "praxe min. 3 roky",
+    "výuka v oboru elektro",
+    "řidičský průkaz sk. B"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "cs-ucetni-brno-hybrid",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 1.0505374999920605,
+  "input_tokens": 811,
+  "output_tokens": 157,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": false,
+   "city": false,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 2,
+  "skills_pred": 4,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": "junior",
+   "years": 5,
+   "remote": "remote_country",
+   "city": "Brno-střed",
+   "salary_min": 42000,
+   "salary_max": 50000,
+   "currency": "CZK",
+   "skills": [
+    " znalost Pohody nebo Money S3",
+    "5 let praxe v podvojném účetnictví",
+    "SŠ/VŠ ekonomického směru",
+    "mzdové účetnictví výhodou"
+   ],
+   "_precise_skills": 2
+  }
+ },
+ {
+  "id": "en-warehouse-operative-pilsen",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.6430436000082409,
+  "input_tokens": 712,
+  "output_tokens": 96,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 2,
+  "skills_gold": 1,
+  "predicted": {
+   "seniority": "junior",
+   "years": 0,
+   "remote": "onsite",
+   "city": "Pilsen",
+   "salary_min": 185,
+   "salary_max": null,
+   "currency": "CZK",
+   "skills": [
+    "forklift licence",
+    "physical fitness"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "cs-kuchar-brno",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.8003406999923754,
+  "input_tokens": 761,
+  "output_tokens": 119,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 2,
+  "skills_pred": 3,
+  "skills_gold": 2,
+  "predicted": {
+   "seniority": "medior",
+   "years": 2,
+   "remote": null,
+   "city": "Brno",
+   "salary_min": 38000,
+   "salary_max": null,
+   "currency": "CZK",
+   "skills": [
+    "praxe v à la carte provoz",
+    "vyučení v oboru kuchař",
+    "zdravotní průkaz"
+   ],
+   "_precise_skills": 3
+  }
+ },
+ {
+  "id": "en-office-assistant-prague",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.7703082999942126,
+  "input_tokens": 736,
+  "output_tokens": 116,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 4,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": "junior",
+   "years": 1,
+   "remote": "onsite",
+   "city": "Prague 1",
+   "salary_min": 36000,
+   "salary_max": 40000,
+   "currency": "CZK",
+   "skills": [
+    "Czech",
+    "English",
+    "Fluent",
+    "MS Office"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "cs-zdravotni-sestra-brno",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 1.0447308000002522,
+  "input_tokens": 805,
+  "output_tokens": 158,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": false,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": false
+  },
+  "skills_tp": 0,
+  "skills_pred": 4,
+  "skills_gold": 2,
+  "predicted": {
+   "seniority": "junior",
+   "years": 0,
+   "remote": null,
+   "city": "Brno-Bohunice",
+   "salary_min": 60000,
+   "salary_max": 60000,
+   "currency": "CZK",
+   "skills": [
+    "mza dle platov r v t  r v",
+    "o db z p s 96/2004 Sb",
+    "pr xa nen  m  p  podm nky",
+    "registrace výh odou"
+   ],
+   "_precise_skills": 0
+  }
+ },
+ {
+  "id": "en-truck-driver-ce-international",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.6898691000096733,
+  "input_tokens": 734,
+  "output_tokens": 104,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 3,
+  "skills_pred": 3,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": "medior",
+   "years": 3,
+   "remote": "onsite",
+   "city": "Ostrava",
+   "salary_min": 2800,
+   "salary_max": 3300,
+   "currency": "EUR",
+   "skills": [
+    "ADR",
+    "C+E licence",
+    "driver qualification card"
+   ],
+   "_precise_skills": 3
+  }
+ },
+ {
+  "id": "cs-prodavac-olomouc",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.8040977999917232,
+  "input_tokens": 751,
+  "output_tokens": 120,
+  "fields": {
+   "seniority": false,
+   "years": false,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 3,
+  "skills_gold": 1,
+  "predicted": {
+   "seniority": "junior",
+   "years": 1,
+   "remote": "onsite",
+   "city": "Olomouc",
+   "salary_min": 165,
+   "salary_max": 190,
+   "currency": "CZK",
+   "skills": [
+    "práce s pokladnou",
+    "příjemné vystupování",
+    "spolehlivost"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "en-hr-generalist-remote-cz",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.7569921000103932,
+  "input_tokens": 729,
+  "output_tokens": 114,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": false,
+   "salary_min": false,
+   "salary_max": false,
+   "currency": true
+  },
+  "skills_tp": 5,
+  "skills_pred": 5,
+  "skills_gold": 6,
+  "predicted": {
+   "seniority": "medior",
+   "years": 3,
+   "remote": "remote_country",
+   "city": "Brno",
+   "salary_min": 5500,
+   "salary_max": 6500,
+   "currency": "CZK",
+   "skills": [
+    "BambooHR",
+    "Czech labour law",
+    "onboarding",
+    "payroll",
+    "recruitment"
+   ],
+   "_precise_skills": 5
+  }
+ },
+ {
+  "id": "cs-instalater-ostrava",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.7904120000021067,
+  "input_tokens": 776,
+  "output_tokens": 116,
+  "fields": {
+   "seniority": false,
+   "years": false,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": false,
+   "currency": true
+  },
+  "skills_tp": 2,
+  "skills_pred": 3,
+  "skills_gold": 4,
+  "predicted": {
+   "seniority": "junior",
+   "years": 1,
+   "remote": "onsite",
+   "city": "Ostrava",
+   "salary_min": 40000,
+   "salary_max": 40000,
+   "currency": "CZK",
+   "skills": [
+    "oprávnění",
+    "výuční list",
+    "ŘP sk. B"
+   ],
+   "_precise_skills": 2
+  }
+ },
+ {
+  "id": "en-customer-support-hybrid-german",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.8616371000098297,
+  "input_tokens": 741,
+  "output_tokens": 121,
+  "fields": {
+   "seniority": true,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 2,
+  "skills_pred": 5,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": "senior",
+   "years": 3,
+   "remote": "hybrid",
+   "city": "Brno",
+   "salary_min": 48000,
+   "salary_max": 56000,
+   "currency": "CZK",
+   "skills": [
+    "1 year as a team lead",
+    "fluent english",
+    "freshdesk",
+    "native-level german",
+    "zendesk"
+   ],
+   "_precise_skills": 2
+  }
+ },
+ {
+  "id": "cs-skladnik-brno-bez-praxe",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.7584036000043852,
+  "input_tokens": 778,
+  "output_tokens": 108,
+  "fields": {
+   "seniority": false,
+   "years": false,
+   "remote": false,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 1,
+  "skills_pred": 1,
+  "skills_gold": 1,
+  "predicted": {
+   "seniority": "medior",
+   "years": 1,
+   "remote": "remote_region",
+   "city": "Brno",
+   "salary_min": 30000,
+   "salary_max": 34000,
+   "currency": "CZK",
+   "skills": [
+    "vzv průkaz výhodou"
+   ],
+   "_precise_skills": 1
+  }
+ },
+ {
+  "id": "en-teacher-english-praha",
+  "domain": "non-it",
+  "lang": "en",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.7651124999974854,
+  "input_tokens": 742,
+  "output_tokens": 107,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 2,
+  "skills_pred": 3,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": "medior",
+   "years": 1,
+   "remote": "onsite",
+   "city": "Prague 6",
+   "salary_min": 400,
+   "salary_max": 500,
+   "currency": "CZK",
+   "skills": [
+    "CELTA",
+    "DELTA",
+    "equivalent qualification"
+   ],
+   "_precise_skills": 2
+  }
+ },
+ {
+  "id": "cs-svarec-brno",
+  "domain": "non-it",
+  "lang": "cs",
+  "ok": true,
+  "attempts": 1,
+  "latency_s": 0.8807960000121966,
+  "input_tokens": 780,
+  "output_tokens": 132,
+  "fields": {
+   "seniority": false,
+   "years": true,
+   "remote": true,
+   "city": true,
+   "salary_min": true,
+   "salary_max": true,
+   "currency": true
+  },
+  "skills_tp": 2,
+  "skills_pred": 3,
+  "skills_gold": 3,
+  "predicted": {
+   "seniority": "medior",
+   "years": 2,
+   "remote": "onsite",
+   "city": "Kuřim",
+   "salary_min": 40000,
+   "salary_max": 48000,
+   "currency": "CZK",
+   "skills": [
+    "platný svářečský průkaz",
+    "praxe 2 roky",
+    "čtení technických výkresů"
+   ],
+   "_precise_skills": 2
+  }
+ }
+]
