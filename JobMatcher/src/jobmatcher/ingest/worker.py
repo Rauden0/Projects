@@ -7,7 +7,7 @@ from aio_pika.exceptions import AMQPError, ChannelInvalidStateError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from jobmatcher import messaging
+from jobmatcher import messaging, metrics
 from jobmatcher.config import configure_logging, configure_tracing, get_settings
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.domain import RawPosting
@@ -30,6 +30,7 @@ class Worker:
             await self._handle(msg)
         except Exception:  # noqa: BLE001 - consumer boundary: an unsettled message pins a prefetch slot
             log.exception("could not settle message, requeueing")
+            metrics.recorder.ingest_message("requeued")
             await _requeue(msg)
 
     async def _handle(self, msg: AbstractIncomingMessage) -> None:
@@ -39,6 +40,7 @@ class Worker:
             posting = RawPosting.model_validate_json(body)
         except (ValidationError, messaging.UndecodableBody) as exc:
             log.error("malformed message, sending to DLQ")
+            metrics.recorder.ingest_message("malformed")
             await self._dead_letter(
                 msg, msg.body, msg.content_encoding, attempt, type(exc).__name__
             )
@@ -47,6 +49,7 @@ class Worker:
 
         try:
             result = await self.indexer.index(posting)
+            metrics.recorder.ingest_message("ok")
             log.info(
                 "indexed %s/%s job_id=%s changed=%s",
                 posting.company,
@@ -58,11 +61,13 @@ class Worker:
             next_attempt = attempt + 1
             if next_attempt <= len(messaging.RETRY_DELAYS_S):
                 log.exception("indexing failed, retry %d scheduled", next_attempt)
+                metrics.recorder.ingest_message("retry")
                 exchange = await self.channel.get_exchange(messaging.RETRY_EXCHANGE)
                 retry = messaging.message(body, next_attempt)
                 await exchange.publish(retry, routing_key=str(next_attempt))
             else:
                 log.exception("indexing failed permanently, sending to DLQ")
+                metrics.recorder.ingest_message("dead_letter")
                 await self._dead_letter(msg, body, None, attempt, type(exc).__name__)
         # Ack only after the retry/DLQ publish succeeded; if that publish raises, the
         # message is requeued instead of lost.
@@ -120,6 +125,7 @@ async def start_consumers(
 async def main() -> None:
     configure_logging()
     configure_tracing()
+    metrics.serve_from_env()
     settings = get_settings()
     indexer = Indexer(
         get_sessionmaker(),

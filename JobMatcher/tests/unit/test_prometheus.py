@@ -112,3 +112,19 @@ def test_without_prometheus_client_nothing_is_mounted(monkeypatch: pytest.Monkey
     metrics.serve_from_env()
     metrics.recorder.chat_turn("answer")
     assert all(getattr(r, "path", None) != metrics.PATH for r in app.routes)
+
+
+async def test_worker_counts_each_outcome() -> None:
+    from test_worker import BODY, FailingIndexer, FakeChannel, FakeMessage, OkIndexer
+
+    from jobmatcher.ingest.worker import Worker
+
+    outcomes = ("ok", "retry", "dead_letter", "malformed")
+    before = {o: sample("jobmatcher_ingest_messages_total", outcome=o) for o in outcomes}
+    await Worker(OkIndexer(), FakeChannel()).handle(FakeMessage(BODY, {}))  # type: ignore[arg-type]
+    failing = Worker(FailingIndexer(), FakeChannel())  # type: ignore[arg-type]
+    await failing.handle(FakeMessage(BODY, {}))  # type: ignore[arg-type]
+    await failing.handle(FakeMessage(BODY, {"x-attempt": 99}))  # type: ignore[arg-type]
+    await failing.handle(FakeMessage(b"not json", {}))  # type: ignore[arg-type]
+    for outcome in outcomes:
+        assert sample("jobmatcher_ingest_messages_total", outcome=outcome) == before[outcome] + 1
