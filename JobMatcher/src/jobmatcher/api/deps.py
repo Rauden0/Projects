@@ -1,10 +1,13 @@
 from collections.abc import AsyncIterator, Awaitable, Callable
+from datetime import timedelta
 from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from jobmatcher.agent.answers import AnswerCache, PostgresAnswerCache
+from jobmatcher.agent.session import ChatGuards
 from jobmatcher.api.auth import Authenticator, build_authenticator
 from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy
 from jobmatcher.budget.ledger import UsageLedger
@@ -13,11 +16,13 @@ from jobmatcher.budget.limits import (
     WINDOW,
     ChatGate,
     ClientLimiter,
+    DuplicateGuard,
     MemoryRateStore,
     PostgresRateStore,
     Rate,
     RateStore,
     RequestLimiter,
+    StreamSlots,
 )
 from jobmatcher.config import get_settings
 from jobmatcher.db.session import get_sessionmaker
@@ -57,6 +62,41 @@ def get_chat_gate() -> ChatGate:
 
 
 ChatGateDep = Annotated[ChatGate, Depends(get_chat_gate)]
+
+# A slot outlives a stream that ended without releasing it by this much.
+SLOT_GRACE_S = 30.0
+
+
+@lru_cache
+def get_stream_slots() -> StreamSlots:
+    s = get_settings()
+    hold_s = s.chat_stream_timeout_s + SLOT_GRACE_S
+    return StreamSlots(s.chat_max_streams, s.chat_max_streams_per_client, hold_s)
+
+
+@lru_cache
+def get_duplicate_guard() -> DuplicateGuard:
+    return DuplicateGuard(get_settings().chat_duplicate_window_s)
+
+
+@lru_cache
+def get_answer_cache() -> AnswerCache | None:
+    ttl_s = get_settings().chat_answer_cache_ttl_s
+    if ttl_s == 0:
+        return None
+    return PostgresAnswerCache(get_sessionmaker(), timedelta(seconds=ttl_s))
+
+
+def get_chat_guards(
+    gate: ChatGateDep,
+    slots: Annotated[StreamSlots, Depends(get_stream_slots)],
+    duplicates: Annotated[DuplicateGuard, Depends(get_duplicate_guard)],
+    answers: Annotated[AnswerCache | None, Depends(get_answer_cache)],
+) -> ChatGuards:
+    return ChatGuards(gate, slots, duplicates, answers, get_settings().chat_stream_timeout_s)
+
+
+ChatGuardsDep = Annotated[ChatGuards, Depends(get_chat_guards)]
 
 
 @lru_cache

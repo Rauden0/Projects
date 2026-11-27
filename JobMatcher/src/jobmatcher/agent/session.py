@@ -1,13 +1,17 @@
+import asyncio
 import logging
 import uuid
-from collections.abc import AsyncIterator
-from typing import Any
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
+from dataclasses import dataclass
+from typing import Any, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from jobmatcher import telemetry
+from jobmatcher import metrics, telemetry
+from jobmatcher.agent.answers import AnswerCache, Turn, recording, replay
 from jobmatcher.agent.loop import AgentEvent, run_agent
 from jobmatcher.agent.tools import Toolbox
+from jobmatcher.budget.limits import DuplicateGuard, Slot, StreamSlots
 from jobmatcher.llm import LLMClient
 from jobmatcher.observability import Stopwatch, UsageMeter, request_id_var
 from jobmatcher.search.embeddings import Embedder
@@ -24,7 +28,7 @@ async def chat_events(
     message: str,
     history: list[dict[str, Any]],
     profile_summary: str,
-) -> AsyncIterator[AgentEvent]:
+) -> AsyncGenerator[AgentEvent]:
     """Runs one chat turn with its own DB session (an SSE stream outlives the request scope),
     traced as one `chat` span, and logs one `chat_turn` summary line when it ends."""
     watch = Stopwatch()
@@ -65,3 +69,77 @@ async def chat_events(
                     "duration_ms": round(watch.elapsed_s * 1000),
                 },
             )
+
+
+TIMEOUT_MESSAGE = "The answer took too long, try again later."
+
+
+async def with_deadline(
+    events: AsyncGenerator[AgentEvent], timeout_s: float
+) -> AsyncIterator[AgentEvent]:
+    """Ends the turn with an error event once it has run `timeout_s`; closing the agent's
+    generator cancels its pending LLM or tool call."""
+    deadline = asyncio.get_running_loop().time() + timeout_s
+    try:
+        while True:
+            try:
+                async with asyncio.timeout_at(deadline):
+                    event = await anext(events)
+            except StopAsyncIteration:
+                return
+            except TimeoutError:
+                log.warning("chat turn stopped after %.0fs", timeout_s)
+                metrics.recorder.rejected("chat_timeout")
+                yield AgentEvent("error", {"message": TIMEOUT_MESSAGE})
+                return
+            yield event
+    finally:
+        await events.aclose()
+
+
+class Gate(Protocol):
+    async def admit(self, client_id: str) -> None: ...
+
+    async def admit_cached(self, client_id: str) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ChatGuards:
+    gate: Gate
+    slots: StreamSlots
+    duplicates: DuplicateGuard
+    answers: AnswerCache | None
+    timeout_s: float
+
+
+async def start_turn(
+    guards: ChatGuards,
+    client_id: str,
+    turn: Turn,
+    run: Callable[[], AsyncGenerator[AgentEvent]],
+) -> AsyncIterator[AgentEvent]:
+    """Admits a turn before its first event, so a refusal is an HTTP error and not an event:
+    a cached first turn is replayed (it counts as a request, not as tokens); anything else
+    must not repeat the client's last message, gets past the budget and the client's limits,
+    and takes a stream slot that it holds until the stream ends."""
+    key: bytes | None = None
+    if guards.answers is not None and turn.cacheable:
+        key, cached = await guards.answers.lookup(turn)
+        if cached is not None:
+            await guards.gate.admit_cached(client_id)
+            return replay(cached)
+    await guards.gate.admit(client_id)
+    guards.duplicates.check(client_id, turn.fingerprint())
+    slot = guards.slots.acquire(client_id)
+    events: AsyncIterator[AgentEvent] = with_deadline(run(), guards.timeout_s)
+    if guards.answers is not None and key is not None:
+        events = recording(guards.answers, key, turn, events)
+    return _holding(slot, events)
+
+
+async def _holding(slot: Slot, events: AsyncIterator[AgentEvent]) -> AsyncIterator[AgentEvent]:
+    try:
+        async for event in events:
+            yield event
+    finally:
+        slot.release()

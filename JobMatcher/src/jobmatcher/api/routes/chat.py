@@ -1,15 +1,17 @@
 import json
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
-from jobmatcher.agent.session import chat_events
+from jobmatcher.agent.answers import Turn
+from jobmatcher.agent.loop import AgentEvent
+from jobmatcher.agent.session import chat_events, start_turn
 from jobmatcher.api.deps import (
-    ChatGateDep,
+    ChatGuardsDep,
     ClientKeyDep,
     EmbedderDep,
     PrincipalDep,
@@ -24,7 +26,7 @@ from jobmatcher.cv.profile import CvExtractor, CvProfile
 from jobmatcher.cv.service import create_cv, delete_cv, profile_summary
 from jobmatcher.db.session import get_sessionmaker
 from jobmatcher.errors import LLMUnavailable
-from jobmatcher.llm import get_llm
+from jobmatcher.llm import LLMClient, get_llm
 from jobmatcher.observability import UsageMeter
 
 router = APIRouter(
@@ -92,12 +94,17 @@ def _sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
 
 
+def model_of(llm: LLMClient) -> str | None:
+    model = getattr(llm, "model", None)
+    return f"{type(llm).__name__}:{model}" if isinstance(model, str) else None
+
+
 @router.post("/chat", response_class=StreamingResponse)
 async def chat(
     body: ChatIn,
     session: SessionDep,
     embedder: EmbedderDep,
-    gate: ChatGateDep,
+    guards: ChatGuardsDep,
     principal: PrincipalDep,
     client_id: ClientKeyDep,
 ) -> StreamingResponse:
@@ -106,13 +113,17 @@ async def chat(
     if llm is None:
         raise LLMUnavailable("no API key configured for the chat model")
     summary = await profile_summary(session, body.cv_id, principal)
-    await gate.admit(client_id)
     history = [turn.model_dump() for turn in body.history]
+    turn = Turn(body.message, body.cv_id, principal, summary, history, model_of(llm))
 
-    async def stream() -> AsyncIterator[str]:
-        events = chat_events(
+    def run() -> AsyncGenerator[AgentEvent]:
+        return chat_events(
             llm, meter, get_sessionmaker(), embedder, body.cv_id, body.message, history, summary
         )
+
+    events = await start_turn(guards, client_id, turn, run)
+
+    async def stream() -> AsyncIterator[str]:
         async for event in events:
             yield _sse(event.type, event.data)
 

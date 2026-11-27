@@ -101,6 +101,15 @@ class Settings(BaseSettings):
     # /jobs/search responses per process, also the max-age the response advertises; 0 = off.
     search_cache_ttl_s: int = Field(default=60, ge=0)
     search_cache_size: int = Field(default=1024, ge=1)
+    # First chat turns (no history) replayed from chat_answer_cache for this long; 0 = off.
+    chat_answer_cache_ttl_s: int = Field(default=600, ge=0)
+    # Concurrent /chat streams per process and per client; more get 503 / 429.
+    chat_max_streams: int = Field(default=32, ge=1)
+    chat_max_streams_per_client: int = Field(default=3, ge=1)
+    # A chat turn still running after this long ends with an error event.
+    chat_stream_timeout_s: float = Field(default=300.0, gt=0)
+    # The same message from the same client within this window gets 429; 0 = off.
+    chat_duplicate_window_s: float = Field(default=10.0, ge=0)
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:

@@ -50,7 +50,14 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 @pytest.fixture(autouse=True)
 def fresh_limits() -> None:
     """Rate windows and caches live in the process; every test starts with empty ones."""
-    for cached in (deps.get_rate_store, deps.get_request_limiter, deps.get_search_cache):
+    for cached in (
+        deps.get_rate_store,
+        deps.get_request_limiter,
+        deps.get_search_cache,
+        deps.get_stream_slots,
+        deps.get_duplicate_guard,
+        deps.get_answer_cache,
+    ):
         cached.cache_clear()
 
 
