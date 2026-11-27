@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 from jobmatcher.api.deps import EmbedderDep, SessionDep
 from jobmatcher.api.schemas import JobDetail
 from jobmatcher.db.models import Job
-from jobmatcher.ingest.extraction import RemotePolicy, Seniority
+from jobmatcher.domain import RemotePolicy, Seniority
 from jobmatcher.search.hybrid import Mode, SearchFilters, SearchHit, search_jobs
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])

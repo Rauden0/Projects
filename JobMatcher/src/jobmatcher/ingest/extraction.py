@@ -6,31 +6,13 @@ fails validation twice (``extraction_status = 'fallback'``, retried by ``reextra
 """
 
 import re
-from typing import Any, Literal, Protocol, get_args
+from typing import Any, Protocol, get_args
 
 from pydantic import BaseModel, Field, ValidationError
 
+from jobmatcher.domain import ContractType, JobFacts, RemotePolicy, Seniority
 from jobmatcher.ingest.normalize import compact_for_llm
 from jobmatcher.llm import LLMClient
-
-Seniority = Literal["junior", "medior", "senior", "staff"]
-RemotePolicy = Literal["onsite", "hybrid", "remote_country", "remote_region", "remote_global"]
-ContractType = Literal["employment", "contract", "freelance"]
-
-
-class JobFacts(BaseModel):
-    seniority: Seniority | None = None
-    years_required_min: int | None = Field(default=None, ge=0, le=30)
-    remote_policy: RemotePolicy | None = None
-    office_city: str | None = None
-    salary_min: int | None = Field(default=None, ge=0)
-    salary_max: int | None = Field(default=None, ge=0)
-    currency: str | None = Field(default=None, min_length=3, max_length=3)
-    contract_type: ContractType | None = None
-    tech_stack: list[str] = Field(default_factory=list)
-    required_skills: list[str] = Field(default_factory=list)
-    nice_to_have_skills: list[str] = Field(default_factory=list)
-    languages_required: list[str] = Field(default_factory=list)
 
 
 class Extractor(Protocol):

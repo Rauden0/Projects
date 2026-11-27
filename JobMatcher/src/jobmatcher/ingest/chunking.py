@@ -1,5 +1,6 @@
 import re
-from dataclasses import dataclass
+
+from jobmatcher.domain import Chunk
 
 # Rough token estimate: good enough to keep chunks well under the embedding model limit.
 _WORDS_PER_CHUNK = 350
@@ -12,13 +13,6 @@ _SECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
                                     r"budeš", re.I)),
     ("benefits", re.compile(r"benefit|we offer|what we offer|perks|nabízíme", re.I)),
 ]
-
-
-@dataclass(frozen=True)
-class Chunk:
-    ord: int
-    section: str | None
-    content: str
 
 
 def _classify(heading: str) -> str | None:

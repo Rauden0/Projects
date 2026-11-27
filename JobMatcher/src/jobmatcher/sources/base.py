@@ -7,6 +7,8 @@ import httpx
 import yaml
 from pydantic import BaseModel
 
+from jobmatcher.domain import RawPosting
+
 
 class SourceConfig(BaseModel):
     kind: str
@@ -31,19 +33,6 @@ class PostingRef(BaseModel):
     company: str
     external_id: str
     url: str
-
-
-class RawPosting(BaseModel):
-    kind: str
-    company: str
-    # Source this posting was crawled from, when it differs from the employer (job boards
-    # list many employers under one configured source). Defaults to ``company``.
-    source: str | None = None
-    external_id: str
-    url: str
-    title: str
-    location: str | None
-    description_html: str
 
 
 class SourceAdapter(ABC):

@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher.db import repository
+from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.chunking import chunk_posting
 from jobmatcher.ingest.extraction import Extractor, HeuristicExtractor
 from jobmatcher.ingest.normalize import content_hash, html_to_text
 from jobmatcher.search.embeddings import Embedder
-from jobmatcher.sources import RawPosting
 
 log = logging.getLogger(__name__)
 

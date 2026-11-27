@@ -16,12 +16,12 @@ from sqlalchemy import text
 
 from jobmatcher.db.models import EMBEDDING_DIM
 from jobmatcher.db.session import get_sessionmaker
+from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.extraction import HeuristicExtractor
 from jobmatcher.ingest.indexer import Indexer
 from jobmatcher.search.embeddings import Embedder, HashingEmbedder, get_embedder
 from jobmatcher.search.hybrid import SearchFilters, search_jobs
 from jobmatcher.search.metrics import hit_at_k, recall_at_k, reciprocal_rank
-from jobmatcher.sources import RawPosting
 
 HERE = Path(__file__).parent
 

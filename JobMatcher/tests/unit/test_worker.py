@@ -5,9 +5,9 @@ from typing import Any
 import pytest
 
 from jobmatcher import messaging
+from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.indexer import IndexResult
 from jobmatcher.ingest.worker import Worker
-from jobmatcher.sources import RawPosting
 
 BODY = RawPosting(
     kind="greenhouse",

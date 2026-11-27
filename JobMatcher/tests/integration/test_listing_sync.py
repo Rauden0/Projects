@@ -5,11 +5,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobmatcher.db.models import EMBEDDING_DIM, Job, Outbox
+from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.extraction import HeuristicExtractor
 from jobmatcher.ingest.indexer import Indexer
 from jobmatcher.ingest.listing_sync import ListingSyncConsumer
 from jobmatcher.search.embeddings import HashingEmbedder
-from jobmatcher.sources import RawPosting
 
 pytestmark = pytest.mark.integration
 

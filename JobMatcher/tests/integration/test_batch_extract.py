@@ -8,11 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from jobmatcher.budget.guard import BudgetGuard, BudgetPolicy
 from jobmatcher.budget.ledger import UsageLedger
 from jobmatcher.db.models import EMBEDDING_DIM, Job
+from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.batch_extract import BatchExtraction
 from jobmatcher.ingest.extraction import HeuristicExtractor
 from jobmatcher.ingest.indexer import Indexer
 from jobmatcher.search.embeddings import HashingEmbedder
-from jobmatcher.sources import RawPosting
 
 GOOD = (
     '{"sen": "senior", "yrs": 5, "rem": null, "city": null, "smin": null, "smax": null,'

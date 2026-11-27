@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobmatcher.ingest.extraction import ContractType, RemotePolicy, Seniority
+from jobmatcher.domain import ContractType, RemotePolicy, Seniority
 from jobmatcher.search.embeddings import Embedder
 
 RRF_K = 60

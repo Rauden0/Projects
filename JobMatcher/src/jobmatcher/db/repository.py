@@ -5,8 +5,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobmatcher.db.models import Job, JobChunk, Outbox, Source
-from jobmatcher.ingest.chunking import Chunk
-from jobmatcher.ingest.extraction import JobFacts
+from jobmatcher.domain import Chunk, JobFacts
 
 
 @dataclass(frozen=True)

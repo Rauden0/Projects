@@ -20,10 +20,10 @@ from jobmatcher.budget.ledger import UsageLedger
 from jobmatcher.config import Settings, configure_logging, get_settings
 from jobmatcher.db.models import Job
 from jobmatcher.db.session import get_sessionmaker
+from jobmatcher.domain import JobFacts
 from jobmatcher.ingest.extraction import (
     COMPACT_SCHEMA,
     EXTRACTION_SYSTEM,
-    JobFacts,
     extraction_prompt,
     parse_compact,
 )

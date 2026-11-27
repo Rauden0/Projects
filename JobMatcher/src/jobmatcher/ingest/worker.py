@@ -8,12 +8,12 @@ from pydantic import ValidationError
 from jobmatcher import messaging
 from jobmatcher.config import configure_logging, get_settings
 from jobmatcher.db.session import get_sessionmaker
+from jobmatcher.domain import RawPosting
 from jobmatcher.ingest.extraction import Extractor, HeuristicExtractor, LLMExtractor
 from jobmatcher.ingest.indexer import Indexer
 from jobmatcher.ingest.listing_sync import ListingSyncConsumer
 from jobmatcher.llm import get_llm
 from jobmatcher.search.embeddings import get_embedder
-from jobmatcher.sources import RawPosting
 
 log = logging.getLogger(__name__)
 

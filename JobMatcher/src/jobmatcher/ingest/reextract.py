@@ -16,7 +16,8 @@ from sqlalchemy import or_, select, update
 from jobmatcher.config import configure_logging
 from jobmatcher.db.models import Job
 from jobmatcher.db.session import get_sessionmaker
-from jobmatcher.ingest.extraction import JobFacts, LLMExtractor
+from jobmatcher.domain import JobFacts
+from jobmatcher.ingest.extraction import LLMExtractor
 from jobmatcher.llm import get_llm
 
 log = logging.getLogger(__name__)

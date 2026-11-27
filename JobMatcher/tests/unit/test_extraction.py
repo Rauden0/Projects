@@ -2,11 +2,11 @@ from typing import Any
 
 import pytest
 
+from jobmatcher.domain import JobFacts
 from jobmatcher.ingest.extraction import (
     COMPACT_SCHEMA,
     ExtractionError,
     HeuristicExtractor,
-    JobFacts,
     LLMExtractor,
 )
 
